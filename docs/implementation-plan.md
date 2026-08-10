@@ -16,7 +16,8 @@ Deliverables:
 - user flows;
 - design system;
 - traceability;
-- daftar ambiguity.
+- daftar ambiguity;
+- laporan review produk dan teknis terhadap teks serta gambar/flowchart PDF.
 
 Exit criteria:
 
@@ -132,6 +133,14 @@ Dependency: M5-M6.
 - performance baseline.
 
 Dependency: all previous milestones.
+
+## Relationship to the proposal timeline
+
+PDF sumber mengusulkan jadwal kalender Juli-November: development (Juli-Agustus), testing
+(September), pelatihan (Oktober), dan launching/monitoring awal (November). Milestone M0-M8 di atas
+adalah urutan dependency/gate rekayasa, bukan perubahan sepihak atas jadwal tersebut. Tahun target,
+kapasitas tim, pemetaan milestone ke minggu, serta kelayakan jadwal PDF harus disetujui stakeholder
+sebelum dijadikan baseline delivery.
 
 ## Milestone operating rule
 
