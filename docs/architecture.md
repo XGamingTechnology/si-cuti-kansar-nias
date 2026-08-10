@@ -148,19 +148,30 @@ Export target:
 - PDF
 - Excel
 
-## 8. Deployment assumptions - NOT YET DECIDED
+## 8. Deployment baseline - APPROVED FOR M1
 
-Proposal memperbolehkan server lokal/cloud instansi. Keputusan berikut masih terbuka:
+Target produksi awal yang disetujui adalah **VPS berbasis Ubuntu** dan tidak boleh diubah tanpa
+keputusan stakeholder baru. M1 boleh merancang detail berikut selama kompatibel dengan target itu:
 
-- cloud vs on-premise/local server;
+- containerization, reverse proxy, TLS/HTTPS, firewall, dan process management;
+- deployment pipeline dan environment variable handling;
+- database topology;
 - framework frontend/backend;
 - RDBMS spesifik;
 - object storage;
 - identity provider/SSO;
 - CI/CD platform;
-- backup and disaster recovery strategy.
+- topology staging dan kapasitas.
 
-Codex tidak boleh mengunci pilihan teknologi ini sebagai requirement bisnis tanpa persetujuan.
+Dokumen privat harus berada di storage non-publik tanpa URL anonim permanen. Download dilayani
+backend setelah autentikasi dan pemeriksaan authorization untuk Admin Kepegawaian atau Pegawai
+pemilik; role masa depan ditolak secara default. Object-reference authorization, metadata, dan akses
+sensitif harus dapat diaudit.
+
+Backup otomatis dijadwalkan dengan cron dan minimal mencakup database serta dokumen privat.
+Implementasi harus dapat menyalin hasil keluar dari lokasi data aplikasi utama. Tujuan sekunder,
+retensi/rotasi, enkripsi salinan, interval uji restore, RPO/RTO, dan runbook DR diputuskan sebelum
+M8/production. Salinan yang hanya berada di VPS produksi yang sama bukan DR lengkap.
 
 ## 9. Suggested engineering properties
 
@@ -186,8 +197,8 @@ berstatus Resolved di `docs/decision-log.md`.
 |---|---|
 | Transaction boundary dan ledger saldo | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 |
 | Workflow/approval domain dan authorization transition | WF-001, WF-002, WF-003, WF-004, AUTH-002 |
-| Document service, versioning, retention, dan storage | DOC-001, DOC-002, DOC-003, DOC-004 |
+| Document service, versioning, retention, dan storage | DOC-001, DOC-002, DOC-003 (access policy resolved), DOC-004 |
 | Calendar/notification adapters | CAL-001, NOT-001, NOT-002 |
 | Audit/report security boundary | AUD-001, RPT-001, RPT-002 |
 | Identity provider dan employee hierarchy | AUTH-001 (resolved), AUTH-002, DATA-001 |
-| Hosting, persistence topology, backup/DR, observability | DEP-001, DEP-002, DEP-003 |
+| Hosting, persistence topology, backup/DR, observability | DEP-001 (resolved), DEP-002 (M1 baseline resolved; production details deferred), DEP-003 |

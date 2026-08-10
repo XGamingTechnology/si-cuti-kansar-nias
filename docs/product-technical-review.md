@@ -1,6 +1,6 @@
 # SI CUTI - Product and Technical Review
 
-Status: **M0 review complete; awaiting human decisions and approval**
+Status: **M0 decision review updated; M1 policy gate satisfied**
 Review date: **10 August 2026**
 
 ## 1. Review scope and method
@@ -78,7 +78,8 @@ Keputusan manusia diperlukan sebelum milestone terkait:
 - identitas atasan dan kanal reminder;
 - file type/size/security/retention, retensi audit, serta delete policy;
 - authentication, SSO/MFA, session, dan recovery;
-- deployment cloud/on-premise, backup, disaster recovery, dan target availability;
+- detail implementasi Ubuntu VPS; tujuan backup sekunder/off-VPS, retensi/rotasi, enkripsi salinan,
+  interval uji restore, RPO/RTO, runbook disaster recovery, dan target availability;
 - status jadwal Juli-November: tahun target, kapasitas, dan penerimaan delivery baseline.
 
 ## 6. Architecture recommendations awaiting approval
@@ -96,8 +97,9 @@ Rekomendasi yang belum boleh dianggap keputusan bisnis/teknologi final:
 8. adapter kalender untuk hari libur/agenda setelah sumber data disetujui;
 9. typed codebase, migrations, automated tests, CI, structured logging, secrets management, backup,
    dan least privilege;
-10. pemilihan framework, RDBMS, identity provider, object storage, hosting, dan CI/CD ditunda sampai
-    constraint operasional disetujui.
+10. framework, RDBMS, object storage, containerization, reverse proxy, TLS, firewall, process
+    management, pipeline, environment handling, dan database topology boleh dirancang pada M1,
+    dengan constraint target produksi awal Ubuntu VPS.
 
 ## 7. Proposed milestone order
 
@@ -113,10 +115,15 @@ kapasitas; urutan dependency tidak boleh dikorbankan hanya untuk mencocokkan nam
 
 ## 8. M0 exit recommendation
 
-Repository tetap documentation-first; tidak ada folder source aplikasi dibuat. Secara editorial M0
-telah direview, tetapi exit criterion belum terpenuhi sampai stakeholder menyetujui interpretasi,
-memutuskan ambiguity kritis atau menundanya secara eksplisit, dan menyetujui pilihan teknologi untuk
-M1. Setelah itu repository siap memasuki **M1 - Technical Foundation**.
+Repository tetap documentation-first; tidak ada source aplikasi dibuat. Stakeholder kini telah
+menyetujui target Ubuntu VPS, kebijakan akses dokumen privat, dan baseline backup cron untuk database
+serta dokumen privat. Keputusan ini menutup seluruh kebutuhan kebijakan untuk memulai **M1 - Technical
+Foundation**, sehingga M1 tidak lagi terblokir. Detail teknis deployment boleh dirancang M1.
+
+Tujuan backup sekunder/off-VPS, retensi, rotasi, enkripsi salinan, interval uji restore, RPO, RTO,
+dan runbook DR tetap terbuka, tetapi dipindahkan secara eksplisit ke gate M8/production readiness.
+Arsitektur M1 wajib mendukung keputusan mendatang tersebut; backup hanya pada VPS produksi tidak
+boleh dilaporkan sebagai disaster recovery lengkap.
 
 ## 9. Decision log follow-up
 
@@ -133,5 +140,6 @@ secara eksplisit non-final, dampak, owner confirmation, dan gate milestone di
 - identity/organisasi: AUTH-001, AUTH-002, DATA-001;
 - deployment/operasi: DEP-001–DEP-003.
 
-Kesimpulan M0 tetap sama: review dokumentasi selesai, tetapi approval M0 dan M1 tetap terblokir
-sampai keputusan yang diwajibkan gate dicatat sebagai Resolved oleh otoritas yang sesuai.
+Kesimpulan gate berubah: M1 terbuka berdasarkan keputusan stakeholder yang dicatat sebagai final,
+bukan berdasarkan rekomendasi. Keputusan workflow, saldo, retensi dokumen, operasi, dan fitur lain
+tetap terbuka dan terus memblokir milestone masing-masing sebagaimana decision log.
