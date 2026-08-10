@@ -228,7 +228,9 @@ Contoh di proposal terkait Cuti Sakit lebih dari 14 hari **harus dikonfirmasi te
 6. Besaran Klaim Cuti Bersama dan hubungan dengan tanggal cuti bersama nasional belum cukup rinci dalam proposal.
 7. Format nomor registrasi otomatis belum mencantumkan pola tata naskah dinas final.
 8. Jenis, ukuran maksimum, dan retensi file upload belum ditentukan.
-9. Kebijakan login, reset password, MFA/SSO, dan session timeout belum ditentukan.
+9. AUTH-001 menetapkan akun lokal sebagai provider awal. Identifier login lokal, reset/recovery,
+   algoritma/parameter hashing, MFA, lockout, dan session timeout masih perlu ditentukan; pemilihan
+   provider OIDC/SAML/SSO masa depan tetap terbuka dan bukan scope milestone awal.
 10. Struktur unit kerja dalam dashboard/filter belum cukup terdefinisi.
 11. Definisi indikator personel “tersedia/siap gerak” harus dikonfirmasi agar tidak disimpulkan hanya dari status cuti.
 12. Kanal notifikasi selain notifikasi web/sistem belum ditentukan.
@@ -259,5 +261,5 @@ pemisahan fakta PDF/rekomendasi/policy tersedia di `docs/decision-log.md`.
 | Izin, TUKIN/disiplin, dan validasi jenis cuti | PERM-001, PERM-002, VAL-001 |
 | Kalender dan reminder | CAL-001, NOT-001, NOT-002 |
 | Audit, reporting, dan kesiapan personel | AUD-001, RPT-001, RPT-002 |
-| Identity, scope akses, dan master organisasi | AUTH-001, AUTH-002, DATA-001 |
+| Identity, scope akses, dan master organisasi | AUTH-001 (resolved), AUTH-002, DATA-001 |
 | Deployment, backup, dan operasi | DEP-001, DEP-002, DEP-003 |

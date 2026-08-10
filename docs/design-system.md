@@ -148,7 +148,7 @@ surface berikut, periksa `docs/decision-log.md`.
 | Form izin dan informasi TUKIN/disiplin | PERM-001, PERM-002 |
 | Kalender dan reminder | CAL-001, NOT-001, NOT-002 |
 | Audit, laporan/export, dan indikator kesiapan | AUD-001, RPT-001, RPT-002 |
-| Login/recovery, menu berbasis scope, dan relasi atasan | AUTH-001, AUTH-002, DATA-001 |
+| Detail login/recovery lokal, menu berbasis scope, dan relasi atasan | AUTH-001 (resolved), AUTH-002, DATA-001 |
 
 Sampai keputusan disahkan, mockup PDF tetap referensi visual saja dan tidak membenarkan status,
 aktor, angka, data pribadi, atau aturan yang tidak tertulis secara eksplisit.

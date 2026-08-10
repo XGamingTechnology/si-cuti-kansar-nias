@@ -42,7 +42,8 @@ Belum boleh dianggap final sampai ambiguity berikut diputuskan:
 - registration number format;
 - definition of “personel tersedia/siap gerak”;
 - file policy;
-- authentication/SSO policy;
+- detail autentikasi lokal (identifier, hashing, recovery, MFA, lockout, dan sesi) serta pemilihan
+  provider SSO masa depan; strategi provider awal telah diputuskan pada AUTH-001;
 - physical-signature versus digital-approval boundary;
 - incomplete-document correction states;
 - TUKIN/discipline scope and authoritative rules;
@@ -65,5 +66,5 @@ Kolom implementasi/test pada matriks di atas hanya dapat difinalkan setelah kepu
 | Reminder H-2 kepada Pegawai/atasan | NOT-001, NOT-002, DATA-001 |
 | Audit saldo/upload/download/export | AUD-001, DOC-002 |
 | Search, PDF/Excel, dashboard, dan kesiapan | RPT-001, RPT-002, AUTH-002 |
-| Authentication, owner isolation, dan master/hierarki | AUTH-001, AUTH-002, DATA-001 |
+| Authentication, owner isolation, dan master/hierarki | AUTH-001 (resolved), AUTH-002, DATA-001 |
 | Relational deployment, storage, backup, dan operasi | DEP-001, DEP-002, DEP-003, DOC-003 |
