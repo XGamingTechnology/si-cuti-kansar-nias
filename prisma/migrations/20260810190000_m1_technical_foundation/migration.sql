@@ -1,0 +1,2 @@
+-- M1 establishes Prisma migration infrastructure only.
+-- Business and identity tables are deliberately deferred to their approved milestones.

@@ -24,3 +24,16 @@ coverage/
 # Temporary files
 *.tmp
 *.swp
+.next/
+node_modules/
+coverage/
+dist/
+src/generated/prisma/
+.env
+.env.*
+!.env.example
+*.log
+*.dump
+backups/
+private-documents/
+.DS_Store
