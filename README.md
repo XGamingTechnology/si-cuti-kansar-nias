@@ -1,6 +1,6 @@
 # SI CUTI - Sistem Informasi Cuti dan Izin
 
-Repository awal untuk pengembangan **SI CUTI** pada Kantor Pencarian dan Pertolongan Kelas B Nias, Badan Nasional Pencarian dan Pertolongan.
+Repository **SI CUTI** pada Kantor Pencarian dan Pertolongan Kelas B Nias, Badan Nasional Pencarian dan Pertolongan. M1 Technical Foundation telah tersedia; autentikasi dan fitur bisnis belum diimplementasikan. Lihat [`docs/m1-technical-foundation.md`](docs/m1-technical-foundation.md) untuk struktur dan perintah operasi.
 
 ## Tujuan repository
 
