@@ -15,6 +15,7 @@ Status: **Initial mapping**
 | Admin memverifikasi klaim | Verification | JointLeaveClaim, AuditLog | Admin Verification | Approve/reject | authorization + balance grant on approve only |
 | Upload PDF persetujuan final | Document Archive | Document | Detail Pengajuan Admin | Upload/link document | file validation + authorization |
 | Histori dan download arsip | History / Archive | LeaveApplication, Document | Riwayat Pegawai | Query/download | owner isolation |
+| Akses dokumen privat | Document Archive / Authorization | Document, Employee, AuditLog | Download/detail dokumen | Authenticated server-authorized stream | Admin scope, owner isolation, IDOR denial, anonymous denial, audit |
 | Search tanggal/jenis/nama/NIP/status | Search / Reporting | Multiple | Laporan / Arsip | Filter query | combined filters + pagination |
 | Export PDF dan Excel | Reporting | Reporting view/query | Laporan | Generate export | role + content correctness |
 | Kalender cuti personal | Calendar | LeaveApplication | Dashboard/Kalender Pegawai | Calendar query | only permitted events |
@@ -41,7 +42,8 @@ Belum boleh dianggap final sampai ambiguity berikut diputuskan:
 - cancellation/restore behavior;
 - registration number format;
 - definition of “personel tersedia/siap gerak”;
-- file policy;
+- detail teknis file (format/ukuran, malware scan, enkripsi, dan storage); kebijakan akses privat
+  Admin/owner telah resolved;
 - detail autentikasi lokal (identifier, hashing, recovery, MFA, lockout, dan sesi) serta pemilihan
   provider SSO masa depan; strategi provider awal telah diputuskan pada AUTH-001;
 - physical-signature versus digital-approval boundary;
@@ -68,3 +70,9 @@ Kolom implementasi/test pada matriks di atas hanya dapat difinalkan setelah kepu
 | Search, PDF/Excel, dashboard, dan kesiapan | RPT-001, RPT-002, AUTH-002 |
 | Authentication, owner isolation, dan master/hierarki | AUTH-001 (resolved), AUTH-002, DATA-001 |
 | Relational deployment, storage, backup, dan operasi | DEP-001, DEP-002, DEP-003, DOC-003 |
+
+DEP-001, kebijakan akses DOC-003, dan baseline backup cron DEP-002 telah resolved untuk M1. Test
+fondasi harus membuktikan storage tidak publik, anonymous/direct-object access ditolak, owner
+isolation ditegakkan server-side, dan rancangan backup mencakup database+dokumen serta dapat
+menyalin hasil keluar lokasi data utama. Detail DR/retensi/enkripsi/restore/RPO/RTO ditelusuri pada
+gate M8/production.

@@ -279,6 +279,9 @@ User 1 --- * AuditLog
 - Pemotongan saldo harus atomic/transactional.
 - User Pegawai hanya boleh mengakses data dirinya sesuai policy.
 - Dokumen harus memiliki ownership/reference yang jelas.
+- Referensi dokumen privat wajib memungkinkan authorization server-side terhadap Pegawai pemilik
+  atau Admin Kepegawaian; penyimpanan path/object key tidak boleh membentuk URL publik permanen.
+- Metadata audit harus dapat merekam actor, dokumen, waktu, dan aksi akses/download bila diwajibkan.
 - Audit log tidak boleh dapat diedit oleh user normal.
 - Nomor registrasi otomatis harus unik sesuai pola final.
 
@@ -308,4 +311,4 @@ Candidate field/entity di atas belum mengesahkan policy. Detail schema harus men
 | Calendar/notification | CAL-001, NOT-001, NOT-002 | Menentukan event source, hierarchy reference, delivery, dan idempotency key. |
 | Audit/reporting | AUD-001, RPT-001, RPT-002 | Menentukan event coverage, retention/access, snapshots, dan safe export views. |
 | User/role/employee organization | AUTH-001 (resolved), AUTH-002, DATA-001 | AUTH-001 menetapkan model identity provider-neutral dan LOCAL sebagai provider awal; scope/delegation, hierarchy, effective dates, serta detail keamanan lokal masih perlu ditetapkan. |
-| Deployment/storage/backup | DEP-001, DEP-002, DEP-003 | Menentukan RDBMS/storage features, encryption, replication, dan recovery metadata. |
+| Deployment/storage/backup | DEP-001 (resolved), DEP-002 (baseline M1 resolved), DEP-003 | Schema harus kompatibel dengan Ubuntu VPS, storage privat, serta backup cron untuk DB+dokumen yang dapat disalin keluar lokasi data utama; metadata retensi/enkripsi/restore menunggu gate production. |

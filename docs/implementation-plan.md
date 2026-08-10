@@ -26,7 +26,9 @@ Exit criteria:
 
 ## M1 - Technical Foundation
 
-Setelah teknologi disetujui:
+Gate kebijakan M1 telah terpenuhi. Fondasi harus menargetkan produksi awal pada Ubuntu VPS dan
+boleh menentukan containerization, reverse proxy, TLS, firewall, process management, pipeline,
+environment handling, serta topology database selama kompatibel dengan target tersebut:
 
 - initialize framework/project;
 - environment configuration;
@@ -35,6 +37,9 @@ Setelah teknologi disetujui:
 - database migration baseline;
 - CI checks;
 - base application shell.
+- kontrak storage privat dengan seluruh download melalui authorization server-side;
+- rancangan backup cron untuk database dan dokumen privat yang mendukung penyalinan keluar lokasi
+  data aplikasi utama (tanpa mengklaim backup satu-VPS sebagai DR lengkap).
 
 Dependency: M0 approved.
 
@@ -130,6 +135,8 @@ Dependency: M5-M6.
 - file upload security;
 - error handling;
 - backup/deployment documentation;
+- keputusan tujuan sekunder/off-VPS, retensi/rotasi, enkripsi backup, interval uji restore, RPO/RTO,
+  dan disaster recovery runbook;
 - UAT scenarios;
 - accessibility/responsive review;
 - performance baseline.
@@ -166,14 +173,16 @@ Status dan keputusan final dikelola di `docs/decision-log.md`; rekomendasi tidak
 
 | Gate | Required resolved Decision IDs |
 |---|---|
-| Sebelum M1 | DEP-001, DEP-002, keputusan minimum DOC-003 (AUTH-001 telah resolved) |
+| Sebelum M1 | **Terpenuhi:** DEP-001, baseline M1 DEP-002, keputusan akses DOC-003, AUTH-001 |
 | Sebelum M2 | AUTH-002, DATA-001 |
 | Sebelum M3 | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 |
 | Sebelum M4 | WF-001, WF-002, WF-003, WF-004, PERM-001, PERM-002, VAL-001 |
 | Sebelum M5 | DOC-001, DOC-002, DOC-003, DOC-004, AUD-001 |
 | Sebelum M6 | CAL-001, RPT-002; NOT-001 bila penerima muncul di dashboard |
 | Sebelum M7 | RPT-001, AUTH-002, AUD-001 |
-| Sebelum M8/production | NOT-001, NOT-002, DEP-002, DEP-003 serta seluruh keputusan security/retention yang relevan |
+| Sebelum M8/production | NOT-001, NOT-002, detail production DEP-002, DEP-003 serta seluruh keputusan security/retention yang relevan |
 
-M0 belum memenuhi exit criterion selama keputusan blocking tetap “Belum diputuskan”. Tidak ada
-bagian tabel ini yang mengizinkan dimulainya M1.
+M1 sekarang tidak terblokir karena keputusan stakeholder—bukan rekomendasi—telah menutup kebutuhan
+kebijakan fondasi. Ambiguity bisnis lain tetap mengunci milestone fitur terkait. Detail backup
+production (tujuan sekunder/off-VPS, retensi, rotasi, enkripsi, uji restore, RPO/RTO, dan runbook DR)
+tidak mengunci M1 bila arsitektur mendukungnya, tetapi wajib selesai sebelum M8/production readiness.

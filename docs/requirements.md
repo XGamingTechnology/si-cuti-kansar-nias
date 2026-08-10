@@ -53,6 +53,17 @@ ditandatangani oleh Atasan Langsung dan Kepala Kantor sebelum diserahkan kepada 
 diunggah. Batas antara langkah di dalam sistem dan proses fisik ini harus dipertahankan sampai
 stakeholder menyetujui digitalisasi tanda tangan/approval.
 
+### 2.3 Akses dokumen privat (disetujui)
+
+- Admin Kepegawaian dapat mengakses dokumen privat sesuai otorisasi administratifnya.
+- Pegawai hanya dapat mengakses dokumen yang terkait dengan akun/record pegawainya sendiri.
+- Dokumen privat tidak boleh disajikan dari direktori web publik atau melalui URL anonim permanen;
+  seluruh akses/download wajib melewati autentikasi dan otorisasi server-side.
+- Manipulasi identifier objek tidak boleh melewati owner isolation. Metadata dan akses file harus
+  dapat diaudit bila diwajibkan.
+- Role yang ditambahkan pada masa depan tidak otomatis memperoleh akses dokumen; akses tambahan
+  memerlukan keputusan kebijakan yang disetujui.
+
 ## 3. Scope baseline
 
 Proposal menyebut sistem dirancang untuk 93 pegawai.
@@ -218,6 +229,12 @@ Contoh di proposal terkait Cuti Sakit lebih dari 14 hari **harus dikonfirmasi te
 - pencarian arsip;
 - maintainability untuk pengembangan berikutnya.
 
+Keputusan stakeholder menambahkan baseline operasional berikut: target produksi awal adalah VPS
+berbasis Ubuntu; backup otomatis terjadwal menggunakan cron dan minimal mencakup database serta
+dokumen privat; implementasi backup harus mendukung penyalinan ke luar lokasi data aplikasi utama.
+Target deployment tidak boleh diubah tanpa keputusan stakeholder baru. Backup yang hanya tersimpan
+pada VPS produksi yang sama tidak boleh dinyatakan sebagai disaster recovery lengkap.
+
 ## 15. Ambiguities requiring confirmation
 
 1. Siapa pihak approval formal selain Admin Kepegawaian? Mockup/workflow perlu dikonfirmasi terhadap proses organisasi aktual.
@@ -227,7 +244,8 @@ Contoh di proposal terkait Cuti Sakit lebih dari 14 hari **harus dikonfirmasi te
 5. Masa berlaku dan mekanisme carry-over N-1/N-2 pada pergantian tahun perlu dirinci menjadi rule deterministik.
 6. Besaran Klaim Cuti Bersama dan hubungan dengan tanggal cuti bersama nasional belum cukup rinci dalam proposal.
 7. Format nomor registrasi otomatis belum mencantumkan pola tata naskah dinas final.
-8. Jenis, ukuran maksimum, dan retensi file upload belum ditentukan.
+8. Jenis, ukuran maksimum, pemeriksaan malware, enkripsi, dan retensi file upload belum ditentukan;
+   kebijakan siapa yang boleh mengakses dokumen privat telah disetujui pada DOC-003.
 9. AUTH-001 menetapkan akun lokal sebagai provider awal. Identifier login lokal, reset/recovery,
    algoritma/parameter hashing, MFA, lockout, dan session timeout masih perlu ditentukan; pemilihan
    provider OIDC/SAML/SSO masa depan tetap terbuka dan bukan scope milestone awal.
@@ -263,3 +281,6 @@ pemisahan fakta PDF/rekomendasi/policy tersedia di `docs/decision-log.md`.
 | Audit, reporting, dan kesiapan personel | AUD-001, RPT-001, RPT-002 |
 | Identity, scope akses, dan master organisasi | AUTH-001 (resolved), AUTH-002, DATA-001 |
 | Deployment, backup, dan operasi | DEP-001, DEP-002, DEP-003 |
+
+DEP-001 dan baseline M1 DEP-002 telah resolved. Tujuan backup sekunder/off-VPS, retensi, rotasi,
+enkripsi salinan, interval uji restore, RPO, RTO, dan runbook DR tetap menjadi gate M8/production.
