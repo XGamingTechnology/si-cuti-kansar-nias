@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Node / common web build artifacts (future use)
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp

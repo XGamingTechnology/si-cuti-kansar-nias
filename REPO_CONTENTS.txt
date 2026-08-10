@@ -1,0 +1,12 @@
+.gitignore
+AGENTS.md
+CODEX_START_HERE.md
+README.md
+docs/architecture.md
+docs/database-schema.md
+docs/design-system.md
+docs/implementation-plan.md
+docs/requirement-traceability.md
+docs/requirements.md
+docs/source/Laporan-Kerangka-Inovasi-SI-CUTI-KANSAR-NIAS.pdf
+docs/user-flows.md
