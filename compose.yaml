@@ -1,4 +1,3 @@
-name: si-cuti
 services:
   postgres:
     image: postgres:18.1-bookworm
@@ -10,6 +9,7 @@ services:
       POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?required}
       POSTGRES_MIGRATION_USER: ${POSTGRES_MIGRATION_USER:?required}
       POSTGRES_MIGRATION_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:?required}
+      DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:?required}
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -20,16 +20,37 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
-  migrate:
-    build: { context: ., target: migrator }
-    command: ["npx", "prisma", "migrate", "deploy"]
+  environment-guard:
+    image: postgres:18.1-bookworm
+    command:
+      - sh
+      - -ec
+      - |
+        marker="$$(psql "$${DATABASE_MIGRATION_URL}" --tuples-only --no-align --set=ON_ERROR_STOP=1 --command='SELECT environment FROM deployment_control.environment_marker WHERE singleton = true')"
+        test "$${marker}" = "$${DEPLOYMENT_ENVIRONMENT}" || {
+          echo "Deployment environment mismatch: expected '$${DEPLOYMENT_ENVIRONMENT}', database marker is '$${marker}'" >&2
+          exit 1
+        }
     environment:
-      DATABASE_URL: ${DATABASE_MIGRATION_URL:?required}
+      DATABASE_MIGRATION_URL: ${DATABASE_MIGRATION_URL:?required}
+      DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:?required}
     depends_on:
       postgres: { condition: service_healthy }
     networks: [database]
     restart: "no"
+  migrate:
+    image: ${MIGRATOR_IMAGE_REF:-si-cuti-migrator:local}
+    build: { context: ., target: migrator }
+    profiles: [migration]
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: ${DATABASE_MIGRATION_URL:?required}
+    depends_on:
+      environment-guard: { condition: service_completed_successfully }
+    networks: [database]
+    restart: "no"
   app:
+    image: ${IMAGE_REF:-si-cuti:local}
     build: .
     environment:
       DATABASE_URL: ${DATABASE_URL:?required}
@@ -38,33 +59,30 @@ services:
     volumes:
       - private_documents:/var/lib/si-cuti/documents
     depends_on:
-      migrate: { condition: service_completed_successfully }
-    networks: [frontend, database]
+      environment-guard: { condition: service_completed_successfully }
+    networks:
+      frontend:
+        aliases: ["${APP_NETWORK_ALIAS:?required}"]
+      database: {}
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/live').then(r=>{if(!r.ok)process.exit(1)})"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health/live').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
       interval: 10s
       timeout: 3s
       retries: 10
     restart: unless-stopped
-  nginx:
-    image: nginx:1.28.0-alpine3.21
-    ports: ["${HTTP_PORT:-8080}:8080"]
-    volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      app: { condition: service_healthy }
-    networks: [frontend]
-    read_only: true
-    tmpfs: [/var/cache/nginx, /var/run]
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-    restart: unless-stopped
 networks:
-  frontend: {}
+  frontend:
+    name: ${FRONTEND_NETWORK_NAME:?required}
   database: { internal: true }
 volumes:
   postgres_data: {}

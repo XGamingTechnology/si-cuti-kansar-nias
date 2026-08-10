@@ -13,20 +13,20 @@ dan dependency pada dokumen ini disetujui.
 
 ## 2. Stack dan versi mayor yang direkomendasikan
 
-| Komponen | Pin M1 | Alasan dan kompatibilitas |
-|---|---:|---|
-| Node.js | **24.x LTS** | Runtime production LTS; gunakan image resmi `node:24-*-slim` dengan digest yang dicatat saat implementasi. |
-| Next.js | **16.x** | Stable release, App Router; kompatibel dengan Node 24. |
-| React / React DOM | **19.x** | Pasangan stable yang didukung Next.js 16. |
-| TypeScript | **5.x** | Stable compiler line untuk Next.js 16 dan package yang dipilih. |
-| PostgreSQL | **18.x** | Stable supported server; image resmi major 18 dengan patch + digest terkunci saat scaffold. |
-| ORM/migrations | **Prisma 7.x** | Stable major, PostgreSQL, transaksi, migration history, generated types; Node 24 memenuhi runtime Prisma 7. |
-| Schema validation | **Zod 4.x** | Server-first runtime validation dengan inferensi TypeScript. |
-| Unit/integration runner | **Vitest 4.x** | Stable runner, Node 24, TypeScript/ESM, mocks dan V8 coverage. |
-| Lint / format | **ESLint 9.x / Prettier 3.x** | Flat lint config dan formatting deterministik. |
-| Logging | **Pino 10.x** | Structured JSON logging dengan redaction. |
-| Reverse proxy | **Nginx stable 1.28.x** | TLS termination, proxy, request limits, security headers. |
-| Compose | **Docker Compose specification / plugin v2** | Project-owned `compose.yaml`; bukan Kubernetes. |
+| Komponen                |                                       Pin M1 | Alasan dan kompatibilitas                                                                                   |
+| ----------------------- | -------------------------------------------: | ----------------------------------------------------------------------------------------------------------- |
+| Node.js                 |                                 **24.x LTS** | Runtime production LTS; gunakan image resmi `node:24-*-slim` dengan digest yang dicatat saat implementasi.  |
+| Next.js                 |                                     **16.x** | Stable release, App Router; kompatibel dengan Node 24.                                                      |
+| React / React DOM       |                                     **19.x** | Pasangan stable yang didukung Next.js 16.                                                                   |
+| TypeScript              |                                      **5.x** | Stable compiler line untuk Next.js 16 dan package yang dipilih.                                             |
+| PostgreSQL              |                                     **18.x** | Stable supported server; image resmi major 18 dengan patch + digest terkunci saat scaffold.                 |
+| ORM/migrations          |                               **Prisma 7.x** | Stable major, PostgreSQL, transaksi, migration history, generated types; Node 24 memenuhi runtime Prisma 7. |
+| Schema validation       |                                  **Zod 4.x** | Server-first runtime validation dengan inferensi TypeScript.                                                |
+| Unit/integration runner |                               **Vitest 4.x** | Stable runner, Node 24, TypeScript/ESM, mocks dan V8 coverage.                                              |
+| Lint / format           |                **ESLint 9.x / Prettier 3.x** | Flat lint config dan formatting deterministik.                                                              |
+| Logging                 |                                **Pino 10.x** | Structured JSON logging dengan redaction.                                                                   |
+| Reverse proxy           |                      **Nginx stable 1.28.x** | TLS termination, proxy, request limits, security headers.                                                   |
+| Compose                 | **Docker Compose specification / plugin v2** | Project-owned `compose.yaml`; bukan Kubernetes.                                                             |
 
 Pin di atas adalah **major line**, bukan izin memakai `latest`. Tepat sebelum scaffold, maintainer
 wajib memeriksa release/support matrix resmi, memilih patch stable terbaru pada major yang disetujui,
@@ -37,21 +37,21 @@ requirements, PostgreSQL versioning policy, dan dokumentasi Vitest.
 
 ## 3. Evaluasi ORM
 
-| Kriteria | Prisma 7 (rekomendasi) | Drizzle (alternatif) |
-|---|---|---|
-| PostgreSQL | First-class melalui driver/adapter resmi | First-class dan dekat dengan SQL |
-| Transaksi | Sequential/interaktif; raw transaction tersedia | Transaction API ringan; savepoint bergantung driver |
-| Migrasi | Prisma Migrate, SQL committed, drift tooling | `drizzle-kit`; SQL migration committed |
-| Type safety | Generated client kuat dari schema | Type inference kuat dari schema TypeScript |
-| Relasi | Declarative dan mudah dibaca tim kecil | Eksplisit dan fleksibel; perlu disiplin query |
-| Testability | Client dapat diinjeksi; test memakai PostgreSQL nyata | Database object mudah diinjeksi; PostgreSQL nyata |
-| Maintainability | Dokumentasi/tooling matang, schema terpusat | Sedikit magic; API/tooling lebih cepat berubah |
-| Raw SQL | Typed SQL/raw escape hatch | SQL template/native query sangat natural |
-| Audit ledger | Cocok; append-only tetap di service + DB permission | Cocok; SQL constraint terlihat langsung |
-| Concurrency saldo | Transaction + isolation/locking via raw SQL | Kontrol SQL/locking lebih langsung |
+| Kriteria             | Prisma 7 (rekomendasi)                                      | Drizzle (alternatif)                                   |
+| -------------------- | ----------------------------------------------------------- | ------------------------------------------------------ |
+| PostgreSQL           | First-class melalui driver/adapter resmi                    | First-class dan dekat dengan SQL                       |
+| Transaksi            | Sequential/interaktif; raw transaction tersedia             | Transaction API ringan; savepoint bergantung driver    |
+| Migrasi              | Prisma Migrate, SQL committed, drift tooling                | `drizzle-kit`; SQL migration committed                 |
+| Type safety          | Generated client kuat dari schema                           | Type inference kuat dari schema TypeScript             |
+| Relasi               | Declarative dan mudah dibaca tim kecil                      | Eksplisit dan fleksibel; perlu disiplin query          |
+| Testability          | Client dapat diinjeksi; test memakai PostgreSQL nyata       | Database object mudah diinjeksi; PostgreSQL nyata      |
+| Maintainability      | Dokumentasi/tooling matang, schema terpusat                 | Sedikit magic; API/tooling lebih cepat berubah         |
+| Raw SQL              | Typed SQL/raw escape hatch                                  | SQL template/native query sangat natural               |
+| Audit ledger         | Cocok; append-only tetap di service + DB permission         | Cocok; SQL constraint terlihat langsung                |
+| Concurrency saldo    | Transaction + isolation/locking via raw SQL                 | Kontrol SQL/locking lebih langsung                     |
 | Developer experience | Client/migrate konsisten; generation menambah build concern | Ringan/SQL-like; tim menanggung lebih banyak keputusan |
-| Docker | Generate pada build; migration one-shot | Ringan; migration one-shot |
-| Jangka panjang | Ekosistem/governance lebih matang | Kandidat serius; versioning pra-1.0 harus diverifikasi |
+| Docker               | Generate pada build; migration one-shot                     | Ringan; migration one-shot                             |
+| Jangka panjang       | Ekosistem/governance lebih matang                           | Kandidat serius; versioning pra-1.0 harus diverifikasi |
 
 **Rekomendasi: Prisma 7.** Untuk tim kecil, workflow schema/migration terarah dan relational modelling
 yang mudah direview lebih berharga daripada minimnya abstraction. Kelemahannya adalah generated
@@ -133,7 +133,7 @@ internal memakai correlation ID dan redaction.
 - Connection string dari secret environment, tidak masuk image/Git.
 - Prisma migration SQL committed, immutable setelah diterapkan, direview, dan dijalankan sebagai
   explicit one-shot `prisma migrate deploy` sebelum app baru menerima traffic.
-- M1 tidak membuat rule/table BAL-* unresolved. Database test memakai PostgreSQL 18 nyata, bukan SQLite.
+- M1 tidak membuat rule/table BAL-\* unresolved. Database test memakai PostgreSQL 18 nyata, bukan SQLite.
 
 ## 8. Private document storage
 
@@ -163,16 +163,20 @@ Internet -> HTTPS :443 -> nginx -> internal network -> app:3000 -> backend -> po
                                                    \-> private document volume
 ```
 
-`compose.yaml` memuat `nginx`, `app`, `postgres`, healthchecks, networks, persistent DB/document
-volumes. Hanya Nginx mempublikasikan 80/443; 80 redirect HTTPS. Nginx tidak mendapat mount dokumen.
+`compose.yaml` menjadi base dua project terpisah: production dan staging/UAT. Override dan env file
+rahasia berbeda mengisolasi database, network, credential, dokumen, backup, dan mutable data. Staging
+memakai data non-production dan bukan automated-test environment. Satu project edge Nginx saja
+mempublikasikan 80/443, merutekan hostname configurable, dan tidak mendapat mount dokumen. Lihat
+`deployment-environments.md`.
 
 Satu multi-stage `Dockerfile`: dependency/build lalu minimal Next standalone runtime, production-only,
 non-root, read-only root filesystem bila praktis, tmpfs `/tmp`, dropped capabilities. Worker masa
 depan memakai image sama dengan command berbeda. M1 tidak perlu queue/Redis/Kafka/RabbitMQ. Scheduled
 job adalah idempotent CLI yang dipanggil Ubuntu cron dengan locking dan monitored exit code.
 
-`compose.production.yaml` bernilai untuk TLS mount, secrets, no source bind, resource/log/restart
-policy, dan hardening; panggil eksplisit bersama base agar tidak bergantung override implisit.
+`compose.production.yaml` dan `compose.staging.yaml` dipanggil eksplisit bersama base. Resource limit
+dapat berbeda (staging lebih ketat), tetapi nilainya menunggu spesifikasi VPS. Marker environment
+persisten dalam database diperiksa sebelum migration/app agar staging menolak database production.
 
 ## 10. Environment, logging, security, supply chain
 
@@ -198,15 +202,15 @@ retention, rotation, encryption, RPO/RTO, dan DR runbook menunggu M8. Same-VPS c
 
 ## 12. Testing proposal
 
-| Jenis | Tool / approach |
-|---|---|
-| Unit/domain | Vitest 4, pure services, no DB |
-| Application/integration | Vitest, use case + real adapter/controlled fake |
-| Database/concurrency | PostgreSQL 18, Prisma migrations, real transactions |
-| Authorization | Policy matrix/table tests; default deny/owner isolation |
-| Authentication | Password/session/cookie/rotation/revocation/rate limit |
-| Document | Temp private storage + real metadata DB; traversal/type/size/IDOR |
-| HTTP/API | Vitest + native Web `Request`/`Response` |
+| Jenis                   | Tool / approach                                                   |
+| ----------------------- | ----------------------------------------------------------------- |
+| Unit/domain             | Vitest 4, pure services, no DB                                    |
+| Application/integration | Vitest, use case + real adapter/controlled fake                   |
+| Database/concurrency    | PostgreSQL 18, Prisma migrations, real transactions               |
+| Authorization           | Policy matrix/table tests; default deny/owner isolation           |
+| Authentication          | Password/session/cookie/rotation/revocation/rate limit            |
+| Document                | Temp private storage + real metadata DB; traversal/type/size/IDOR |
+| HTTP/API                | Vitest + native Web `Request`/`Response`                          |
 
 Mandatory: Employee A → Employee B document = **deny**; anonymous private request = **deny**;
 authorized Admin = **allow**. Playwright/Cypress belum masuk M1; tambah kelak hanya bila justified.
@@ -261,7 +265,7 @@ Rollback app memakai image sebelumnya; schema changes harus backward-compatible/
 ## 15. M1 acceptance criteria
 
 - Stakeholder menyetujui major + exact patch set, Prisma, auth approach, command plan sebelum code.
-- Scaffold minimal; tidak ada business feature atau BAL-* unresolved.
+- Scaffold minimal; tidak ada business feature atau BAL-\* unresolved.
 - Modular boundaries/import rules diperiksa; PostgreSQL persistent/internal/non-superuser.
 - Migration committed; Nginx-only ingress; HTTPS plan; non-root/minimal image; health endpoint.
 - Provider-neutral identity/session; server RBAC/resource policy; DOC-003 authorization tests.

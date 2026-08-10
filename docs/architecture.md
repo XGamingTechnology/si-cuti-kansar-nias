@@ -185,7 +185,11 @@ Implementasi harus dapat menyalin hasil keluar dari lokasi data aplikasi utama. 
 retensi/rotasi, enkripsi salinan, interval uji restore, RPO/RTO, dan runbook DR diputuskan sebelum
 M8/production. Salinan yang hanya berada di VPS produksi yang sama bukan DR lengkap.
 
-Topologi M1 adalah `nginx`, `app`, `postgres`; hanya Nginx mengekspos 80/443. DB dan dokumen memakai volume persistent, PostgreSQL tidak public. Multi-stage Dockerfile menghasilkan Next standalone runtime non-root. Worker masa depan dapat memakai image sama, tetapi M1 tidak memasang Redis/queue; Ubuntu cron memanggil CLI job idempotent.
+Topologi M1 menjalankan project Compose persisten `si-cuti-prod` dan `si-cuti-staging` pada VPS yang
+sama. Masing-masing mempunyai app, database/internal network, credential, dan volume database serta
+dokumen privat sendiri. Project edge bersama adalah satu-satunya pemilik 80/443 dan merutekan
+hostname configurable ke frontend network tiap project; PostgreSQL dan dokumen tidak public. Detail
+isolasi, marker database, release, dan verifikasi ada di `deployment-environments.md`.
 
 ## 9. Suggested engineering properties
 
@@ -207,12 +211,12 @@ Ini adalah rekomendasi teknis, bukan requirement eksplisit proposal:
 Arsitektur ini tetap konseptual. Pilihan berikut tidak boleh dikunci sebelum Decision ID terkait
 berstatus Resolved di `docs/decision-log.md`.
 
-| Architecture concern | Decision IDs |
-|---|---|
-| Transaction boundary dan ledger saldo | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 |
-| Workflow/approval domain dan authorization transition | WF-001, WF-002, WF-003, WF-004, AUTH-002 |
-| Document service, versioning, retention, dan storage | DOC-001, DOC-002, DOC-003 (access policy resolved), DOC-004 |
-| Calendar/notification adapters | CAL-001, NOT-001, NOT-002 |
-| Audit/report security boundary | AUD-001, RPT-001, RPT-002 |
-| Identity provider dan employee hierarchy | AUTH-001 (resolved), AUTH-002, DATA-001 |
+| Architecture concern                                    | Decision IDs                                                                             |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Transaction boundary dan ledger saldo                   | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005                                              |
+| Workflow/approval domain dan authorization transition   | WF-001, WF-002, WF-003, WF-004, AUTH-002                                                 |
+| Document service, versioning, retention, dan storage    | DOC-001, DOC-002, DOC-003 (access policy resolved), DOC-004                              |
+| Calendar/notification adapters                          | CAL-001, NOT-001, NOT-002                                                                |
+| Audit/report security boundary                          | AUD-001, RPT-001, RPT-002                                                                |
+| Identity provider dan employee hierarchy                | AUTH-001 (resolved), AUTH-002, DATA-001                                                  |
 | Hosting, persistence topology, backup/DR, observability | DEP-001 (resolved), DEP-002 (M1 baseline resolved; production details deferred), DEP-003 |
