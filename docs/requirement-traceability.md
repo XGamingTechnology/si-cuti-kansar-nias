@@ -1,6 +1,23 @@
 # SI CUTI - Requirement Traceability Matrix
 
-Status: **Initial mapping**
+Status: **Initial mapping plus M1 technical-foundation traceability**
+
+
+## M1 technical foundation traceability
+
+| Constraint/control | Proposed artifact | Verification at M1 |
+|---|---|---|
+| TypeScript modular monolith | Next.js 16/Node 24 after approval | boundary review/typecheck; no business feature |
+| PostgreSQL | PostgreSQL 18 + Prisma 7 | migration test, private port, non-superuser |
+| Server authorization | Role/Permission/ResourcePolicy | policy matrix + HTTP authorization tests |
+| AUTH-001 | User/Identity/LocalCredential/opaque Session | auth lifecycle; Employee decoupling |
+| DOC-003 | DocumentStorage/LocalPrivateStorage | anonymous deny, Employee A/B deny, Admin allow, traversal deny |
+| Persistent containers | DB/document volumes | recreate containers, data persists |
+| Nginx/HTTPS | Nginx-only ingress | Compose network/ports, headers/health smoke |
+| DEP-002 | DB+documents artifact + external-copy port | backup/restore dry run; no false DR claim |
+| Security/testability | env/cookies/CSRF/rate limit/upload/logging + Vitest/PostgreSQL | auth/authz/document/HTTP/database suites and scans |
+
+TECH-002/TECH-003 require approval before executable artifacts. This is acceptance mapping, not evidence of scaffold.
 
 | PDF Requirement | System Module | Main Data Entity | UI / Surface | Server / Domain Action | Test Requirement |
 |---|---|---|---|---|---|
