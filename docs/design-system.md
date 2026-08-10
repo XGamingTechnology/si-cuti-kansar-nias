@@ -134,3 +134,21 @@ Status final harus mengikuti workflow yang disetujui.
 - jangan membuat setiap halaman memiliki style sendiri-sendiri;
 - jangan menaruh warna tanpa semantic meaning;
 - jangan hard-code layout berulang jika dapat dibuat reusable.
+
+## 10. Decision-dependent UI
+
+Design system tidak boleh menyelesaikan policy melalui label, tombol, atau menu. Sebelum membangun
+surface berikut, periksa `docs/decision-log.md`.
+
+| UI surface | Decision IDs |
+|---|---|
+| Status badge, tombol approve/reject/cancel/resubmit | WF-001, WF-002, WF-003, WF-004 |
+| Saldo, date picker, dan penjelasan pemotongan/restore | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 |
+| Upload, preview, versi final, dan delete dokumen | DOC-001, DOC-002, DOC-003, DOC-004 |
+| Form izin dan informasi TUKIN/disiplin | PERM-001, PERM-002 |
+| Kalender dan reminder | CAL-001, NOT-001, NOT-002 |
+| Audit, laporan/export, dan indikator kesiapan | AUD-001, RPT-001, RPT-002 |
+| Login/recovery, menu berbasis scope, dan relasi atasan | AUTH-001, AUTH-002, DATA-001 |
+
+Sampai keputusan disahkan, mockup PDF tetap referensi visual saja dan tidak membenarkan status,
+aktor, angka, data pribadi, atau aturan yang tidak tertulis secara eksplisit.

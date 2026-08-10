@@ -163,3 +163,18 @@ Ini adalah rekomendasi teknis, bukan requirement eksplisit proposal:
 - structured logging;
 - backup policy;
 - least-privilege database/service accounts.
+
+## 10. Decision dependencies
+
+Arsitektur ini tetap konseptual. Pilihan berikut tidak boleh dikunci sebelum Decision ID terkait
+berstatus Resolved di `docs/decision-log.md`.
+
+| Architecture concern | Decision IDs |
+|---|---|
+| Transaction boundary dan ledger saldo | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 |
+| Workflow/approval domain dan authorization transition | WF-001, WF-002, WF-003, WF-004, AUTH-002 |
+| Document service, versioning, retention, dan storage | DOC-001, DOC-002, DOC-003, DOC-004 |
+| Calendar/notification adapters | CAL-001, NOT-001, NOT-002 |
+| Audit/report security boundary | AUD-001, RPT-001, RPT-002 |
+| Identity provider dan employee hierarchy | AUTH-001, AUTH-002, DATA-001 |
+| Hosting, persistence topology, backup/DR, observability | DEP-001, DEP-002, DEP-003 |
