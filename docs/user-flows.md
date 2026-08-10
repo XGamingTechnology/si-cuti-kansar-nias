@@ -6,6 +6,9 @@ Status: **Baseline flows derived from proposal; exact approval states require co
 
 ```text
 Login
+  -> provider LOCAL memverifikasi identifier dan password di server
+  -> identity dipetakan ke User aplikasi
+  -> role/permission aplikasi diperiksa di server (bukan ditentukan provider)
   -> autentikasi berhasil
   -> Dashboard Pegawai
      -> ringkasan profil

@@ -40,11 +40,13 @@ Dependency: M0 approved.
 
 ## M2 - Authentication, Employee & RBAC
 
-- authentication;
+- autentikasi provider-neutral dengan provider `LOCAL`;
+- credential lokal terpisah dari `User` dan `Employee`, hanya menyimpan password hash aman;
 - role model;
 - employee master data;
 - employee profile;
 - server-side authorization;
+- contract/test yang memastikan domain dan authorization tidak bergantung pada provider `LOCAL`;
 - mock seed data (bukan data nyata).
 
 Dependency: M1.
@@ -164,7 +166,7 @@ Status dan keputusan final dikelola di `docs/decision-log.md`; rekomendasi tidak
 
 | Gate | Required resolved Decision IDs |
 |---|---|
-| Sebelum M1 | DEP-001, AUTH-001, DEP-002, keputusan minimum DOC-003 |
+| Sebelum M1 | DEP-001, DEP-002, keputusan minimum DOC-003 (AUTH-001 telah resolved) |
 | Sebelum M2 | AUTH-002, DATA-001 |
 | Sebelum M3 | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 |
 | Sebelum M4 | WF-001, WF-002, WF-003, WF-004, PERM-001, PERM-002, VAL-001 |

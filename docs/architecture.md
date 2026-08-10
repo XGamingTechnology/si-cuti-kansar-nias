@@ -54,6 +54,11 @@ Audit / Reporting / Analytics
 - transaction boundaries;
 - API/server actions.
 
+Authentication memakai boundary provider-neutral. Milestone awal menyediakan adapter `LOCAL`;
+OIDC, SAML, atau SSO institusi tidak diimplementasikan pada milestone ini. Adapter autentikasi
+menghasilkan `User` aplikasi yang sama sehingga penambahan provider di masa depan tidak mengubah
+`Employee`, role/permission, authorization policy, atau transaksi domain.
+
 ### Domain layer
 
 Domain modules minimal:
@@ -85,6 +90,10 @@ PDF dan bukti pendukung sebaiknya disimpan melalui abstraction layer agar deploy
 
 ## 4. Authorization model
 
+Authentication (pembuktian identitas) dipisahkan dari authorization (keputusan akses). Provider
+autentikasi tidak memberikan kewenangan aplikasi secara langsung; role dan permission tetap
+dikelola serta diperiksa oleh SI CUTI.
+
 Baseline RBAC:
 
 - `ADMIN_KEPEGAWAIAN`
@@ -99,6 +108,10 @@ Authorization harus diperiksa pada server/backend untuk:
 - perubahan saldo;
 - approval/verifikasi;
 - audit logs.
+
+Credential `LOCAL` disimpan sebagai hash yang aman, tidak pernah plaintext, dan terpisah dari data
+`Employee`. Baik autentikasi maupun authorization wajib ditegakkan di server/backend. Business
+logic tidak boleh bercabang berdasarkan provider autentikasi.
 
 ## 5. Audit architecture
 
@@ -176,5 +189,5 @@ berstatus Resolved di `docs/decision-log.md`.
 | Document service, versioning, retention, dan storage | DOC-001, DOC-002, DOC-003, DOC-004 |
 | Calendar/notification adapters | CAL-001, NOT-001, NOT-002 |
 | Audit/report security boundary | AUD-001, RPT-001, RPT-002 |
-| Identity provider dan employee hierarchy | AUTH-001, AUTH-002, DATA-001 |
+| Identity provider dan employee hierarchy | AUTH-001 (resolved), AUTH-002, DATA-001 |
 | Hosting, persistence topology, backup/DR, observability | DEP-001, DEP-002, DEP-003 |

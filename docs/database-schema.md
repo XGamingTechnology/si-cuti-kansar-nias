@@ -8,19 +8,51 @@ Tujuan dokumen ini adalah menjaga struktur data konsisten sebelum memilih ORM/RD
 
 ### User
 
-Tujuan: akun autentikasi.
+Tujuan: identitas aplikasi yang menjadi penghubung antara Pegawai, role, dan satu atau lebih
+identitas autentikasi. `User` bukan credential dan tidak bergantung pada provider autentikasi.
 
 Candidate fields:
 
 - id
-- username/email/login identifier
-- password hash / external identity id
 - role id
 - employee id (nullable bila ada akun sistem)
 - active flag
-- last login
 - created at
 - updated at
+
+### AuthenticationIdentity
+
+Tujuan: hubungan provider-neutral antara `User` dan identitas yang dipakai untuk autentikasi.
+Satu `User` dapat memiliki lebih dari satu identity/provider tanpa mengubah relasi ke `Employee`,
+role, atau transaksi cuti.
+
+Candidate fields:
+
+- id
+- user id
+- provider type (`LOCAL` untuk milestone awal; nilai masa depan dapat mencakup OIDC/SAML/SSO)
+- provider subject/identifier
+- active flag
+- last login at
+- created at
+- updated at
+
+Constraint konseptual: kombinasi provider type dan provider subject/identifier harus unik.
+
+### LocalCredential
+
+Tujuan: credential khusus provider `LOCAL`, terpisah dari identity model dan data Pegawai.
+
+Candidate fields:
+
+- authentication identity id (unik)
+- password hash (tidak pernah password plaintext)
+- password changed at
+- created at
+- updated at
+
+Algoritma hashing, parameter, reset/recovery, lockout, dan kebijakan sesi harus ditetapkan sebelum
+implementasi. Domain cuti tidak boleh membaca provider type atau credential.
 
 ### Role
 
@@ -275,5 +307,5 @@ Candidate field/entity di atas belum mengesahkan policy. Detail schema harus men
 | Permission/validation | PERM-001, PERM-002, VAL-001 | Menentukan apakah data hanya dicatat, dihitung, atau diintegrasikan. |
 | Calendar/notification | CAL-001, NOT-001, NOT-002 | Menentukan event source, hierarchy reference, delivery, dan idempotency key. |
 | Audit/reporting | AUD-001, RPT-001, RPT-002 | Menentukan event coverage, retention/access, snapshots, dan safe export views. |
-| User/role/employee organization | AUTH-001, AUTH-002, DATA-001 | Menentukan external identity, scope/delegation, hierarchy, dan effective dates. |
+| User/role/employee organization | AUTH-001 (resolved), AUTH-002, DATA-001 | AUTH-001 menetapkan model identity provider-neutral dan LOCAL sebagai provider awal; scope/delegation, hierarchy, effective dates, serta detail keamanan lokal masih perlu ditetapkan. |
 | Deployment/storage/backup | DEP-001, DEP-002, DEP-003 | Menentukan RDBMS/storage features, encryption, replication, dan recovery metadata. |
