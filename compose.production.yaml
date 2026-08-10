@@ -1,0 +1,12 @@
+services:
+  app:
+    environment:
+      DEPLOYMENT_ENVIRONMENT: production
+  postgres:
+    environment:
+      DEPLOYMENT_ENVIRONMENT: production
+  environment-guard:
+    environment:
+      DEPLOYMENT_ENVIRONMENT: production
+
+# Tambahkan deploy.resources.limits/reservations di sini setelah spesifikasi VPS disetujui.

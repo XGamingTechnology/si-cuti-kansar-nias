@@ -10,17 +10,17 @@ M1 is a modular monolith. Next.js is delivery only; critical rules cannot live i
 
 ## 2. Milestones
 
-| Milestone | Scope | Gate |
-|---|---|---|
-| M0 | Product/documentation foundation | Complete |
-| **M1** | Technical foundation only | Final technical-baseline approval |
-| M2 | Local auth, Employee, RBAC/resource policy | AUTH detail, AUTH-002/DATA-001 as relevant |
-| M3 | Leave Balance engine | BAL-001–BAL-005 |
-| M4 | Leave/permission workflow | WF-001–004, PERM-001/002, VAL-001 |
-| M5 | Verification/document archive | DOC-001/002/004, AUD-001 |
-| M6 | Dashboard/calendar/analytics | CAL-001, RPT-002, relevant NOT/DATA |
-| M7 | Reporting/export | RPT-001, AUTH-002, AUD-001 |
-| M8 | Notification, hardening, UAT/production | NOT-001/002, DEP details, retention/DR |
+| Milestone | Scope                                      | Gate                                       |
+| --------- | ------------------------------------------ | ------------------------------------------ |
+| M0        | Product/documentation foundation           | Complete                                   |
+| **M1**    | Technical foundation only                  | Final technical-baseline approval          |
+| M2        | Local auth, Employee, RBAC/resource policy | AUTH detail, AUTH-002/DATA-001 as relevant |
+| M3        | Leave Balance engine                       | BAL-001–BAL-005                            |
+| M4        | Leave/permission workflow                  | WF-001–004, PERM-001/002, VAL-001          |
+| M5        | Verification/document archive              | DOC-001/002/004, AUD-001                   |
+| M6        | Dashboard/calendar/analytics               | CAL-001, RPT-002, relevant NOT/DATA        |
+| M7        | Reporting/export                           | RPT-001, AUTH-002, AUD-001                 |
+| M8        | Notification, hardening, UAT/production    | NOT-001/002, DEP details, retention/DR     |
 
 ## 3. Approval package
 
@@ -39,7 +39,9 @@ M1 is a modular monolith. Next.js is delivery only; critical rules cannot live i
 3. **Database:** PostgreSQL persistent/private, least-privilege roles, committed Prisma migration, real-PostgreSQL test harness.
 4. **Auth/authz:** provider-neutral identity/session ports, secure cookies/Argon2id after policy, rate-limit/CSRF, ResourcePolicy/default deny; no SSO.
 5. **Documents:** `DocumentStorage`, private local adapter, traversal/stream limits/checksum, authorized download and mandatory IDOR tests.
-6. **Operations:** multi-stage non-root Dockerfile; base+production Compose; Nginx-only ingress; cron job contract; DB+document backup/external-copy interface; no queue.
+6. **Operations:** multi-stage non-root Dockerfile; base + production/staging override sebagai project
+   terpisah; shared edge-only ingress; DB marker guard; backup path terisolasi; cron job contract;
+   DB+document backup/external-copy interface; no queue.
 7. **Verification:** frozen install, format/lint/typecheck, unit/integration/database/auth/authz/document/HTTP tests, migration/build/Compose/container/health checks, persistence and backup/restore dry run.
 
 ## 5. Explicit exclusions
@@ -48,4 +50,8 @@ No leave balance/application/approval, dashboard, calendar, reports, notificatio
 
 ## 6. Exit and later gates
 
-M1 exit requires the full acceptance criteria in `docs/technical-baseline.md`, command-result reporting, and no secrets/real employee data. M3 waits for BAL-*; M4/M5 wait workflow/document authority; cron availability does not authorize NOT-* semantics. Before production, M8 must decide off-VPS destination, retention/rotation/encryption, restore cadence, RPO/RTO, and DR runbook; same-VPS copy is not complete DR.
+M1 exit requires the full acceptance criteria in `docs/technical-baseline.md`, command-result reporting, and no secrets/real employee data. M3 waits for BAL-_; M4/M5 wait workflow/document authority; cron availability does not authorize NOT-_ semantics. Before production, M8 must decide off-VPS destination, retention/rotation/encryption, restore cadence, RPO/RTO, and DR runbook; same-VPS copy is not complete DR.
+
+Release mempromosikan exact immutable version dari staging setelah migration check dan UAT ke
+production. Migration production memiliki approval eksplisit sesudah staging; deploy branch tidak
+boleh otomatis menjalankannya. Checklist VPS ada di `docs/deployment-environments.md`.

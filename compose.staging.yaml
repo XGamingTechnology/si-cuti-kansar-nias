@@ -1,0 +1,12 @@
+services:
+  app:
+    environment:
+      DEPLOYMENT_ENVIRONMENT: staging
+  postgres:
+    environment:
+      DEPLOYMENT_ENVIRONMENT: staging
+  environment-guard:
+    environment:
+      DEPLOYMENT_ENVIRONMENT: staging
+
+# Staging dapat diberi deploy.resources yang lebih ketat setelah spesifikasi VPS disetujui.

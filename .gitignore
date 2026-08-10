@@ -10,6 +10,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.production.example
+!.env.staging.example
+!.env.edge.example
 
 # Node / common web build artifacts (future use)
 node_modules/
@@ -32,6 +35,9 @@ src/generated/prisma/
 .env
 .env.*
 !.env.example
+!.env.production.example
+!.env.staging.example
+!.env.edge.example
 *.log
 *.dump
 backups/

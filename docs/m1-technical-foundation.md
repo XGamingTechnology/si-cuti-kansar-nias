@@ -17,11 +17,16 @@ encoding AUTH, BAL, WF, PERM, NOT, or other policy.
 
 ## Containers and security
 
-The topology is `nginx -> app -> postgres`. Only Nginx publishes a host port. PostgreSQL is attached
-to an internal network with no host port. The disposable, non-root standalone app has a read-only
+The topology has persistent production and staging Compose projects behind one shared edge. Only
+edge Nginx publishes 80/443. Each PostgreSQL has its own internal network with no host port, and a
+database marker guard runs before migration/app. The disposable, non-root standalone app has a read-only
 root filesystem, dropped capabilities, and a persistent private-document volume. Nginx neither
 mounts nor aliases private storage. PostgreSQL and documents use separate named volumes. Bootstrap
 creates the app role as `NOSUPERUSER`, `NOCREATEDB`, and `NOCREATEROLE`.
+
+Environment credentials/secrets, database and document volumes, backup roots, and mutable data are
+independent. Staging is dummy-data UAT, not automated test. The release procedure and deferred VPS
+verification checklist are in `docs/deployment-environments.md`.
 
 `DocumentStorage` is an application port. `LocalPrivateStorage` requires an absolute private root,
 uses opaque keys, rejects traversal, writes atomically with restrictive permissions, and calculates
