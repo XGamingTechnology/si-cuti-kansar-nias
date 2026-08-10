@@ -20,7 +20,12 @@ Status: **Initial mapping**
 | Kalender cuti personal | Calendar | LeaveApplication | Dashboard/Kalender Pegawai | Calendar query | only permitted events |
 | Grafik penggunaan cuti | Analytics | LeaveApplication | Dashboard | Aggregate analytics | aggregate correctness |
 | Reminder 2 hari sebelum aktif | Notification | Notification, LeaveApplication | Notification UI | Scheduled reminder | correct timing + no duplicate reminder |
+| Reminder kepada Pegawai dan atasan | Notification | Notification, employee hierarchy (TBD) | Notification UI | Resolve recipients | recipient authorization + no data leakage |
 | Audit saldo dan upload | Audit | AuditLog | Admin Audit (if exposed) | Record event | immutable, actor/time/action captured |
+| Berkas tidak lengkap dikembalikan untuk perbaikan | Workflow / Verification | LeaveApplication, status history | Detail Pengajuan | Return for correction | transition authorization + audit |
+| Cetak form dan tanda tangan Atasan Langsung/Kepala Kantor | Document / Hybrid Workflow | LeaveApplication, Document | Form/Detail Pengajuan | Generate standard PDF / link final scan | content correctness + access control |
+| Izin tidak mengurangi saldo Cuti Tahunan | Permission / Balance | PermissionRequest, LeaveBalanceTransaction | Pengajuan Izin | Preserve annual balance | balance unchanged |
+| Kalender personal memuat jadwal libur dan agenda kerja | Calendar | Data source TBD | Kalender Pegawai | Calendar query | pending source/ownership decision |
 | Dashboard Admin | Analytics | Employee, LeaveApplication | Dashboard Admin | Summary queries | counts match source data |
 | Dashboard Pegawai | Dashboard | Employee, balances, applications | Dashboard Pegawai | User summary query | only current employee data |
 | Responsive web | UI Platform | N/A | All pages | N/A | desktop/tablet/mobile checks |
@@ -37,4 +42,9 @@ Belum boleh dianggap final sampai ambiguity berikut diputuskan:
 - registration number format;
 - definition of “personel tersedia/siap gerak”;
 - file policy;
-- authentication/SSO policy.
+- authentication/SSO policy;
+- physical-signature versus digital-approval boundary;
+- incomplete-document correction states;
+- TUKIN/discipline scope and authoritative rules;
+- calendar holiday/work-agenda source and ownership;
+- supervisor identity and notification channel.

@@ -25,14 +25,21 @@ Dashboard Pegawai
   -> Isi tanggal dan data permohonan
   -> Sistem menghitung/menampilkan kebutuhan hari sesuai rule final
   -> Sistem memvalidasi saldo dan requirement
-  -> Simpan draft atau ajukan
+  -> Ajukan (opsi draft belum dikonfirmasi)
   -> Status pengajuan tercatat
-  -> Admin memproses sesuai workflow
+  -> Cetak form
+  -> Tanda tangan Atasan Langsung dan Kepala Kantor (digambarkan sebagai proses fisik)
+  -> Serahkan ke Admin untuk diperiksa dan diunggah
+  -> Admin memvalidasi kelengkapan
+     -> belum lengkap: kembalikan ke Pegawai untuk diperbaiki
+     -> lengkap: arsipkan dan catat dalam riwayat
   -> Dokumen persetujuan final dapat diarsipkan
   -> Pegawai dapat melihat status/riwayat dan mengunduh dokumen yang berhak diakses
 ```
 
-Catatan: titik pasti pemotongan saldo (saat submit, approval, atau status lain) belum dinyatakan secara cukup rinci dan harus dikonfirmasi.
+Catatan: flowchart menempatkan pengurangan saldo Cuti Tahunan setelah validasi kelengkapan oleh
+Admin, tetapi titik komit transaksi/status final dan mekanisme koreksinya belum cukup rinci dan harus
+dikonfirmasi. Opsi draft adalah rekomendasi produk, bukan requirement PDF.
 
 ## 3. Pegawai - Klaim Cuti Bersama
 
@@ -56,10 +63,15 @@ Dashboard Pegawai
   -> Isi data izin
   -> Upload surat/pernyataan bila diperlukan
   -> Submit
+  -> Generate form izin (PDF)
+  -> Cetak dan tanda tangan Atasan Langsung
+  -> Serahkan kepada Admin untuk diunggah
   -> status/arsip tercatat
 ```
 
-Izin non-cuti tidak boleh diasumsikan mengurangi saldo Cuti Tahunan tanpa rule eksplisit.
+Flowchart secara eksplisit menyatakan izin non-cuti tidak mengurangi saldo Cuti Tahunan. Pernyataan
+tentang pemotongan TUKIN dan pengecualian dari perhitungan disiplin belum boleh diotomatisasi tanpa
+aturan resmi dan keputusan scope.
 
 ## 5. Admin - Dashboard Monitoring
 
@@ -129,3 +141,8 @@ Scheduled check
 - perpanjangan cuti;
 - koreksi data oleh Admin;
 - workflow izin sakit/CAP/Cuti Besar/Cuti Melahirkan/CLTN secara detail.
+- arti dan status "berkas lengkap" serta siklus perbaikannya;
+- status tanda tangan fisik versus approval digital;
+- aturan/scope TUKIN dan disiplin untuk izin;
+- sumber jadwal libur dan agenda kerja pada kalender personal;
+- identitas atasan penerima reminder.

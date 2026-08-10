@@ -31,6 +31,10 @@ Kemampuan yang dinyatakan:
 - menarik rekap laporan;
 - mengendalikan dashboard monitoring.
 
+Flowchart proposal juga memperlihatkan Admin menerima berkas cuti/izin dari pegawai, memvalidasi
+kelengkapan, dan mengembalikan berkas yang belum lengkap untuk diperbaiki. Arti tepat "menerima"
+(serah-terima fisik, pencatatan di sistem, atau keduanya) masih perlu dikonfirmasi.
+
 ### 2.2 Pegawai
 
 Kemampuan yang dinyatakan:
@@ -43,6 +47,11 @@ Kemampuan yang dinyatakan:
 - mengunduh arsip PDF yang tersedia;
 - mengajukan izin non-cuti dengan dokumen pendukung;
 - melihat saldo cuti secara langsung.
+
+Flowchart proposal memperlihatkan bahwa form cuti/izin yang dihasilkan sistem dicetak lalu
+ditandatangani oleh Atasan Langsung dan Kepala Kantor sebelum diserahkan kepada Admin untuk
+diunggah. Batas antara langkah di dalam sistem dan proses fisik ini harus dipertahankan sampai
+stakeholder menyetujui digitalisasi tanda tangan/approval.
 
 ## 3. Scope baseline
 
@@ -110,6 +119,13 @@ Proposal menyatakan pegawai yang tidak mengambil Cuti Tahunan sama sekali selama
 - Cuti Melahirkan
 - Cuti di Luar Tanggungan Negara (CLTN)
 
+Proposal juga menyebut syarat/contoh berikut, tetapi belum cukup rinci untuk dijadikan rule engine:
+
+- Cuti Sakit disertai surat keterangan dokter;
+- contoh Cuti Alasan Penting (CAP): istri melahirkan, kedukaan keluarga inti, dan musibah;
+- Cuti Besar dikaitkan dengan masa kerja;
+- Cuti Melahirkan disebut untuk pegawai wanita.
+
 ## 6. Application and workflow requirements
 
 Proposal menyatakan penggunaan **Hybrid Workflow** dan menggambarkan alur pada halaman 7.
@@ -122,8 +138,18 @@ Baseline requirement:
 - admin melakukan proses administrasi/verifikasi;
 - dokumen persetujuan final dapat diunggah sebagai PDF;
 - riwayat dan status harus dapat ditelusuri.
+- Admin memvalidasi kelengkapan berkas dan berkas yang belum lengkap dikembalikan kepada Pegawai
+  untuk diperbaiki;
+- setelah berkas lengkap, Admin mengarsipkan dokumen dan pencatatan masuk ke riwayat Pegawai;
+- pengurangan saldo, jika jenisnya Cuti Tahunan, digambarkan terjadi pada proses Admin setelah
+  berkas dinyatakan lengkap.
 
-Detail state machine final harus diverifikasi dari workflow dan keputusan stakeholder sebelum coding.
+Detail state machine final, titik komit transaksi saldo, serta apakah langkah tanda tangan dan
+serah-terima berkas tetap fisik harus diverifikasi sebelum coding.
+
+Untuk izin non-cuti, flowchart menyatakan bahwa izin tidak mengurangi saldo Cuti Tahunan, tetap
+dapat dikenai pemotongan TUKIN sesuai ketentuan, dan tidak masuk perhitungan disiplin. Dua dampak
+terakhir memerlukan dasar aturan dan konfirmasi stakeholder sebelum diimplementasikan.
 
 ## 7. Search and archive
 
@@ -147,6 +173,8 @@ Sistem harus dapat mengekspor rekapitulasi dalam:
 ## 9. Calendar and analytics
 
 - kalender cuti personal;
+- kalender personal juga digambarkan memuat jadwal libur dan agenda kerja; sumber dan kewenangan
+  pengelolaan kedua jenis agenda tersebut belum ditentukan;
 - kalender/monitoring cuti untuk Admin;
 - grafik penggunaan/jenis cuti;
 - dashboard indikator ringkas.
@@ -204,3 +232,16 @@ Contoh di proposal terkait Cuti Sakit lebih dari 14 hari **harus dikonfirmasi te
 10. Struktur unit kerja dalam dashboard/filter belum cukup terdefinisi.
 11. Definisi indikator personel “tersedia/siap gerak” harus dikonfirmasi agar tidak disimpulkan hanya dari status cuti.
 12. Kanal notifikasi selain notifikasi web/sistem belum ditentukan.
+13. Apakah approval oleh Atasan Langsung/Kepala Kantor tetap berupa tanda tangan fisik atau akan
+    direpresentasikan sebagai approval digital di sistem?
+14. Apa arti operasional status "berkas lengkap", mekanisme pengembalian untuk perbaikan, dan siapa
+    yang boleh mengubah pengajuan setelah dikembalikan?
+15. Apakah pengurangan TUKIN untuk izin dan pernyataan bahwa izin tidak masuk perhitungan disiplin
+    termasuk scope SI CUTI; jika ya, aturan dan sumber otoritatifnya belum tersedia.
+16. Dari mana data jadwal libur dan agenda kerja pada kalender personal berasal dan siapa yang
+    berwenang mengelolanya?
+17. PDF menyebut reminder kepada Pegawai dan atasan, sedangkan kanal selain web/sistem dan definisi
+    "atasan" belum ditentukan.
+18. Mockup adalah referensi visual, bukan sumber data demo: nama, NIP, nilai statistik, batas
+    pengajuan tiga hari, dan contoh tahun/tanggal di dalamnya belum boleh diperlakukan sebagai rule
+    atau data implementasi.
