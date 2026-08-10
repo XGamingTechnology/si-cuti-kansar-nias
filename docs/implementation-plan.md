@@ -157,3 +157,21 @@ READ REQUIREMENTS
 ```
 
 Jangan lanjut milestone berikutnya hanya karena kode berhasil dibangun; requirement dan behavior harus direview.
+
+## Decision gates
+
+Status dan keputusan final dikelola di `docs/decision-log.md`; rekomendasi tidak membuka gate.
+
+| Gate | Required resolved Decision IDs |
+|---|---|
+| Sebelum M1 | DEP-001, AUTH-001, DEP-002, keputusan minimum DOC-003 |
+| Sebelum M2 | AUTH-002, DATA-001 |
+| Sebelum M3 | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 |
+| Sebelum M4 | WF-001, WF-002, WF-003, WF-004, PERM-001, PERM-002, VAL-001 |
+| Sebelum M5 | DOC-001, DOC-002, DOC-003, DOC-004, AUD-001 |
+| Sebelum M6 | CAL-001, RPT-002; NOT-001 bila penerima muncul di dashboard |
+| Sebelum M7 | RPT-001, AUTH-002, AUD-001 |
+| Sebelum M8/production | NOT-001, NOT-002, DEP-002, DEP-003 serta seluruh keputusan security/retention yang relevan |
+
+M0 belum memenuhi exit criterion selama keputusan blocking tetap “Belum diputuskan”. Tidak ada
+bagian tabel ini yang mengizinkan dimulainya M1.

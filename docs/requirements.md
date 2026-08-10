@@ -245,3 +245,19 @@ Contoh di proposal terkait Cuti Sakit lebih dari 14 hari **harus dikonfirmasi te
 18. Mockup adalah referensi visual, bukan sumber data demo: nama, NIP, nilai statistik, batas
     pengajuan tiga hari, dan contoh tahun/tanggal di dalamnya belum boleh diperlakukan sebagai rule
     atau data implementasi.
+
+## 16. Decision dependencies
+
+Keputusan yang belum final tidak boleh diperlakukan sebagai requirement. Register lengkap dan
+pemisahan fakta PDF/rekomendasi/policy tersedia di `docs/decision-log.md`.
+
+| Area requirement | Decision IDs |
+|---|---|
+| Saldo, day-count, restore, rollover, dan Klaim Cuti Bersama | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 |
+| Hybrid approval, otoritas, koreksi, dan status | WF-001, WF-002, WF-003, WF-004 |
+| Dokumen, penomoran, retensi, dan file | DOC-001, DOC-002, DOC-003, DOC-004 |
+| Izin, TUKIN/disiplin, dan validasi jenis cuti | PERM-001, PERM-002, VAL-001 |
+| Kalender dan reminder | CAL-001, NOT-001, NOT-002 |
+| Audit, reporting, dan kesiapan personel | AUD-001, RPT-001, RPT-002 |
+| Identity, scope akses, dan master organisasi | AUTH-001, AUTH-002, DATA-001 |
+| Deployment, backup, dan operasi | DEP-001, DEP-002, DEP-003 |

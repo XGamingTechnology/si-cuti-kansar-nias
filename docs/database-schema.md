@@ -261,3 +261,19 @@ User 1 --- * AuditLog
 - retention policy dokumen dan audit;
 - soft delete vs hard delete;
 - identity/authentication scheme.
+
+## 5. Decision dependencies before logical/physical schema
+
+Candidate field/entity di atas belum mengesahkan policy. Detail schema harus menunggu register
+`docs/decision-log.md` berikut.
+
+| Schema area | Decision IDs | Consequence |
+|---|---|---|
+| Balance bucket/ledger/reservation/reversal | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 | Menentukan transaction types, effective dates, constraints, dan annual snapshots. |
+| Application/status/approval/revision | WF-001, WF-002, WF-003, WF-004 | Menentukan state history, revision, approver/delegation, dan transition constraints. |
+| Document/registration | DOC-001, DOC-002, DOC-003, DOC-004 | Menentukan version/provenance, retention/legal hold, storage metadata, dan numbering sequence. |
+| Permission/validation | PERM-001, PERM-002, VAL-001 | Menentukan apakah data hanya dicatat, dihitung, atau diintegrasikan. |
+| Calendar/notification | CAL-001, NOT-001, NOT-002 | Menentukan event source, hierarchy reference, delivery, dan idempotency key. |
+| Audit/reporting | AUD-001, RPT-001, RPT-002 | Menentukan event coverage, retention/access, snapshots, dan safe export views. |
+| User/role/employee organization | AUTH-001, AUTH-002, DATA-001 | Menentukan external identity, scope/delegation, hierarchy, dan effective dates. |
+| Deployment/storage/backup | DEP-001, DEP-002, DEP-003 | Menentukan RDBMS/storage features, encryption, replication, dan recovery metadata. |

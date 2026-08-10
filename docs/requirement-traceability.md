@@ -48,3 +48,22 @@ Belum boleh dianggap final sampai ambiguity berikut diputuskan:
 - TUKIN/discipline scope and authoritative rules;
 - calendar holiday/work-agenda source and ownership;
 - supervisor identity and notification channel.
+
+## Decision ID mapping for unresolved requirements
+
+Kolom implementasi/test pada matriks di atas hanya dapat difinalkan setelah keputusan terkait di
+`docs/decision-log.md` disahkan.
+
+| Traceability concern | Decision IDs |
+|---|---|
+| Saldo otomatis, prioritas, N/N-1/N-2, rollback | BAL-001, BAL-002, BAL-003, BAL-004 |
+| Klaim Cuti Bersama dan verifikasi Admin | BAL-005, WF-004, DOC-003 |
+| Submit/approval/perbaikan/pembatalan | WF-001, WF-002, WF-003, WF-004 |
+| Form, tanda tangan, PDF final, registrasi, dan arsip | DOC-001, DOC-002, DOC-003, DOC-004 |
+| Izin non-cuti, TUKIN/disiplin, dan bukti jenis cuti | PERM-001, PERM-002, VAL-001 |
+| Kalender cuti/libur/agenda dan hitungan hari | CAL-001, BAL-003 |
+| Reminder H-2 kepada Pegawai/atasan | NOT-001, NOT-002, DATA-001 |
+| Audit saldo/upload/download/export | AUD-001, DOC-002 |
+| Search, PDF/Excel, dashboard, dan kesiapan | RPT-001, RPT-002, AUTH-002 |
+| Authentication, owner isolation, dan master/hierarki | AUTH-001, AUTH-002, DATA-001 |
+| Relational deployment, storage, backup, dan operasi | DEP-001, DEP-002, DEP-003, DOC-003 |

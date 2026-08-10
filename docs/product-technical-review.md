@@ -117,3 +117,21 @@ Repository tetap documentation-first; tidak ada folder source aplikasi dibuat. S
 telah direview, tetapi exit criterion belum terpenuhi sampai stakeholder menyetujui interpretasi,
 memutuskan ambiguity kritis atau menundanya secara eksplisit, dan menyetujui pilihan teknologi untuk
 M1. Setelah itu repository siap memasuki **M1 - Technical Foundation**.
+
+## 9. Decision log follow-up
+
+Seluruh ambiguity pada review ini sekarang memiliki ID, pilihan implementasi, rekomendasi yang
+secara eksplisit non-final, dampak, owner confirmation, dan gate milestone di
+`docs/decision-log.md`. Kelompok referensinya adalah:
+
+- saldo: BAL-001–BAL-005;
+- workflow/approval: WF-001–WF-004;
+- dokumen: DOC-001–DOC-004;
+- izin/validasi: PERM-001, PERM-002, VAL-001;
+- kalender/notifikasi: CAL-001, NOT-001, NOT-002;
+- audit/reporting: AUD-001, RPT-001, RPT-002;
+- identity/organisasi: AUTH-001, AUTH-002, DATA-001;
+- deployment/operasi: DEP-001–DEP-003.
+
+Kesimpulan M0 tetap sama: review dokumentasi selesai, tetapi approval M0 dan M1 tetap terblokir
+sampai keputusan yang diwajibkan gate dicatat sebagai Resolved oleh otoritas yang sesuai.

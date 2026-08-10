@@ -146,3 +146,17 @@ Scheduled check
 - aturan/scope TUKIN dan disiplin untuk izin;
 - sumber jadwal libur dan agenda kerja pada kalender personal;
 - identitas atasan penerima reminder.
+
+## 11. Decision dependencies per flow
+
+Flow di atas adalah baseline interpretasi, bukan state machine final. Gunakan `docs/decision-log.md`:
+
+| Flow | Decision IDs |
+|---|---|
+| Pengajuan Cuti Tahunan dan perubahan saldo | BAL-001, BAL-002, BAL-003, WF-001, WF-002, WF-003, WF-004 |
+| Klaim Cuti Bersama | BAL-005, WF-004, DOC-003 |
+| Izin non-cuti | PERM-001, PERM-002, WF-002, WF-003, DOC-001 |
+| Cetak, tanda tangan, registrasi, dan arsip final | WF-001, WF-002, DOC-001, DOC-002, DOC-003, DOC-004 |
+| Search/report/download | AUD-001, RPT-001, AUTH-002 |
+| Reminder kembali aktif | BAL-003, NOT-001, NOT-002, DATA-001 |
+| Validasi dokumen/jenis cuti | VAL-001 |
