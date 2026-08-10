@@ -1,8 +1,8 @@
 # SI CUTI - Conceptual Database Schema
 
-Status: **Conceptual model - technology neutral**
+Status: **Conceptual model aligned to PostgreSQL 18; physical schema waits for M1 stack approval**
 
-Tujuan dokumen ini adalah menjaga struktur data konsisten sebelum memilih ORM/RDBMS spesifik.
+Tujuan dokumen ini menjaga struktur data sebelum schema fisik dibuat. PostgreSQL 18 telah diajukan dan Prisma 7 adalah ORM rekomendasi; belum ada migration.
 
 ## 1. Core entities
 
@@ -62,6 +62,10 @@ Baseline values:
 - PEGAWAI
 
 Struktur dibuat extensible untuk penambahan role bila disetujui kemudian.
+
+### Permission, authorization joins, dan Session
+
+Candidate entities: `Permission`, `UserRole`, `RolePermission`, dan opaque `Session`. Session menyimpan token **digest**, user, expiry/last-seen/created/revoked timestamps—bukan raw token atau role client-authoritative. Resource policy server tetap memutuskan akses dan role baru default deny.
 
 ### Employee
 
@@ -205,6 +209,8 @@ Candidate fields:
 - uploaded by
 - uploaded at
 
+Storage key adalah opaque server-generated key relatif private root, bukan input path/URL publik. Metadata tidak membenarkan akses; resource policy wajib sebelum stream.
+
 ### Approval / Verification
 
 Model final bergantung keputusan workflow.
@@ -284,6 +290,14 @@ User 1 --- * AuditLog
 - Metadata audit harus dapat merekam actor, dokumen, waktu, dan aksi akses/download bila diwajibkan.
 - Audit log tidak boleh dapat diedit oleh user normal.
 - Nomor registrasi otomatis harus unik sesuai pola final.
+
+## 3.1 Physical persistence baseline M1
+
+- PostgreSQL 18 internal-only dengan persistent volume.
+- App role non-superuser tanpa DDL; migration role terpisah.
+- Prisma 7 migration SQL committed, immutable setelah diterapkan, dijalankan `migrate deploy`.
+- Test memakai PostgreSQL nyata, bukan SQLite, untuk constraint/isolation/locking.
+- M1 tidak memfinalkan entitas/kolom BAL/WF/NOT unresolved.
 
 ## 4. Open decisions
 

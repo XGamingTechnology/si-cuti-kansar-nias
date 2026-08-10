@@ -1,6 +1,8 @@
 # SI CUTI - Architecture Baseline
 
-Status: **Proposed technical architecture - requires approval before implementation**
+Status: **M1 TypeScript/Next.js proposal — requires stack approval before implementation**
+
+> Detail executable, version matrix, ORM comparison, security, commands, dan acceptance criteria ada di `docs/technical-baseline.md`. Belum ada source aplikasi atau kebutuhan migrasi aplikasi.
 
 ## 1. Architecture goals
 
@@ -36,6 +38,8 @@ Relational Database                  Document Storage
 Audit / Reporting / Analytics
 ```
 
+Implementasi fisiknya adalah **modular monolith**, bukan microservices. Next.js 16 pada Node.js 24 adalah delivery framework, bukan lokasi seluruh business logic. PostgreSQL 18 adalah relational store dan Prisma 7 direkomendasikan setelah approval M1.
+
 ## 3. Layer responsibilities
 
 ### Presentation layer
@@ -58,6 +62,8 @@ Authentication memakai boundary provider-neutral. Milestone awal menyediakan ada
 OIDC, SAML, atau SSO institusi tidak diimplementasikan pada milestone ini. Adapter autentikasi
 menghasilkan `User` aplikasi yang sama sehingga penambahan provider di masa depan tidak mengubah
 `Employee`, role/permission, authorization policy, atau transaksi domain.
+
+Route Handler/Server Action hanya parsing, validasi boundary, autentikasi, pemanggilan use case, dan mapping response. React, `page.tsx`, `route.ts`, Server Action, ORM hook, dan database trigger bukan lokasi business-critical rule.
 
 ### Domain layer
 
@@ -86,7 +92,11 @@ Domain modules minimal:
 
 ### Document storage
 
-PDF dan bukti pendukung sebaiknya disimpan melalui abstraction layer agar deployment dapat menggunakan local storage atau object storage tanpa mengubah domain logic.
+PDF dan bukti pendukung disimpan melalui port `DocumentStorage`. Adapter awal `LocalPrivateStorage` berada di luar `public/` dan tidak di-mount ke Nginx; `S3CompatibleStorage` dapat ditambahkan tanpa mengubah domain. Download selalu authenticate → metadata → owner/resource policy → audit bila wajib → stream.
+
+### Source boundaries
+
+`src/app` dan `src/components` adalah delivery; `src/modules` menjaga feature cohesion; `src/domain/leave` memuat rule kritis; `src/application/use-cases` melakukan orchestration; `src/infrastructure` berisi adapter database/auth/storage/logging. Shared `src/lib` harus kecil. Reports, notifications, audit tetap dalam process/image yang sama.
 
 ## 4. Authorization model
 
@@ -112,6 +122,8 @@ Authorization harus diperiksa pada server/backend untuk:
 Credential `LOCAL` disimpan sebagai hash yang aman, tidak pernah plaintext, dan terpisah dari data
 `Employee`. Baik autentikasi maupun authorization wajib ditegakkan di server/backend. Business
 logic tidak boleh bercabang berdasarkan provider autentikasi.
+
+Model enforcement adalah `User → Role → Permission → ResourcePolicy`, server-side dan default deny. Policy dokumen juga memeriksa `ownerEmployeeId`; menu/tombol tersembunyi bukan boundary. M1 mengusulkan opaque database session, bukan JWT; cookie `HttpOnly`, `Secure` production, `SameSite=Lax`, dengan rotasi/revocation server-side.
 
 ## 5. Audit architecture
 
@@ -172,6 +184,8 @@ Backup otomatis dijadwalkan dengan cron dan minimal mencakup database serta doku
 Implementasi harus dapat menyalin hasil keluar dari lokasi data aplikasi utama. Tujuan sekunder,
 retensi/rotasi, enkripsi salinan, interval uji restore, RPO/RTO, dan runbook DR diputuskan sebelum
 M8/production. Salinan yang hanya berada di VPS produksi yang sama bukan DR lengkap.
+
+Topologi M1 adalah `nginx`, `app`, `postgres`; hanya Nginx mengekspos 80/443. DB dan dokumen memakai volume persistent, PostgreSQL tidak public. Multi-stage Dockerfile menghasilkan Next standalone runtime non-root. Worker masa depan dapat memakai image sama, tetapi M1 tidak memasang Redis/queue; Ubuntu cron memanggil CLI job idempotent.
 
 ## 9. Suggested engineering properties
 

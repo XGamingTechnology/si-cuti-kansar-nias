@@ -1,188 +1,51 @@
-# SI CUTI - Implementation Plan
+# SI CUTI — Implementation Plan
 
-Status: **Proposed phased roadmap**
+Status: **M1 proposal complete; executable work blocked pending stack approval**
 
-Prinsip: jangan membangun seluruh aplikasi dalam satu task. Setiap milestone harus direview sebelum lanjut.
+## 1. Guardrails
 
-## M0 - Product & Documentation Foundation
+PDF and decision log remain authoritative. The Laravel-to-TypeScript/Next.js change occurred before application source existed: no migration/legacy code and no business requirement change. Do not scaffold, install dependencies, or create application source until TECH-002/TECH-003 approval.
 
-Deliverables:
+M1 is a modular monolith. Next.js is delivery only; critical rules cannot live in React, `page.tsx`, `route.ts`, Server Actions, ORM hooks, or triggers. PostgreSQL is relational persistence; authorization remains server-side.
 
-- source PDF tersimpan di repo;
-- AGENTS.md;
-- requirements;
-- architecture;
-- database schema;
-- user flows;
-- design system;
-- traceability;
-- daftar ambiguity;
-- laporan review produk dan teknis terhadap teks serta gambar/flowchart PDF.
+## 2. Milestones
 
-Exit criteria:
+| Milestone | Scope | Gate |
+|---|---|---|
+| M0 | Product/documentation foundation | Complete |
+| **M1** | Technical foundation only | Final technical-baseline approval |
+| M2 | Local auth, Employee, RBAC/resource policy | AUTH detail, AUTH-002/DATA-001 as relevant |
+| M3 | Leave Balance engine | BAL-001–BAL-005 |
+| M4 | Leave/permission workflow | WF-001–004, PERM-001/002, VAL-001 |
+| M5 | Verification/document archive | DOC-001/002/004, AUD-001 |
+| M6 | Dashboard/calendar/analytics | CAL-001, RPT-002, relevant NOT/DATA |
+| M7 | Reporting/export | RPT-001, AUTH-002, AUD-001 |
+| M8 | Notification, hardening, UAT/production | NOT-001/002, DEP details, retention/DR |
 
-- stakeholder menerima interpretasi requirement;
-- ambiguity kritis diberi keputusan atau secara eksplisit ditunda.
+## 3. Approval package
 
-## M1 - Technical Foundation
+`docs/technical-baseline.md` provides all 22 requested deliverables. Stakeholder decision requested:
 
-Gate kebijakan M1 telah terpenuhi. Fondasi harus menargetkan produksi awal pada Ubuntu VPS dan
-boleh menentukan containerization, reverse proxy, TLS, firewall, process management, pipeline,
-environment handling, serta topology database selama kompatibel dengan target tersebut:
+1. Node 24, Next 16/React 19, TypeScript 5, PostgreSQL 18;
+2. Prisma 7 (Drizzle remains alternative);
+3. Zod 4, Vitest 4, ESLint 9, Prettier 3, Pino 10;
+4. internal LOCAL auth + opaque database sessions; defer Auth.js/JWT;
+5. technical owner may re-verify and exact-pin stable patches/digests inside approved majors; any major change returns for approval.
 
-- initialize framework/project;
-- environment configuration;
-- linting/formatting;
-- testing framework;
-- database migration baseline;
-- CI checks;
-- base application shell.
-- kontrak storage privat dengan seluruh download melalui authorization server-side;
-- rancangan backup cron untuk database dan dokumen privat yang mendukung penyalinan keluar lokasi
-  data aplikasi utama (tanpa mengklaim backup satu-VPS sebagai DR lengkap).
+## 4. M1 batches — do not execute before approval
 
-Dependency: M0 approved.
+1. **Evidence/scaffold:** verify official matrices, record exact patches/digests, scaffold into temporary directory, review minimal diff.
+2. **Quality/boundaries:** strict TS, lint/format/test/CI commands, layer structure, env schema, safe logging/errors, health endpoint.
+3. **Database:** PostgreSQL persistent/private, least-privilege roles, committed Prisma migration, real-PostgreSQL test harness.
+4. **Auth/authz:** provider-neutral identity/session ports, secure cookies/Argon2id after policy, rate-limit/CSRF, ResourcePolicy/default deny; no SSO.
+5. **Documents:** `DocumentStorage`, private local adapter, traversal/stream limits/checksum, authorized download and mandatory IDOR tests.
+6. **Operations:** multi-stage non-root Dockerfile; base+production Compose; Nginx-only ingress; cron job contract; DB+document backup/external-copy interface; no queue.
+7. **Verification:** frozen install, format/lint/typecheck, unit/integration/database/auth/authz/document/HTTP tests, migration/build/Compose/container/health checks, persistence and backup/restore dry run.
 
-## M2 - Authentication, Employee & RBAC
+## 5. Explicit exclusions
 
-- autentikasi provider-neutral dengan provider `LOCAL`;
-- credential lokal terpisah dari `User` dan `Employee`, hanya menyimpan password hash aman;
-- role model;
-- employee master data;
-- employee profile;
-- server-side authorization;
-- contract/test yang memastikan domain dan authorization tidak bergantung pada provider `LOCAL`;
-- mock seed data (bukan data nyata).
+No leave balance/application/approval, dashboard, calendar, reports, notification semantics, Klaim Cuti Bersama, TUKIN automation, or unresolved policy. No microservices, Kubernetes, Redis/Kafka/RabbitMQ, second ORM, SSO, JWT architecture, or large browser E2E suite.
 
-Dependency: M1.
+## 6. Exit and later gates
 
-## M3 - Leave Balance Domain Engine
-
-- balance buckets;
-- ledger/transactions;
-- Cuti N;
-- carry-over N-1/N-2 sesuai rule yang telah dikonfirmasi;
-- Klaim Cuti Bersama entitlement;
-- deduction priority;
-- non-annual leave exclusions;
-- automated unit/integration tests.
-
-Exit criteria: seluruh test skenario saldo kritis lulus.
-
-Dependency: M2 + keputusan ambiguity saldo.
-
-## M4 - Employee Leave & Permission Workflows
-
-- pengajuan cuti;
-- draft/submit;
-- validation;
-- upload evidence;
-- izin non-cuti;
-- history/status;
-- generation/linking of standard document as applicable.
-
-Dependency: M3 + workflow state approved.
-
-## M5 - Admin Verification & Document Archive
-
-- admin queues;
-- search/filter;
-- Klaim Cuti Bersama verification;
-- approval/rejection flow;
-- document archive upload/download;
-- audit records.
-
-Dependency: M4.
-
-## M6 - Dashboards, Calendar & Analytics
-
-Admin:
-
-- summary indicators;
-- leave calendar;
-- latest applications;
-- leave analytics;
-- readiness-related summary based only on approved definition.
-
-Employee:
-
-- profile summary;
-- balance breakdown;
-- active application;
-- personal calendar;
-- history;
-- usage chart;
-- notifications.
-
-Dependency: M4-M5 data flows stable.
-
-## M7 - Reporting & Export
-
-- multi-parameter filter;
-- PDF export;
-- Excel export;
-- archive search;
-- pagination;
-- access-control tests.
-
-Dependency: M5-M6.
-
-## M8 - Notifications, Audit Hardening, Security & UAT
-
-- reminder H-2 before return to work;
-- complete audit review;
-- authorization penetration checks;
-- file upload security;
-- error handling;
-- backup/deployment documentation;
-- keputusan tujuan sekunder/off-VPS, retensi/rotasi, enkripsi backup, interval uji restore, RPO/RTO,
-  dan disaster recovery runbook;
-- UAT scenarios;
-- accessibility/responsive review;
-- performance baseline.
-
-Dependency: all previous milestones.
-
-## Relationship to the proposal timeline
-
-PDF sumber mengusulkan jadwal kalender Juli-November: development (Juli-Agustus), testing
-(September), pelatihan (Oktober), dan launching/monitoring awal (November). Milestone M0-M8 di atas
-adalah urutan dependency/gate rekayasa, bukan perubahan sepihak atas jadwal tersebut. Tahun target,
-kapasitas tim, pemetaan milestone ke minggu, serta kelayakan jadwal PDF harus disetujui stakeholder
-sebelum dijadikan baseline delivery.
-
-## Milestone operating rule
-
-Untuk setiap milestone:
-
-```text
-READ REQUIREMENTS
-      -> PLAN
-      -> IMPLEMENT SMALL SCOPE
-      -> TEST
-      -> VERIFY AGAINST TRACEABILITY
-      -> HUMAN REVIEW
-      -> MERGE
-```
-
-Jangan lanjut milestone berikutnya hanya karena kode berhasil dibangun; requirement dan behavior harus direview.
-
-## Decision gates
-
-Status dan keputusan final dikelola di `docs/decision-log.md`; rekomendasi tidak membuka gate.
-
-| Gate | Required resolved Decision IDs |
-|---|---|
-| Sebelum M1 | **Terpenuhi:** DEP-001, baseline M1 DEP-002, keputusan akses DOC-003, AUTH-001 |
-| Sebelum M2 | AUTH-002, DATA-001 |
-| Sebelum M3 | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 |
-| Sebelum M4 | WF-001, WF-002, WF-003, WF-004, PERM-001, PERM-002, VAL-001 |
-| Sebelum M5 | DOC-001, DOC-002, DOC-003, DOC-004, AUD-001 |
-| Sebelum M6 | CAL-001, RPT-002; NOT-001 bila penerima muncul di dashboard |
-| Sebelum M7 | RPT-001, AUTH-002, AUD-001 |
-| Sebelum M8/production | NOT-001, NOT-002, detail production DEP-002, DEP-003 serta seluruh keputusan security/retention yang relevan |
-
-M1 sekarang tidak terblokir karena keputusan stakeholder—bukan rekomendasi—telah menutup kebutuhan
-kebijakan fondasi. Ambiguity bisnis lain tetap mengunci milestone fitur terkait. Detail backup
-production (tujuan sekunder/off-VPS, retensi, rotasi, enkripsi, uji restore, RPO/RTO, dan runbook DR)
-tidak mengunci M1 bila arsitektur mendukungnya, tetapi wajib selesai sebelum M8/production readiness.
+M1 exit requires the full acceptance criteria in `docs/technical-baseline.md`, command-result reporting, and no secrets/real employee data. M3 waits for BAL-*; M4/M5 wait workflow/document authority; cron availability does not authorize NOT-* semantics. Before production, M8 must decide off-VPS destination, retention/rotation/encryption, restore cadence, RPO/RTO, and DR runbook; same-VPS copy is not complete DR.

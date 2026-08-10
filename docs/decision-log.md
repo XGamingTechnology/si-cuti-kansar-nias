@@ -1,8 +1,19 @@
-# SI CUTI - Decision Log M0
+# SI CUTI - Decision Log M0–M1
 
 Status: **Keputusan kebijakan minimum M1 disetujui; M1 tidak lagi terblokir**
 Tanggal review ulang: **10 Agustus 2026**  
 Sumber utama: `docs/source/Laporan-Kerangka-Inovasi-SI-CUTI-KANSAR-NIAS.pdf`
+
+
+## 0. Catatan arah teknis M1 — 10 Agustus 2026
+
+Stakeholder mengganti usulan Laravel dengan arah **disetujui**: TypeScript-first modular monolith, Next.js/React, Node.js, PostgreSQL, Docker Compose, Nginx, dan Ubuntu VPS. Perubahan terjadi sebelum scaffold/source ada: tidak ada migration/legacy code dan tidak ada business requirement berubah. Microservices/Kubernetes tidak disetujui.
+
+| ID | Keputusan | Status |
+|---|---|---|
+| TECH-001 | TypeScript/Next.js modular monolith menggantikan usulan Laravel sebelum scaffolding | **Resolved — stakeholder, 10 Agustus 2026** |
+| TECH-002 | Proposal Node 24, Next 16/React 19, PostgreSQL 18, Prisma 7, Zod 4, Vitest 4 | **Approval pending — dilarang scaffold/install** |
+| TECH-003 | Proposal internal opaque database-session auth, provider-neutral; bukan JWT/Auth.js pada M1 | **Approval pending — AUTH-001 tetap resolved** |
 
 ## 1. Tujuan dan cara membaca
 
