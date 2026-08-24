@@ -15,6 +15,9 @@ services:
     read_only: true
     tmpfs: [/var/cache/nginx, /var/run, /etc/nginx/conf.d]
     cap_drop: [ALL]
+    # Minimal capabilities required by the official Nginx entrypoint/master:
+    # chown tmpfs cache paths, bind 80/443, and drop worker uid/gid.
+    cap_add: [CHOWN, NET_BIND_SERVICE, SETGID, SETUID]
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
 
