@@ -49,6 +49,24 @@ services:
       environment-guard: { condition: service_completed_successfully }
     networks: [database]
     restart: "no"
+  private-storage-init:
+    image: ${IMAGE_REF:-si-cuti:local}
+    user: "0:0"
+    command:
+      - sh
+      - -ec
+      - |
+        mkdir -p /var/lib/si-cuti/documents
+        chown 1001:1001 /var/lib/si-cuti/documents
+        chmod 0700 /var/lib/si-cuti/documents
+    volumes:
+      - private_documents:/var/lib/si-cuti/documents
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER]
+    security_opt: [no-new-privileges:true]
+    restart: "no"
   app:
     image: ${IMAGE_REF:-si-cuti:local}
     build: .
@@ -60,6 +78,7 @@ services:
       - private_documents:/var/lib/si-cuti/documents
     depends_on:
       environment-guard: { condition: service_completed_successfully }
+      private-storage-init: { condition: service_completed_successfully }
     networks:
       frontend:
         aliases: ["${APP_NETWORK_ALIAS:?required}"]
