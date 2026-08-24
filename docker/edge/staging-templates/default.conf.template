@@ -1,0 +1,18 @@
+server {
+  listen 80;
+  server_name ${STAGING_HOSTNAME};
+  return 308 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name ${STAGING_HOSTNAME};
+
+  ssl_certificate /etc/nginx/tls/fullchain.pem;
+  ssl_certificate_key /etc/nginx/tls/privkey.pem;
+
+  location / {
+    proxy_pass http://si-cuti-staging-app:3000;
+    include /etc/nginx/proxy_params;
+  }
+}
