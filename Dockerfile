@@ -6,6 +6,12 @@ RUN npm ci
 
 FROM dependencies AS builder
 COPY . .
+
+# Prisma 7 loads prisma.config.ts during `prisma generate`.
+# This URL is build-only and contains no staging/production credential.
+ARG PRISMA_GENERATE_DATABASE_URL=postgresql://prisma-build:prisma-build@127.0.0.1:5432/prisma_build
+ENV DATABASE_URL=${PRISMA_GENERATE_DATABASE_URL}
+
 RUN npm run build
 
 FROM dependencies AS migrator
