@@ -1,57 +1,65 @@
 # SI CUTI — Implementation Plan
 
-Status: **M1 proposal complete; executable work blocked pending stack approval**
+Status: **M1 technical foundation implemented and staging-verified; M2 baseline approved and executable**
 
 ## 1. Guardrails
 
-PDF and decision log remain authoritative. The Laravel-to-TypeScript/Next.js change occurred before application source existed: no migration/legacy code and no business requirement change. Do not scaffold, install dependencies, or create application source until TECH-002/TECH-003 approval.
+PDF, decision log, and approved decision amendments remain authoritative. The Laravel-to-TypeScript/Next.js change occurred before application source existed: no migration/legacy code and no business requirement change.
 
-M1 is a modular monolith. Next.js is delivery only; critical rules cannot live in React, `page.tsx`, `route.ts`, Server Actions, ORM hooks, or triggers. PostgreSQL is relational persistence; authorization remains server-side.
+The application remains a TypeScript-first modular monolith. Next.js is delivery only; critical rules cannot live in React, `page.tsx`, `route.ts`, Server Actions, ORM hooks, or triggers. PostgreSQL is relational persistence; authentication and authorization remain server-side.
+
+M2 must follow `docs/m2-baseline-decisions.md`. Do not use M2 implementation as a reason to invent M3+ leave-balance, workflow, approval-authority, document-retention, reporting, notification, or production policy.
 
 ## 2. Milestones
 
 | Milestone | Scope                                      | Gate                                       |
 | --------- | ------------------------------------------ | ------------------------------------------ |
 | M0        | Product/documentation foundation           | Complete                                   |
-| **M1**    | Technical foundation only                  | Final technical-baseline approval          |
-| M2        | Local auth, Employee, RBAC/resource policy | AUTH detail, AUTH-002/DATA-001 as relevant |
+| **M1**    | Technical foundation only                  | Implemented; staging runtime verified      |
+| **M2**    | Local auth, Employee, RBAC/resource policy | **Approved — executable**                  |
 | M3        | Leave Balance engine                       | BAL-001–BAL-005                            |
 | M4        | Leave/permission workflow                  | WF-001–004, PERM-001/002, VAL-001          |
 | M5        | Verification/document archive              | DOC-001/002/004, AUD-001                   |
 | M6        | Dashboard/calendar/analytics               | CAL-001, RPT-002, relevant NOT/DATA        |
-| M7        | Reporting/export                           | RPT-001, AUTH-002, AUD-001                 |
+| M7        | Reporting/export                           | RPT-001, AUTH/AUD scope as applicable      |
 | M8        | Notification, hardening, UAT/production    | NOT-001/002, DEP details, retention/DR     |
 
-## 3. Approval package
+## 3. Approved technical baseline
 
-`docs/technical-baseline.md` provides all 22 requested deliverables. Stakeholder decision requested:
+The approved and implemented technical direction is Node.js/TypeScript, Next.js/React, PostgreSQL, Prisma, Zod, Vitest, ESLint, Prettier, Pino, Docker Compose, Nginx, and Ubuntu VPS. Authentication baseline is internal `LOCAL` authentication with opaque server-side/database sessions; SSO/JWT architecture is not part of M2.
 
-1. Node 24, Next 16/React 19, TypeScript 5, PostgreSQL 18;
-2. Prisma 7 (Drizzle remains alternative);
-3. Zod 4, Vitest 4, ESLint 9, Prettier 3, Pino 10;
-4. internal LOCAL auth + opaque database sessions; defer Auth.js/JWT;
-5. technical owner may re-verify and exact-pin stable patches/digests inside approved majors; any major change returns for approval.
+M2-specific stakeholder approval on 25 August 2026 resolves `AUTH-002` and `DATA-001` through `docs/m2-baseline-decisions.md`:
 
-## 4. M1 batches — do not execute before approval
+1. exactly two baseline roles: `ADMIN_KEPEGAWAIAN` and `PEGAWAI`;
+2. server-side RBAC/resource policy with owner isolation for Pegawai;
+3. internal immutable Employee ID;
+4. NIP unique and used as baseline local-login username;
+5. employee fields: NIP, name, position/title, work unit, active status, optional direct supervisor;
+6. employee master maintained manually by Admin plus validated Excel import;
+7. no external HR/SSO synchronization in M2;
+8. account/employee deactivation preserves history and blocks new login;
+9. no additional application role or approval authority is inferred in M2.
 
-1. **Evidence/scaffold:** verify official matrices, record exact patches/digests, scaffold into temporary directory, review minimal diff.
-2. **Quality/boundaries:** strict TS, lint/format/test/CI commands, layer structure, env schema, safe logging/errors, health endpoint.
-3. **Database:** PostgreSQL persistent/private, least-privilege roles, committed Prisma migration, real-PostgreSQL test harness.
-4. **Auth/authz:** provider-neutral identity/session ports, secure cookies/Argon2id after policy, rate-limit/CSRF, ResourcePolicy/default deny; no SSO.
-5. **Documents:** `DocumentStorage`, private local adapter, traversal/stream limits/checksum, authorized download and mandatory IDOR tests.
-6. **Operations:** multi-stage non-root Dockerfile; base + production/staging override sebagai project
-   terpisah; shared edge-only ingress; DB marker guard; backup path terisolasi; cron job contract;
-   DB+document backup/external-copy interface; no queue.
-7. **Verification:** frozen install, format/lint/typecheck, unit/integration/database/auth/authz/document/HTTP tests, migration/build/Compose/container/health checks, persistence and backup/restore dry run.
+## 4. M2 implementation batches
 
-## 5. Explicit exclusions
+1. **Schema and migration:** add Employee, User/auth identity/credential/session, role assignment, active-state lifecycle, and optional supervisor relationship without adding leave/workflow entities.
+2. **Authentication:** NIP login, secure password hashing, opaque database sessions, secure cookie lifecycle, logout, disabled-account rejection, generic authentication errors.
+3. **Authorization:** server-side role/resource policy, default deny, Pegawai owner isolation, Admin employee/account administration, IDOR-focused tests.
+4. **Employee master:** Admin CRUD, uniqueness/validation, active/inactive lifecycle, optional supervisor assignment, no hard-delete baseline.
+5. **Excel import:** template/contract, parse + validate, preview/error reporting, duplicate NIP protection, transactional commit, no silent overwrite.
+6. **Delivery UI:** login page, authenticated Admin shell, authenticated Pegawai shell/profile, employee-management pages sufficient to verify RBAC. Do not build leave balance or workflow UI.
+7. **Verification:** typecheck/lint/format/unit/integration/database/auth/authz/HTTP tests; migration review; Docker build; deploy exact candidate image to staging; guard/migration/readiness/smoke/UAT; record immutable digest before any later production promotion.
 
-No leave balance/application/approval, dashboard, calendar, reports, notification semantics, Klaim Cuti Bersama, TUKIN automation, or unresolved policy. No microservices, Kubernetes, Redis/Kafka/RabbitMQ, second ORM, SSO, JWT architecture, or large browser E2E suite.
+## 5. Explicit exclusions for M2
+
+No leave balance calculation, leave submission/approval, permission workflow, dashboard analytics, calendar, reports, notification semantics, Klaim Cuti Bersama processing, TUKIN automation, digital approval/e-signature, or unresolved policy. No microservices, Kubernetes, Redis/Kafka/RabbitMQ, second ORM, SSO, JWT architecture, or unnecessary browser E2E suite.
+
+The `atasanLangsung` relationship may exist as optional master data, but it does not grant approval authority in M2. `ADMIN_KEPEGAWAIAN` administration likewise must not be interpreted as final legal leave approval.
 
 ## 6. Exit and later gates
 
-M1 exit requires the full acceptance criteria in `docs/technical-baseline.md`, command-result reporting, and no secrets/real employee data. M3 waits for BAL-_; M4/M5 wait workflow/document authority; cron availability does not authorize NOT-_ semantics. Before production, M8 must decide off-VPS destination, retention/rotation/encryption, restore cadence, RPO/RTO, and DR runbook; same-VPS copy is not complete DR.
+M2 exits only when authentication, session handling, employee lifecycle, two-role RBAC, owner isolation, Admin employee/account administration, Excel import validation, migration, and staging runtime verification pass without secrets or real employee data in staging.
 
-Release mempromosikan exact immutable version dari staging setelah migration check dan UAT ke
-production. Migration production memiliki approval eksplisit sesudah staging; deploy branch tidak
-boleh otomatis menjalankannya. Checklist VPS ada di `docs/deployment-environments.md`.
+M3 remains blocked by `BAL-001` through `BAL-005`; no day-count, rollover, balance reservation/commit, cancellation restore, or Klaim Cuti Bersama formula may be invented in M2. M4/M5 remain blocked by workflow/document authority decisions. Before production, M8 must decide off-VPS destination, retention/rotation/encryption, restore cadence, RPO/RTO, and DR runbook; same-VPS backup is not complete DR.
+
+Release continues to promote the exact immutable version that passed staging/UAT. Production migration requires separate explicit approval; changing a Git branch alone does not authorize a production migration.
