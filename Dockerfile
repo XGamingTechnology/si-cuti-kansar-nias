@@ -1,6 +1,12 @@
 # syntax=docker/dockerfile:1.7
 FROM node:24.15.0-bookworm-slim AS dependencies
 WORKDIR /app
+
+# Prisma requires OpenSSL during generate/migration operations.
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
