@@ -7,4 +7,84 @@ datasource db {
   provider = "postgresql"
 }
 
-// M1 intentionally contains no business or identity models.
+enum ApplicationRole {
+  ADMIN_KEPEGAWAIAN
+  PEGAWAI
+}
+
+enum AuthenticationProvider {
+  LOCAL
+}
+
+model Employee {
+  id                 String     @id @default(uuid()) @db.Uuid
+  nip                String     @unique @db.VarChar(32)
+  fullName           String     @db.VarChar(200)
+  positionTitle      String     @db.VarChar(200)
+  workUnit           String     @db.VarChar(200)
+  isActive           Boolean    @default(true)
+  directSupervisorId String?    @db.Uuid
+  createdAt          DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime   @updatedAt @db.Timestamptz(3)
+
+  directSupervisor Employee?  @relation("EmployeeDirectSupervisor", fields: [directSupervisorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  directReports    Employee[] @relation("EmployeeDirectSupervisor")
+  user             User?
+
+  @@index([directSupervisorId])
+}
+
+model User {
+  id        String          @id @default(uuid()) @db.Uuid
+  employeeId String          @unique @db.Uuid
+  role      ApplicationRole
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime        @updatedAt @db.Timestamptz(3)
+
+  employee                Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  authenticationIdentities AuthenticationIdentity[]
+}
+
+model AuthenticationIdentity {
+  id              String                 @id @default(uuid()) @db.Uuid
+  userId          String                 @db.Uuid
+  provider        AuthenticationProvider
+  providerSubject String                 @db.VarChar(191)
+  isActive        Boolean                @default(true)
+  lastLoginAt     DateTime?              @db.Timestamptz(3)
+  createdAt       DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime               @updatedAt @db.Timestamptz(3)
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  localCredential LocalCredential?
+  sessions        Session[]
+
+  @@unique([provider, providerSubject])
+  @@unique([userId, provider])
+}
+
+model LocalCredential {
+  authenticationIdentityId String   @id @db.Uuid
+  passwordHash             String   @db.Text
+  passwordChangedAt        DateTime @default(now()) @db.Timestamptz(3)
+  createdAt                DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @db.Timestamptz(3)
+
+  authenticationIdentity AuthenticationIdentity @relation(fields: [authenticationIdentityId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model Session {
+  id                       String    @id @default(uuid()) @db.Uuid
+  authenticationIdentityId String    @db.Uuid
+  tokenHash                String    @unique @db.Char(64)
+  expiresAt                DateTime  @db.Timestamptz(3)
+  revokedAt                DateTime? @db.Timestamptz(3)
+  lastSeenAt               DateTime? @db.Timestamptz(3)
+  createdAt                DateTime  @default(now()) @db.Timestamptz(3)
+
+  authenticationIdentity AuthenticationIdentity @relation(fields: [authenticationIdentityId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([authenticationIdentityId, revokedAt])
+  @@index([expiresAt])
+}
