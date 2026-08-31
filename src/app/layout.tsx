@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./styles.css";
 
 export const metadata: Metadata = {
-  title: "SI CUTI — Prototype Antarmuka",
+  title: "SI CUTI — Sistem Informasi Cuti dan Izin",
   description:
-    "Pratinjau statis Sistem Informasi Cuti dan Izin Kantor SAR Nias",
+    "Sistem Informasi Cuti dan Izin Kantor SAR Nias",
 };
 
 export default function RootLayout({

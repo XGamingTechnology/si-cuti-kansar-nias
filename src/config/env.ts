@@ -9,6 +9,7 @@ const serverEnvironmentSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
+  SESSION_TTL_SECONDS: z.coerce.number().int().min(900).max(86400).default(28800),
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;

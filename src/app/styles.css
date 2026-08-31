@@ -301,6 +301,13 @@ input:focus-visible {
   text-align: center;
   margin-top: 28px;
 }
+.auth-error { background: #fff1f1; border: 1px solid #efcaca; border-radius: 8px; color: #9d2424; font-size: 12px; padding: 10px 12px; }
+.login-card .primary-button { margin-top: 18px; }
+.primary-button:disabled { cursor: wait; opacity: .7; }
+.authenticated-proof { align-items: center; background: var(--navy); display: flex; justify-content: center; min-height: 100vh; padding: 24px; }
+.authenticated-proof section { background: white; border-radius: 16px; box-shadow: 0 20px 60px #00152b55; max-width: 620px; padding: 48px; width: 100%; }
+.authenticated-proof h1 { font-size: clamp(30px, 5vw, 48px); letter-spacing: -.04em; margin: 0 0 16px; }
+.authenticated-proof section > p:not(.eyebrow) { color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
 .mobile-brand {
   display: none;
 }
