@@ -1,62 +1,20 @@
-"use client";
+import { cookies } from "next/headers";
+import { createRuntimeAuthentication } from "@/infrastructure/auth/runtime";
+import { SESSION_COOKIE_NAME } from "@/modules/auth/session";
+import { LoginForm } from "@/components/login-form";
+import { AuthenticatedShell } from "@/components/authenticated-shell";
 
-import { useState } from "react";
-import { AppShell } from "@/components/app-shell";
-import { LoginPreview } from "@/components/login-preview";
-import { PreviewSwitcher } from "@/components/preview-switcher";
-import {
-  AdminDashboard,
-  EmployeeDashboard,
-  EmployeeDataPage,
-} from "@/components/surfaces";
-import type { PreviewRole } from "@/lib/prototype-data";
+export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const [preview, setPreview] = useState<PreviewRole>("login");
-  const [adminPage, setAdminPage] = useState<"dashboard" | "employees">(
-    "dashboard",
-  );
-
-  const selectPreview = (next: PreviewRole) => {
-    setPreview(next);
-    if (next === "admin") setAdminPage("dashboard");
-  };
-
-  if (preview === "login") {
-    return (
-      <main className="login-page">
-        <PreviewSwitcher value={preview} onChange={selectPreview} />
-        <LoginPreview onPreview={selectPreview} />
-      </main>
-    );
+export default async function Home() {
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!token) return <main className="login-page"><LoginForm /></main>;
+  const runtime = createRuntimeAuthentication();
+  try {
+    const principal = await runtime.authentication.validate(token);
+    if (!principal) return <main className="login-page"><LoginForm sessionExpired /></main>;
+    return <AuthenticatedShell principal={principal} />;
+  } finally {
+    await runtime.database.$disconnect();
   }
-
-  return (
-    <AppShell
-      role={preview}
-      activeItem={
-        preview === "admin" && adminPage === "employees"
-          ? "Data Pegawai"
-          : "Dashboard"
-      }
-      onNavigate={(label) => {
-        if (preview === "admin" && label === "Data Pegawai")
-          setAdminPage("employees");
-        if (label === "Dashboard") setAdminPage("dashboard");
-      }}
-      switcher={
-        <PreviewSwitcher value={preview} onChange={selectPreview} compact />
-      }
-    >
-      {preview === "admin" ? (
-        adminPage === "employees" ? (
-          <EmployeeDataPage />
-        ) : (
-          <AdminDashboard />
-        )
-      ) : (
-        <EmployeeDashboard />
-      )}
-    </AppShell>
-  );
 }
