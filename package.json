@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "prisma generate && tsc --noEmit",
-    "test": "vitest run --exclude tests/integration/**",
+    "test": "vitest run tests/unit tests/http",
     "test:integration": "vitest run tests/integration",
     "test:all": "vitest run",
     "db:generate": "prisma generate",
