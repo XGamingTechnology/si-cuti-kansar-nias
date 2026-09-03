@@ -3,6 +3,10 @@ import {
   authorizationResponse,
 } from "@/application/authorization/http";
 import { requireEmployeeRead } from "@/application/authorization/policy";
+import {
+  employeeErrorResponse,
+  validateEmployeeId,
+} from "@/application/employees/http";
 import { createRuntimeAuthentication } from "@/infrastructure/auth/runtime";
 import {
   PrismaEmployeeReader,
@@ -33,7 +37,9 @@ export function createEmployeeReadHandler(factory = createDependencies) {
       // Evaluate access against the requested identifier before reading its data.
       // This prevents a forbidden caller from learning whether another employee exists.
       requireEmployeeRead(principal, { id: employeeId });
-      const employee = await runtime.employees.findById(employeeId);
+      const employee = await runtime.employees.findById(
+        validateEmployeeId(employeeId),
+      );
       if (!employee)
         return Response.json(
           { error: "Sumber daya tidak ditemukan." },
@@ -41,7 +47,8 @@ export function createEmployeeReadHandler(factory = createDependencies) {
         );
       return Response.json({ employee });
     } catch (error) {
-      const response = authorizationResponse(error);
+      const response =
+        authorizationResponse(error) ?? employeeErrorResponse(error);
       if (response) return response;
       throw error;
     } finally {

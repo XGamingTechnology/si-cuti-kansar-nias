@@ -1,4 +1,13 @@
+import { z } from "zod";
 import { EmployeeError } from "./service";
+
+const employeeIdSchema = z.string().uuid();
+
+export function validateEmployeeId(value: string): string {
+  if (!employeeIdSchema.safeParse(value).success)
+    throw new EmployeeError("VALIDATION", "ID pegawai tidak valid.");
+  return value;
+}
 
 export function employeeErrorResponse(error: unknown): Response | null {
   if (!(error instanceof EmployeeError)) return null;
@@ -21,6 +30,12 @@ export async function employeeInput(request: Request) {
     body.directSupervisorId !== undefined &&
     body.directSupervisorId !== null &&
     typeof body.directSupervisorId !== "string"
+  )
+    throw new EmployeeError("VALIDATION", "Atasan langsung tidak valid.");
+  if (
+    typeof body.directSupervisorId === "string" &&
+    body.directSupervisorId.trim() &&
+    !employeeIdSchema.safeParse(body.directSupervisorId.trim()).success
   )
     throw new EmployeeError("VALIDATION", "Atasan langsung tidak valid.");
   return {

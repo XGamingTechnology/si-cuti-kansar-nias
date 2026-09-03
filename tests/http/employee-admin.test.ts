@@ -4,6 +4,9 @@ import { createEmployeeItemHandlers } from "@/app/api/admin/employees/[employeeI
 import { createEmployeeStatusHandler } from "@/app/api/admin/employees/[employeeId]/status/route";
 import type { Principal } from "@/modules/auth/service";
 
+const employeeId = "00000000-0000-4000-8000-000000000001";
+const unknownSupervisorId = "00000000-0000-4000-8000-000000000099";
+
 const admin: Principal = {
   userId: "admin",
   employeeId: "admin-employee",
@@ -12,13 +15,13 @@ const admin: Principal = {
 };
 const pegawai: Principal = {
   userId: "pegawai",
-  employeeId: "employee-1",
+  employeeId,
   fullName: "Pegawai",
   role: "PEGAWAI",
 };
 function deps(principal: Principal | null) {
   const employee = {
-    id: "employee-1",
+    id: employeeId,
     nip: "TEST-1",
     fullName: "Uji",
     positionTitle: "Analis",
@@ -98,7 +101,7 @@ describe("Admin employee HTTP authorization", () => {
   });
   it("denies Pegawai update and status changes", async () => {
     const d = deps(pegawai);
-    const ctx = { params: Promise.resolve({ employeeId: "employee-1" }) };
+    const ctx = { params: Promise.resolve({ employeeId }) };
     expect(
       (
         await createEmployeeItemHandlers(() => d as never).PATCH(
@@ -118,7 +121,7 @@ describe("Admin employee HTTP authorization", () => {
   });
   it("allows Admin update, deactivate, and reactivate", async () => {
     const d = deps(admin);
-    const ctx = { params: Promise.resolve({ employeeId: "employee-1" }) };
+    const ctx = { params: Promise.resolve({ employeeId }) };
     expect(
       (
         await createEmployeeItemHandlers(() => d as never).PATCH(
@@ -143,5 +146,84 @@ describe("Admin employee HTTP authorization", () => {
         )
       ).status,
     ).toBe(200);
+  });
+
+  it.each([
+    [
+      "GET",
+      (d: ReturnType<typeof deps>) =>
+        createEmployeeItemHandlers(() => d as never).GET(request(), {
+          params: Promise.resolve({ employeeId: "bukan-uuid" }),
+        }),
+    ],
+    [
+      "PATCH",
+      (d: ReturnType<typeof deps>) =>
+        createEmployeeItemHandlers(() => d as never).PATCH(
+          request("PATCH", valid),
+          { params: Promise.resolve({ employeeId: "bukan-uuid" }) },
+        ),
+    ],
+    [
+      "status PATCH",
+      (d: ReturnType<typeof deps>) =>
+        createEmployeeStatusHandler(() => d as never)(
+          request("PATCH", { isActive: false }),
+          { params: Promise.resolve({ employeeId: "bukan-uuid" }) },
+        ),
+    ],
+  ] as const)(
+    "rejects a malformed employeeId for %s before data access",
+    async (_name, invoke) => {
+      const d = deps(admin);
+      const response = await invoke(d);
+      expect(response.status).toBe(422);
+      expect(await response.json()).toEqual({
+        error: "ID pegawai tidak valid.",
+      });
+      expect(d.employees.findById).not.toHaveBeenCalled();
+      expect(d.employees.update).not.toHaveBeenCalled();
+      expect(d.employees.setActive).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    [
+      "create",
+      (d: ReturnType<typeof deps>) =>
+        createEmployeeCollectionHandlers(() => d as never).POST(
+          request("POST", { ...valid, directSupervisorId: "bukan-uuid" }),
+        ),
+    ],
+    [
+      "update",
+      (d: ReturnType<typeof deps>) =>
+        createEmployeeItemHandlers(() => d as never).PATCH(
+          request("PATCH", { ...valid, directSupervisorId: "bukan-uuid" }),
+          { params: Promise.resolve({ employeeId }) },
+        ),
+    ],
+  ] as const)(
+    "rejects a malformed directSupervisorId on %s",
+    async (_name, invoke) => {
+      const d = deps(admin);
+      const response = await invoke(d);
+      expect(response.status).toBe(422);
+      expect(await response.json()).toEqual({
+        error: "Atasan langsung tidak valid.",
+      });
+      expect(d.employees.create).not.toHaveBeenCalled();
+      expect(d.employees.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts a well-formed supervisor UUID for application-level existence validation", async () => {
+    const d = deps(admin);
+    await createEmployeeCollectionHandlers(() => d as never).POST(
+      request("POST", { ...valid, directSupervisorId: unknownSupervisorId }),
+    );
+    expect(d.employees.create).toHaveBeenCalledWith(
+      expect.objectContaining({ directSupervisorId: unknownSupervisorId }),
+    );
   });
 });
