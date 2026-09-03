@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { AccountStatus } from "@/application/accounts/service";
 import type { Employee } from "@/application/employees/service";
+import type { EmployeeImportPreview } from "@/application/employees/import-service";
 import { EmployeeAccountControls } from "@/components/employee-account-controls";
 
 const empty = {
@@ -91,6 +92,10 @@ export function EmployeeManagement() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<EmployeeImportPreview | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
   const [accountRefreshVersions, setAccountRefreshVersions] = useState<
     Record<string, number>
   >({});
@@ -194,6 +199,33 @@ export function EmployeeManagement() {
     if (response.ok) await load();
   }
 
+  async function sendImport(commit: boolean) {
+    if (!importFile) return;
+    setImportBusy(true);
+    setMessage("");
+    const body = new FormData();
+    body.append("file", importFile);
+    try {
+      const response = await fetch("/api/admin/employees/import", {
+        method: commit ? "PUT" : "POST",
+        body,
+      });
+      const data = await response.json();
+      if (!response.ok) return setMessage(data.error ?? "Impor pegawai gagal.");
+      if (commit) {
+        setMessage(`${data.imported} pegawai berhasil diimpor.`);
+        setImportOpen(false);
+        setPreview(null);
+        setImportFile(null);
+        await load();
+      } else setPreview(data.preview);
+    } catch {
+      setMessage("Impor pegawai gagal. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
   return (
     <section className="employee-page" id="pegawai">
       <header className="employee-page-header">
@@ -202,9 +234,22 @@ export function EmployeeManagement() {
           <h1>Kelola Pegawai</h1>
           <p>Kelola data pegawai dan akses akun.</p>
         </div>
-        <button className="primary-button" type="button" onClick={openCreate}>
-          ＋ Tambah Pegawai
-        </button>
+        <div className="employee-header-actions">
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => {
+              setImportOpen(true);
+              setPreview(null);
+              setMessage("");
+            }}
+          >
+            Import Excel
+          </button>
+          <button className="primary-button" type="button" onClick={openCreate}>
+            ＋ Tambah Pegawai
+          </button>
+        </div>
       </header>
       {message && (
         <p className="feedback" role="status">
@@ -326,6 +371,121 @@ export function EmployeeManagement() {
           </>
         )}
       </div>
+      {importOpen && (
+        <>
+          <button
+            className="panel-scrim"
+            type="button"
+            aria-label="Tutup impor"
+            onClick={() => setImportOpen(false)}
+          />
+          <aside
+            className="management-panel import-panel"
+            aria-label="Import Excel pegawai"
+          >
+            <header>
+              <div>
+                <p className="eyebrow">IMPORT PEGAWAI</p>
+                <h2>Import Excel</h2>
+              </div>
+              <button
+                className="panel-close"
+                type="button"
+                onClick={() => setImportOpen(false)}
+                aria-label="Tutup panel"
+              >
+                ×
+              </button>
+            </header>
+            <div className="management-form">
+              <p className="panel-description">
+                Gunakan file .xlsx maksimal 2 MB dengan kolom persis: NIP, Nama
+                Lengkap, Jabatan, Unit Kerja, Status Aktif. Status menerima
+                TRUE/FALSE atau AKTIF/TIDAK AKTIF.
+              </p>
+              <label>
+                Pilih workbook
+                <input
+                  type="file"
+                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  onChange={(event) => {
+                    setImportFile(event.target.files?.[0] ?? null);
+                    setPreview(null);
+                  }}
+                />
+              </label>
+              {preview && (
+                <section className="import-preview" aria-live="polite">
+                  <div className="import-summary">
+                    <span>
+                      <strong>{preview.totalRows}</strong>Total baris
+                    </span>
+                    <span>
+                      <strong>{preview.validRows}</strong>Valid
+                    </span>
+                    <span>
+                      <strong>{preview.invalidRows}</strong>Tidak valid
+                    </span>
+                  </div>
+                  {preview.errors.length ? (
+                    <div className="import-errors">
+                      <table className="employee-table">
+                        <thead>
+                          <tr>
+                            <th>Baris</th>
+                            <th>NIP</th>
+                            <th>Kolom</th>
+                            <th>Kesalahan</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {preview.errors.map((error, index) => (
+                            <tr
+                              key={`${error.rowNumber}-${error.field}-${index}`}
+                            >
+                              <td>{error.rowNumber}</td>
+                              <td className="mono">{error.nip || "—"}</td>
+                              <td>{error.field}</td>
+                              <td>{error.message}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="feedback">
+                      Semua baris valid dan siap diimpor.
+                    </p>
+                  )}
+                </section>
+              )}
+              <div className="panel-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={!importFile || importBusy}
+                  onClick={() => void sendImport(false)}
+                >
+                  {importBusy ? "Memvalidasi…" : "Preview & Validasi"}
+                </button>
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={
+                    !preview ||
+                    preview.invalidRows > 0 ||
+                    preview.totalRows === 0 ||
+                    importBusy
+                  }
+                  onClick={() => void sendImport(true)}
+                >
+                  Commit Import
+                </button>
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
       {(mode || selected) && (
         <>
           <button

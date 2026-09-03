@@ -1484,6 +1484,38 @@ select:focus-visible {
   gap: 20px;
   margin-bottom: 24px;
 }
+.employee-header-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.import-panel {
+  width: min(760px, 100%);
+}
+.import-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+.import-summary span {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.2rem;
+}
+.import-summary strong {
+  font-size: 1.35rem;
+}
+.import-errors {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.import-errors .employee-table {
+  min-width: 620px;
+}
 .employee-page-header h1 {
   font-size: 27px;
   letter-spacing: -0.025em;
