@@ -9,8 +9,10 @@ const roleLabel = (role: ApplicationRole) =>
 
 export function EmployeeAccountControls({
   employeeId,
+  onAccountChanged,
 }: {
   employeeId: string;
+  onAccountChanged: () => void;
 }) {
   const [account, setAccount] = useState<AccountStatus | null>(null);
   const [role, setRole] = useState<ApplicationRole>("PEGAWAI");
@@ -21,15 +23,24 @@ export function EmployeeAccountControls({
 
   useEffect(() => {
     let active = true;
-    void fetch(endpoint).then(async (response) => {
-      const data = await response.json();
-      if (!active) return;
-      if (response.ok) {
-        setAccount(data.account);
-        if (data.account) setRole(data.account.role);
-      } else setMessage(data.error ?? "Status akun gagal dimuat.");
-      setLoading(false);
-    });
+
+    async function loadAccount() {
+      try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        if (!active) return;
+        if (response.ok) {
+          setAccount(data.account);
+          if (data.account) setRole(data.account.role);
+        } else setMessage(data.error ?? "Status akun gagal dimuat.");
+      } catch {
+        if (active) setMessage("Status akun gagal dimuat. Silakan coba lagi.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void loadAccount();
     return () => {
       active = false;
     };
@@ -37,19 +48,25 @@ export function EmployeeAccountControls({
 
   async function send(url: string, method: "POST" | "PATCH", body: object) {
     setMessage("");
-    const response = await fetch(url, {
-      method,
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      setMessage(data.error ?? "Operasi akun gagal.");
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessage(data.error ?? "Operasi akun gagal.");
+        return false;
+      }
+      setAccount(data.account);
+      setRole(data.account.role);
+      onAccountChanged();
+      return true;
+    } catch {
+      setMessage("Operasi akun gagal. Silakan coba lagi.");
       return false;
     }
-    setAccount(data.account);
-    setRole(data.account.role);
-    return true;
   }
   async function passwordAction(event: FormEvent) {
     event.preventDefault();
