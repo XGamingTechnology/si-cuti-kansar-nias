@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { AccountStatus } from "@/application/accounts/service";
 import type { Employee } from "@/application/employees/service";
 import { EmployeeAccountControls } from "@/components/employee-account-controls";
@@ -31,25 +31,57 @@ function StatusBadge({
   );
 }
 
-function AccountBadge({ employeeId }: { employeeId: string }) {
-  const [account, setAccount] = useState<AccountStatus | null | undefined>(
-    undefined,
-  );
+type AccountBadgeState =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "success"; account: AccountStatus | null };
+
+function AccountBadge({
+  employeeId,
+  refreshVersion,
+}: {
+  employeeId: string;
+  refreshVersion: number;
+}) {
+  const [state, setState] = useState<AccountBadgeState>({
+    status: "loading",
+  });
+
   useEffect(() => {
     let active = true;
-    void fetch(`/api/admin/employees/${employeeId}/account`).then(
-      async (response) => {
+
+    async function loadAccount() {
+      try {
+        const response = await fetch(
+          `/api/admin/employees/${employeeId}/account`,
+        );
+        if (!response.ok) {
+          if (active) setState({ status: "error" });
+          return;
+        }
         const data = await response.json();
-        if (active) setAccount(response.ok ? data.account : null);
-      },
-    );
+        if (active) setState({ status: "success", account: data.account });
+      } catch {
+        if (active) setState({ status: "error" });
+      }
+    }
+
+    void loadAccount();
     return () => {
       active = false;
     };
-  }, [employeeId]);
-  if (account === undefined)
+  }, [employeeId, refreshVersion]);
+
+  if (state.status === "loading")
     return <span className="status-loading">Memuat…</span>;
-  return <StatusBadge active={account?.isActive} emptyAccount={!account} />;
+  if (state.status === "error")
+    return <span className="status-loading">Gagal memuat</span>;
+  return (
+    <StatusBadge
+      active={state.account?.isActive}
+      emptyAccount={!state.account}
+    />
+  );
 }
 
 export function EmployeeManagement() {
@@ -59,8 +91,18 @@ export function EmployeeManagement() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [accountRefreshVersions, setAccountRefreshVersions] = useState<
+    Record<string, number>
+  >({});
   const selected =
     employees.find((employee) => employee.id === selectedId) ?? null;
+
+  const handleAccountChanged = useCallback((employeeId: string) => {
+    setAccountRefreshVersions((versions) => ({
+      ...versions,
+      [employeeId]: (versions[employeeId] ?? 0) + 1,
+    }));
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -221,7 +263,12 @@ export function EmployeeManagement() {
                         <StatusBadge active={employee.isActive} />
                       </td>
                       <td>
-                        <AccountBadge employeeId={employee.id} />
+                        <AccountBadge
+                          employeeId={employee.id}
+                          refreshVersion={
+                            accountRefreshVersions[employee.id] ?? 0
+                          }
+                        />
                       </td>
                       <td>
                         <button
@@ -254,7 +301,12 @@ export function EmployeeManagement() {
                     <div>
                       <dt>Status Akun Login</dt>
                       <dd>
-                        <AccountBadge employeeId={employee.id} />
+                        <AccountBadge
+                          employeeId={employee.id}
+                          refreshVersion={
+                            accountRefreshVersions[employee.id] ?? 0
+                          }
+                        />
                       </dd>
                     </div>
                   </dl>
@@ -331,6 +383,7 @@ export function EmployeeManagement() {
                   employees={employees}
                   onEdit={() => openEdit(selected)}
                   onStatus={() => void changeStatus(selected)}
+                  onAccountChanged={handleAccountChanged}
                 />
               )
             )}
@@ -420,11 +473,13 @@ function EmployeeDetail({
   employees,
   onEdit,
   onStatus,
+  onAccountChanged,
 }: {
   employee: Employee;
   employees: Employee[];
   onEdit: () => void;
   onStatus: () => void;
+  onAccountChanged: (employeeId: string) => void;
 }) {
   const supervisor = employees.find(
     (item) => item.id === employee.directSupervisorId,
@@ -485,7 +540,10 @@ function EmployeeDetail({
             <h3>Akses aplikasi</h3>
           </div>
         </div>
-        <EmployeeAccountControls employeeId={employee.id} />
+        <EmployeeAccountControls
+          employeeId={employee.id}
+          onAccountChanged={() => onAccountChanged(employee.id)}
+        />
       </section>
     </div>
   );
