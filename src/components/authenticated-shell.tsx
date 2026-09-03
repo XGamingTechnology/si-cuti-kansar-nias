@@ -1,5 +1,6 @@
 "use client";
 import type { Principal } from "@/modules/auth/service";
+import { EmployeeManagement } from "@/components/employee-management";
 
 export function AuthenticatedShell({ principal }: { principal: Principal }) {
   const isAdmin = principal.role === "ADMIN_KEPEGAWAIAN";
@@ -36,6 +37,7 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
           Keluar
         </button>
       </section>
+      {isAdmin && <EmployeeManagement />}
     </main>
   );
 }
