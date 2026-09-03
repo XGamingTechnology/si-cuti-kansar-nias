@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import type { Employee } from "@/application/employees/service";
+import { EmployeeAccountControls } from "@/components/employee-account-controls";
 
 const empty = {
   nip: "",
@@ -176,11 +177,12 @@ export function EmployeeManagement() {
                     {employee.isActive ? "Aktif" : "Tidak aktif"}
                   </small>
                 </div>
-                <div>
+                <div className="employee-actions">
                   <button onClick={() => edit(employee)}>Detail / Edit</button>
                   <button onClick={() => void status(employee)}>
                     {employee.isActive ? "Nonaktifkan" : "Aktifkan"}
                   </button>
+                  <EmployeeAccountControls employeeId={employee.id} />
                 </div>
               </article>
             ))

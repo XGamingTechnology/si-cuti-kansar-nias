@@ -80,8 +80,9 @@ select {
   flex-direction: column;
   gap: 4px;
 }
-.employee-list article div:last-child {
+.employee-list .employee-actions {
   display: flex;
+  flex-direction: column;
   gap: 7px;
 }
 .employee-list span {
@@ -101,6 +102,20 @@ select {
 .employee-list small.inactive {
   background: #fbe7e7;
   color: #8b2626;
+}
+
+.account-controls {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+.account-controls form,
+.account-controls label {
+  display: grid;
+  gap: 0.3rem;
 }
 @media (max-width: 800px) {
   .employee-grid {
