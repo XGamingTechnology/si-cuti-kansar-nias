@@ -53,7 +53,12 @@ export function createAccountHandlers(
     POST: run(async (runtime, request, id) => {
       const body = await accountBody(request);
       return Response.json(
-        { account: await runtime.accounts.provision(id, body) },
+        {
+          account: await runtime.accounts.provision(id, {
+            role: body.role,
+            password: body.password,
+          }),
+        },
         { status: 201 },
       );
     }),
