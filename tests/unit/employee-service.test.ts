@@ -7,6 +7,9 @@ import {
   type EmployeeWrite,
 } from "@/application/employees/service";
 
+const employeeId = "00000000-0000-4000-8000-000000000001";
+const unknownEmployeeId = "00000000-0000-4000-8000-000000000099";
+
 function fixture(initial: Employee[] = []) {
   const rows = [...initial];
   let sequence = 1;
@@ -54,7 +57,7 @@ const input = (values: Partial<EmployeeWrite> = {}) => ({
   ...values,
 });
 const employee = (values: Partial<Employee> = {}) =>
-  ({ id: "employee-1", isActive: true, ...input(), ...values }) as Employee;
+  ({ id: employeeId, isActive: true, ...input(), ...values }) as Employee;
 
 describe("EmployeeService", () => {
   it("creates with generated internal ID and stores trimmed values", async () => {
@@ -89,7 +92,7 @@ describe("EmployeeService", () => {
   it("updates fields and synchronizes the LOCAL identifier through the repository operation", async () => {
     const { service, identityUpdates } = fixture([employee()]);
     const result = await service.update(
-      "employee-1",
+      employeeId,
       input({ nip: "TEST-NEW", fullName: "Nama Baru" }),
     );
     expect(result.fullName).toBe("Nama Baru");
@@ -97,30 +100,45 @@ describe("EmployeeService", () => {
   });
   it("allows repository update when no LOCAL identity exists without provisioning one", async () => {
     const { service, rows } = fixture([employee()]);
-    await service.update("employee-1", input({ nip: "NO-IDENTITY" }));
+    await service.update(employeeId, input({ nip: "NO-IDENTITY" }));
     expect(rows[0]?.nip).toBe("NO-IDENTITY");
   });
   it("rejects self and unknown supervisors", async () => {
     const { service } = fixture([employee()]);
     await expect(
-      service.update("employee-1", input({ directSupervisorId: "employee-1" })),
+      service.update(employeeId, input({ directSupervisorId: employeeId })),
     ).rejects.toMatchObject({ code: "VALIDATION" });
     await expect(
-      service.update("employee-1", input({ directSupervisorId: "unknown" })),
-    ).rejects.toMatchObject({ code: "VALIDATION" });
+      service.update(
+        employeeId,
+        input({ directSupervisorId: unknownEmployeeId }),
+      ),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+      message: "Atasan langsung tidak ditemukan.",
+    });
+  });
+  it("preserves the safe response for a well-formed unknown supervisor", async () => {
+    const { service } = fixture();
+    await expect(
+      service.create(input({ directSupervisorId: unknownEmployeeId })),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+      message: "Atasan langsung tidak ditemukan.",
+    });
   });
   it("allows a null supervisor", async () => {
     const { service } = fixture([employee({ directSupervisorId: "old" })]);
     expect(
-      (await service.update("employee-1", input({ directSupervisorId: null })))
+      (await service.update(employeeId, input({ directSupervisorId: null })))
         .directSupervisorId,
     ).toBeNull();
   });
   it("deactivates and reactivates while preserving the row", async () => {
     const { service, rows } = fixture([employee()]);
-    expect((await service.setActive("employee-1", false)).isActive).toBe(false);
+    expect((await service.setActive(employeeId, false)).isActive).toBe(false);
     expect(rows).toHaveLength(1);
-    expect((await service.setActive("employee-1", true)).isActive).toBe(true);
+    expect((await service.setActive(employeeId, true)).isActive).toBe(true);
   });
   it("exposes no hard-delete operation", () =>
     expect("delete" in new EmployeeService({} as EmployeeRepository)).toBe(

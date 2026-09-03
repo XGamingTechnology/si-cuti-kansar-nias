@@ -6,6 +6,7 @@ import { requireAdmin } from "@/application/authorization/policy";
 import {
   employeeErrorResponse,
   employeeInput,
+  validateEmployeeId,
 } from "@/application/employees/http";
 import { createEmployeeRuntime } from "@/infrastructure/employees/runtime";
 
@@ -29,7 +30,7 @@ export function createEmployeeItemHandlers(factory = createEmployeeRuntime) {
         return await operation(
           runtime,
           request,
-          (await context.params).employeeId,
+          validateEmployeeId((await context.params).employeeId),
         );
       } catch (error) {
         return (

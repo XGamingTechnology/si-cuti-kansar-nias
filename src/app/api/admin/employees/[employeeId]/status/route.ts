@@ -4,7 +4,10 @@ import {
 } from "@/application/authorization/http";
 import { requireAdmin } from "@/application/authorization/policy";
 import { EmployeeError } from "@/application/employees/service";
-import { employeeErrorResponse } from "@/application/employees/http";
+import {
+  employeeErrorResponse,
+  validateEmployeeId,
+} from "@/application/employees/http";
 import { createEmployeeRuntime } from "@/infrastructure/employees/runtime";
 
 export function createEmployeeStatusHandler(factory = createEmployeeRuntime) {
@@ -24,7 +27,7 @@ export function createEmployeeStatusHandler(factory = createEmployeeRuntime) {
         throw new EmployeeError("VALIDATION", "Status aktif tidak valid.");
       return Response.json({
         employee: await runtime.employees.setActive(
-          (await context.params).employeeId,
+          validateEmployeeId((await context.params).employeeId),
           body.isActive,
         ),
       });
