@@ -4,6 +4,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { AccountStatus } from "@/application/accounts/service";
 import type { ApplicationRole } from "@/application/authorization/policy";
 
+const roleLabel = (role: ApplicationRole) =>
+  role === "ADMIN_KEPEGAWAIAN" ? "Admin Kepegawaian" : "Pegawai";
+
 export function EmployeeAccountControls({
   employeeId,
 }: {
@@ -18,10 +21,7 @@ export function EmployeeAccountControls({
 
   useEffect(() => {
     let active = true;
-    async function load() {
-      const response = await fetch(
-        `/api/admin/employees/${employeeId}/account`,
-      );
+    void fetch(endpoint).then(async (response) => {
       const data = await response.json();
       if (!active) return;
       if (response.ok) {
@@ -29,12 +29,11 @@ export function EmployeeAccountControls({
         if (data.account) setRole(data.account.role);
       } else setMessage(data.error ?? "Status akun gagal dimuat.");
       setLoading(false);
-    }
-    void load();
+    });
     return () => {
       active = false;
     };
-  }, [employeeId]);
+  }, [endpoint]);
 
   async function send(url: string, method: "POST" | "PATCH", body: object) {
     setMessage("");
@@ -52,60 +51,68 @@ export function EmployeeAccountControls({
     setRole(data.account.role);
     return true;
   }
-
-  async function provision(event: FormEvent) {
+  async function passwordAction(event: FormEvent) {
     event.preventDefault();
-    if (await send(endpoint, "POST", { role, password })) {
+    const success = account
+      ? await send(`${endpoint}/password`, "PATCH", { password })
+      : await send(endpoint, "POST", { role, password });
+    if (success) {
       setPassword("");
-      setMessage("Akun berhasil dibuat.");
+      setMessage(
+        account ? "Kata sandi berhasil diatur ulang." : "Akun berhasil dibuat.",
+      );
     }
   }
 
-  async function resetPassword(event: FormEvent) {
-    event.preventDefault();
-    if (await send(`${endpoint}/password`, "PATCH", { password })) {
-      setPassword("");
-      setMessage("Kata sandi berhasil diatur ulang.");
-    }
-  }
-
-  if (loading) return <small>Memuat Status Akun Login…</small>;
+  if (loading)
+    return <div className="account-loading">Memuat informasi akun…</div>;
   return (
-    <div className="account-controls">
-      <div className="account-status">
-        <span>Status Akun Login</span>
-        <strong
-          className={
-            account ? (account.isActive ? "active" : "inactive") : "pending"
-          }
-        >
-          {account
-            ? account.isActive
-              ? "Aktif"
-              : "Tidak aktif"
-            : "Belum memiliki akun"}
-        </strong>
-      </div>
-      {account && <span>Username: {account.username}</span>}
-      <label>
-        Role akun
-        <select
-          value={role}
-          onChange={(event) => setRole(event.target.value as ApplicationRole)}
-        >
-          <option value="PEGAWAI">Pegawai</option>
-          <option value="ADMIN_KEPEGAWAIAN">Admin Kepegawaian</option>
-        </select>
-      </label>
-      {account && role !== account.role && (
-        <button
-          type="button"
-          onClick={() => void send(endpoint, "PATCH", { role })}
-        >
-          Simpan role
-        </button>
-      )}
-      <form onSubmit={account ? resetPassword : provision}>
+    <div className="account-management">
+      <dl className="detail-grid account-summary">
+        <div>
+          <dt>Username / NIP</dt>
+          <dd>{account?.username ?? "Belum tersedia"}</dd>
+        </div>
+        <div>
+          <dt>Role</dt>
+          <dd>{account ? roleLabel(account.role) : "Belum ditentukan"}</dd>
+        </div>
+        <div>
+          <dt>Status Akun Login</dt>
+          <dd>
+            <span
+              className={`status-badge ${!account ? "neutral" : account.isActive ? "success" : "inactive"}`}
+            >
+              <i aria-hidden="true" />
+              {!account
+                ? "Belum memiliki akun"
+                : account.isActive
+                  ? "Aktif"
+                  : "Tidak aktif"}
+            </span>
+          </dd>
+        </div>
+      </dl>
+      <form className="account-form" onSubmit={passwordAction}>
+        <label>
+          Role akun
+          <select
+            value={role}
+            onChange={(event) => setRole(event.target.value as ApplicationRole)}
+          >
+            <option value="PEGAWAI">Pegawai</option>
+            <option value="ADMIN_KEPEGAWAIAN">Admin Kepegawaian</option>
+          </select>
+        </label>
+        {account && role !== account.role && (
+          <button
+            className="secondary-button align-self-end"
+            type="button"
+            onClick={() => void send(endpoint, "PATCH", { role })}
+          >
+            Simpan Role
+          </button>
+        )}
         <label>
           {account ? "Kata sandi baru" : "Kata sandi"}
           <input
@@ -117,21 +124,31 @@ export function EmployeeAccountControls({
             onChange={(event) => setPassword(event.target.value)}
           />
         </label>
-        <button type="submit">
-          {account ? "Reset password" : "Buat akun"}
+        <button className="primary-button align-self-end" type="submit">
+          {account ? "Reset Kata Sandi" : "Buat Akun"}
         </button>
       </form>
       {account && (
-        <button
-          type="button"
-          onClick={() =>
-            void send(endpoint, "PATCH", { isActive: !account.isActive })
-          }
-        >
-          {account.isActive ? "Nonaktifkan Akun Login" : "Aktifkan Akun Login"}
-        </button>
+        <div className="account-lifecycle">
+          <p>Status akun login dikelola terpisah dari Status Pegawai.</p>
+          <button
+            className={account.isActive ? "danger-button" : "success-button"}
+            type="button"
+            onClick={() =>
+              void send(endpoint, "PATCH", { isActive: !account.isActive })
+            }
+          >
+            {account.isActive
+              ? "Nonaktifkan Akun Login"
+              : "Aktifkan Akun Login"}
+          </button>
+        </div>
       )}
-      {message && <small role="status">{message}</small>}
+      {message && (
+        <p className="inline-feedback" role="status">
+          {message}
+        </p>
+      )}
     </div>
   );
 }
