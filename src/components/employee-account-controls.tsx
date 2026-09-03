@@ -69,17 +69,23 @@ export function EmployeeAccountControls({
     }
   }
 
-  if (loading) return <small>Memuat status akun…</small>;
+  if (loading) return <small>Memuat Status Akun Login…</small>;
   return (
     <div className="account-controls">
-      <strong>
-        Akun:{" "}
-        {account
-          ? account.isActive
-            ? "Aktif"
-            : "Tidak aktif"
-          : "Belum memiliki akun"}
-      </strong>
+      <div className="account-status">
+        <span>Status Akun Login</span>
+        <strong
+          className={
+            account ? (account.isActive ? "active" : "inactive") : "pending"
+          }
+        >
+          {account
+            ? account.isActive
+              ? "Aktif"
+              : "Tidak aktif"
+            : "Belum memiliki akun"}
+        </strong>
+      </div>
       {account && <span>Username: {account.username}</span>}
       <label>
         Role akun
@@ -122,7 +128,7 @@ export function EmployeeAccountControls({
             void send(endpoint, "PATCH", { isActive: !account.isActive })
           }
         >
-          {account.isActive ? "Nonaktifkan akun" : "Aktifkan akun"}
+          {account.isActive ? "Nonaktifkan Akun Login" : "Aktifkan Akun Login"}
         </button>
       )}
       {message && <small role="status">{message}</small>}

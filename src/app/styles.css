@@ -25,9 +25,11 @@ select {
 .employee-admin {
   background: #fff;
   border-radius: 14px;
-  margin: 24px auto;
-  max-width: 1200px;
+  margin: 24px 0 0;
+  max-width: none;
+  min-width: 0;
   padding: 28px;
+  width: 100%;
 }
 .employee-admin h2,
 .employee-admin h3 {
@@ -36,12 +38,13 @@ select {
 .employee-grid {
   display: grid;
   gap: 28px;
-  grid-template-columns: minmax(280px, 0.8fr) minmax(400px, 1.5fr);
+  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.5fr);
 }
 .employee-form {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 20px;
+  min-width: 0;
 }
 .employee-form label {
   display: block;
@@ -60,6 +63,7 @@ select {
 }
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 9px;
 }
 .feedback {
@@ -68,22 +72,34 @@ select {
   padding: 12px;
 }
 .employee-list article {
-  align-items: center;
+  align-items: start;
   border-top: 1px solid var(--line);
   display: flex;
   gap: 14px;
   justify-content: space-between;
   padding: 15px 0;
 }
-.employee-list article div:first-child {
+.employee-summary {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .employee-list .employee-actions {
   display: flex;
   flex-direction: column;
   gap: 7px;
+  min-width: min(100%, 280px);
+  width: min(100%, 340px);
+}
+.employee-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.employee-action-buttons button {
+  flex: 1 1 130px;
 }
 .employee-list span {
   color: var(--muted);
@@ -103,6 +119,19 @@ select {
   background: #fbe7e7;
   color: #8b2626;
 }
+.status-line {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 5px 0 0;
+}
+.status-line > span,
+.account-status > span {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
 
 .account-controls {
   display: grid;
@@ -110,6 +139,7 @@ select {
   margin-top: 0.65rem;
   padding-top: 0.65rem;
   border-top: 1px solid var(--line);
+  min-width: 0;
 }
 
 .account-controls form,
@@ -117,13 +147,66 @@ select {
   display: grid;
   gap: 0.3rem;
 }
-@media (max-width: 800px) {
+.account-controls input,
+.account-controls select,
+.account-controls button {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+.account-controls input,
+.account-controls select {
+  padding: 8px;
+}
+.account-status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.account-status strong {
+  border-radius: 10px;
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.account-status strong.active {
+  background: #dcf7e9;
+  color: #17613b;
+}
+.account-status strong.inactive {
+  background: #fbe7e7;
+  color: #8b2626;
+}
+.account-status strong.pending {
+  background: #edf1f5;
+  color: #536274;
+}
+@media (max-width: 1000px) {
   .employee-grid {
     grid-template-columns: 1fr;
   }
   .employee-list article {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .employee-list .employee-actions {
+    width: 100%;
+  }
+}
+@media (max-width: 600px) {
+  .employee-admin {
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .employee-form {
+    padding: 15px;
+  }
+  .employee-action-buttons {
+    flex-direction: column;
+  }
+  .employee-action-buttons button {
+    flex-basis: auto;
+    width: 100%;
   }
 }
 button {
@@ -422,20 +505,30 @@ input:focus-visible {
   opacity: 0.7;
 }
 .authenticated-proof {
-  align-items: center;
+  align-items: stretch;
   background: var(--navy);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   min-height: 100vh;
-  padding: 24px;
+  padding: clamp(16px, 3vw, 36px);
 }
 .authenticated-proof section {
   background: white;
   border-radius: 16px;
   box-shadow: 0 20px 60px #00152b55;
-  max-width: 620px;
-  padding: 48px;
+  max-width: none;
+  padding: clamp(24px, 4vw, 48px);
   width: 100%;
+}
+.authenticated-proof .authenticated-welcome {
+  margin: 0 auto;
+  max-width: 1440px;
+}
+.authenticated-proof .employee-admin {
+  box-shadow: 0 20px 60px #00152b55;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1440px;
 }
 .authenticated-proof h1 {
   font-size: clamp(30px, 5vw, 48px);

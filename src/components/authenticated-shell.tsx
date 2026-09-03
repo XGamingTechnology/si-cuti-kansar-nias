@@ -11,7 +11,7 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
   }
   return (
     <main className="authenticated-proof">
-      <section>
+      <section className="authenticated-welcome">
         <p className="eyebrow">
           {isAdmin ? "RUANG ADMIN KEPEGAWAIAN" : "RUANG PEGAWAI"}
         </p>

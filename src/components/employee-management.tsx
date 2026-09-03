@@ -167,21 +167,32 @@ export function EmployeeManagement() {
           ) : (
             employees.map((employee) => (
               <article key={employee.id}>
-                <div>
+                <div className="employee-summary">
                   <strong>{employee.fullName}</strong>
                   <span>
                     {employee.nip} · {employee.positionTitle} ·{" "}
                     {employee.workUnit}
                   </span>
-                  <small className={employee.isActive ? "active" : "inactive"}>
-                    {employee.isActive ? "Aktif" : "Tidak aktif"}
-                  </small>
+                  <p className="status-line">
+                    <span>Status Pegawai</span>
+                    <small
+                      className={employee.isActive ? "active" : "inactive"}
+                    >
+                      {employee.isActive ? "Aktif" : "Tidak aktif"}
+                    </small>
+                  </p>
                 </div>
                 <div className="employee-actions">
-                  <button onClick={() => edit(employee)}>Detail / Edit</button>
-                  <button onClick={() => void status(employee)}>
-                    {employee.isActive ? "Nonaktifkan" : "Aktifkan"}
-                  </button>
+                  <div className="employee-action-buttons">
+                    <button onClick={() => edit(employee)}>
+                      Detail / Edit
+                    </button>
+                    <button onClick={() => void status(employee)}>
+                      {employee.isActive
+                        ? "Nonaktifkan Pegawai"
+                        : "Aktifkan Pegawai"}
+                    </button>
+                  </div>
                   <EmployeeAccountControls employeeId={employee.id} />
                 </div>
               </article>
