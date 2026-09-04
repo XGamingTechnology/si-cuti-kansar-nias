@@ -166,7 +166,13 @@ export class EmployeeImportService {
         "Workbook tidak memiliki data pegawai.",
       );
     return this.repository.importAll(
-      preview.rows.map(({ rowNumber: _, ...row }) => row),
+      preview.rows.map((row) => ({
+        nip: row.nip,
+        fullName: row.fullName,
+        positionTitle: row.positionTitle,
+        workUnit: row.workUnit,
+        isActive: row.isActive,
+      })),
     );
   }
 }
