@@ -6,6 +6,7 @@ Import pegawai hanya tersedia untuk `ADMIN_KEPEGAWAIAN` dan berlangsung dalam du
 
 - Format `.xlsx`, maksimal 2 MB.
 - Worksheet pertama harus memiliki tepat lima header berurutan: `NIP`, `Nama Lengkap`, `Jabatan`, `Unit Kerja`, `Status Aktif`.
+- Baris yang seluruh selnya kosong diabaikan.
 - NIP wajib, di-trim, maksimal 32 karakter, dan tidak dibatasi hanya angka.
 - Nama Lengkap, Jabatan, dan Unit Kerja wajib, di-trim, maksimal 200 karakter.
 - Status Aktif menerima `TRUE`/`AKTIF` sebagai aktif serta `FALSE`/`TIDAK AKTIF` sebagai tidak aktif (tidak peka huruf besar-kecil setelah trim).

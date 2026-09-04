@@ -35,13 +35,35 @@ describe("EmployeeImportService", () => {
       expect.objectContaining({ nip: "NIP-B", isActive: false }),
     ]);
   });
-  it("reports every required field failure at row level", async () => {
+  it("ignores rows where every cell is blank", async () => {
     const result = await service([
       header,
       ["", "", "", "", ""],
     ]).service.preview(new Uint8Array());
-    expect(result.invalidRows).toBe(1);
-    expect(result.errors).toHaveLength(5);
+    expect(result).toMatchObject({
+      totalRows: 0,
+      validRows: 0,
+      invalidRows: 0,
+      rows: [],
+      errors: [],
+    });
+  });
+  it("reports required field failures for a partially populated row", async () => {
+    const result = await service([
+      header,
+      ["NIP-REQ", "", "", "", ""],
+    ]).service.preview(new Uint8Array());
+    expect(result).toMatchObject({
+      totalRows: 1,
+      validRows: 0,
+      invalidRows: 1,
+    });
+    expect(result.errors.map((error) => error.field)).toEqual([
+      "Nama Lengkap",
+      "Jabatan",
+      "Unit Kerja",
+      "Status Aktif",
+    ]);
   });
   it("reports maximum length failures without numeric-only NIP rules", async () => {
     const result = await service([
