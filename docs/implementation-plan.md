@@ -1,6 +1,6 @@
 # SI CUTI — Implementation Plan
 
-Status: **M1 technical foundation implemented and staging-verified; M2 baseline approved and executable**
+Status: **M1 technical foundation implemented and staging-verified; M2 COMPLETE and staging-verified**
 
 ## 1. Guardrails
 
@@ -12,17 +12,17 @@ M2 must follow `docs/m2-baseline-decisions.md`. Do not use M2 implementation as 
 
 ## 2. Milestones
 
-| Milestone | Scope                                      | Gate                                       |
-| --------- | ------------------------------------------ | ------------------------------------------ |
-| M0        | Product/documentation foundation           | Complete                                   |
-| **M1**    | Technical foundation only                  | Implemented; staging runtime verified      |
-| **M2**    | Local auth, Employee, RBAC/resource policy | **Approved — executable**                  |
-| M3        | Leave Balance engine                       | BAL-001–BAL-005                            |
-| M4        | Leave/permission workflow                  | WF-001–004, PERM-001/002, VAL-001          |
-| M5        | Verification/document archive              | DOC-001/002/004, AUD-001                   |
-| M6        | Dashboard/calendar/analytics               | CAL-001, RPT-002, relevant NOT/DATA        |
-| M7        | Reporting/export                           | RPT-001, AUTH/AUD scope as applicable      |
-| M8        | Notification, hardening, UAT/production    | NOT-001/002, DEP details, retention/DR     |
+| Milestone | Scope                                      | Gate                                   |
+| --------- | ------------------------------------------ | -------------------------------------- |
+| M0        | Product/documentation foundation           | Complete                               |
+| **M1**    | Technical foundation only                  | Implemented; staging runtime verified  |
+| **M2**    | Local auth, Employee, RBAC/resource policy | **COMPLETE — staging-verified**        |
+| M3        | Leave Balance engine                       | BAL-001–BAL-005                        |
+| M4        | Leave/permission workflow                  | WF-001–004, PERM-001/002, VAL-001      |
+| M5        | Verification/document archive              | DOC-001/002/004, AUD-001               |
+| M6        | Dashboard/calendar/analytics               | CAL-001, RPT-002, relevant NOT/DATA    |
+| M7        | Reporting/export                           | RPT-001, AUTH/AUD scope as applicable  |
+| M8        | Notification, hardening, UAT/production    | NOT-001/002, DEP details, retention/DR |
 
 ## 3. Approved technical baseline
 
@@ -58,7 +58,7 @@ The `atasanLangsung` relationship may exist as optional master data, but it does
 
 ## 6. Exit and later gates
 
-M2 exits only when authentication, session handling, employee lifecycle, two-role RBAC, owner isolation, Admin employee/account administration, Excel import validation, migration, and staging runtime verification pass without secrets or real employee data in staging.
+M2 is complete: authentication, session handling, employee lifecycle, two-role RBAC, owner isolation, Admin employee/account administration, Excel import validation, migration, and staging runtime verification passed without secrets or real employee data in staging. The immutable artifacts and verification outcomes are recorded in `docs/m2-verification-record.md`.
 
 M3 remains blocked by `BAL-001` through `BAL-005`; no day-count, rollover, balance reservation/commit, cancellation restore, or Klaim Cuti Bersama formula may be invented in M2. M4/M5 remain blocked by workflow/document authority decisions. Before production, M8 must decide off-VPS destination, retention/rotation/encryption, restore cadence, RPO/RTO, and DR runbook; same-VPS backup is not complete DR.
 
