@@ -5,6 +5,12 @@ import {
   type AccountAdministrationRepository,
 } from "@/application/accounts/service";
 import type { ApplicationRole } from "@/application/authorization/policy";
+import { LAST_LOGIN_CAPABLE_ADMIN_MESSAGE } from "@/application/authentication/admin-lifecycle";
+import {
+  countLoginCapableAdmins,
+  isLoginCapableAdmin,
+  lockAdminLifecycle,
+} from "@/infrastructure/auth/admin-lifecycle-guard";
 
 const accountSelect = {
   employeeId: true,
@@ -87,13 +93,25 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
 
   async updateRole(employeeId: string, role: ApplicationRole) {
     try {
-      return account(
-        await this.database.user.update({
-          where: { employeeId },
-          data: { role },
-          select: accountSelect,
-        }),
-      );
+      return await this.database.$transaction(async (transaction) => {
+        await lockAdminLifecycle(transaction);
+        if (
+          role !== "ADMIN_KEPEGAWAIAN" &&
+          (await isLoginCapableAdmin(transaction, employeeId)) &&
+          (await countLoginCapableAdmins(transaction)) <= 1
+        )
+          throw new AccountAdministrationError(
+            "INVARIANT",
+            LAST_LOGIN_CAPABLE_ADMIN_MESSAGE,
+          );
+        return account(
+          await transaction.user.update({
+            where: { employeeId },
+            data: { role },
+            select: accountSelect,
+          }),
+        );
+      });
     } catch (error) {
       throw this.safeError(error);
     }
@@ -101,13 +119,25 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
 
   async updateActive(employeeId: string, isActive: boolean) {
     try {
-      return account(
-        await this.database.user.update({
-          where: { employeeId },
-          data: { isActive },
-          select: accountSelect,
-        }),
-      );
+      return await this.database.$transaction(async (transaction) => {
+        await lockAdminLifecycle(transaction);
+        if (
+          !isActive &&
+          (await isLoginCapableAdmin(transaction, employeeId)) &&
+          (await countLoginCapableAdmins(transaction)) <= 1
+        )
+          throw new AccountAdministrationError(
+            "INVARIANT",
+            LAST_LOGIN_CAPABLE_ADMIN_MESSAGE,
+          );
+        return account(
+          await transaction.user.update({
+            where: { employeeId },
+            data: { isActive },
+            select: accountSelect,
+          }),
+        );
+      });
     } catch (error) {
       throw this.safeError(error);
     }
@@ -132,6 +162,10 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
         await transaction.localCredential.update({
           where: { authenticationIdentityId: identity.id },
           data: { passwordHash, passwordChangedAt: changedAt },
+        });
+        await transaction.session.updateMany({
+          where: { authenticationIdentityId: identity.id, revokedAt: null },
+          data: { revokedAt: changedAt },
         });
         const row = await transaction.user.findUnique({
           where: { employeeId },

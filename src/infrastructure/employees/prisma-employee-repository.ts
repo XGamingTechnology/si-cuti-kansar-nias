@@ -9,6 +9,12 @@ import type {
   EmployeeImportRepository,
   EmployeeImportRow,
 } from "@/application/employees/import-service";
+import { LAST_LOGIN_CAPABLE_ADMIN_MESSAGE } from "@/application/authentication/admin-lifecycle";
+import {
+  countLoginCapableAdmins,
+  isLoginCapableAdmin,
+  lockAdminLifecycle,
+} from "@/infrastructure/auth/admin-lifecycle-guard";
 
 const select = {
   id: true,
@@ -97,16 +103,29 @@ export class PrismaEmployeeRepository
   }
   async setActive(employeeId: string, isActive: boolean) {
     try {
-      return await this.database.employee.update({
-        where: { id: employeeId },
-        data: { isActive },
-        select,
+      return await this.database.$transaction(async (transaction) => {
+        await lockAdminLifecycle(transaction);
+        if (
+          !isActive &&
+          (await isLoginCapableAdmin(transaction, employeeId)) &&
+          (await countLoginCapableAdmins(transaction)) <= 1
+        )
+          throw new EmployeeError(
+            "INVARIANT",
+            LAST_LOGIN_CAPABLE_ADMIN_MESSAGE,
+          );
+        return transaction.employee.update({
+          where: { id: employeeId },
+          data: { isActive },
+          select,
+        });
       });
     } catch (error) {
       throw this.safeError(error);
     }
   }
   private safeError(error: unknown): Error {
+    if (error instanceof EmployeeError) return error;
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002")
         return new EmployeeError("CONFLICT", "NIP sudah digunakan.");

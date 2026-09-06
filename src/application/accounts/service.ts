@@ -27,7 +27,11 @@ export interface AccountAdministrationRepository {
   ): Promise<AccountStatus>;
 }
 
-export type AccountErrorCode = "VALIDATION" | "CONFLICT" | "NOT_FOUND";
+export type AccountErrorCode =
+  | "VALIDATION"
+  | "CONFLICT"
+  | "NOT_FOUND"
+  | "INVARIANT";
 export class AccountAdministrationError extends Error {
   constructor(
     public readonly code: AccountErrorCode,

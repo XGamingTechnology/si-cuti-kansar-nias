@@ -24,6 +24,20 @@ FROM dependencies AS migrator
 COPY prisma.config.ts ./
 COPY prisma ./prisma
 
+FROM dependencies AS recovery
+COPY prisma.config.ts ./
+COPY prisma ./prisma
+COPY src ./src
+COPY scripts/auth-recovery.ts ./scripts/auth-recovery.ts
+ARG PRISMA_GENERATE_DATABASE_URL=postgresql://prisma-build:prisma-build@127.0.0.1:5432/prisma_build
+ENV DATABASE_URL=${PRISMA_GENERATE_DATABASE_URL} NODE_ENV=production
+RUN npx prisma generate \
+    && groupadd --system --gid 1001 recovery \
+    && useradd --system --uid 1001 --gid recovery recovery \
+    && chown -R recovery:recovery /app
+USER recovery
+CMD ["node", "scripts/auth-recovery.ts"]
+
 FROM node:24.15.0-bookworm-slim AS runtime
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 WORKDIR /app
