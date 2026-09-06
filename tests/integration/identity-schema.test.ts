@@ -26,7 +26,9 @@ run("M2 identity database structure", () => {
     `;
 
     expect(constraints).toHaveLength(5);
-    expect(constraints.every(({ indexdef }) => indexdef.includes("UNIQUE"))).toBe(true);
+    expect(
+      constraints.every(({ indexdef }) => indexdef.includes("UNIQUE")),
+    ).toBe(true);
   });
 
   it("keeps Session attached to exactly one AuthenticationIdentity principal", async () => {
@@ -44,16 +46,22 @@ run("M2 identity database structure", () => {
         AND contype = 'f'
     `;
 
-    expect(columns.map(({ column_name }) => column_name)).not.toContain("userId");
+    expect(columns.map(({ column_name }) => column_name)).not.toContain(
+      "userId",
+    );
     expect(foreignKeys).toHaveLength(1);
     expect(foreignKeys[0]?.definition).toContain(
       'FOREIGN KEY ("authenticationIdentityId") REFERENCES "AuthenticationIdentity"(id)',
     );
-    expect(foreignKeys[0]?.definition).toContain("ON UPDATE RESTRICT ON DELETE RESTRICT");
+    expect(foreignKeys[0]?.definition).toContain(
+      "ON UPDATE RESTRICT ON DELETE RESTRICT",
+    );
   });
 
   it("restricts supervisor deletion and rejects direct self-reference", async () => {
-    const constraints = await database.$queryRaw<Array<{ name: string; definition: string }>>`
+    const constraints = await database.$queryRaw<
+      Array<{ name: string; definition: string }>
+    >`
       SELECT conname AS name, pg_get_constraintdef(oid) AS definition
       FROM pg_constraint
       WHERE conrelid = '"Employee"'::regclass
@@ -84,6 +92,7 @@ run("M2 identity database structure", () => {
       SELECT indexname
       FROM pg_indexes
       WHERE schemaname = current_schema()
+        AND tablename IN ('Employee', 'Session')
         AND indexdef NOT LIKE 'CREATE UNIQUE INDEX%'
         AND indexname NOT LIKE '%_pkey'
       ORDER BY indexname

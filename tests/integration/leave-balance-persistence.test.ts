@@ -15,10 +15,11 @@ run("M3 Batch 2 leave-balance persistence", () => {
   const employeeIds: string[] = [];
 
   async function createEmployee(): Promise<string> {
-    const suffix = randomUUID();
+    const nip = `TEST-${randomUUID().replaceAll("-", "").slice(0, 27)}`;
+    expect(nip.length).toBeLessThanOrEqual(32);
     const employee = await database.employee.create({
       data: {
-        nip: `TEST-${suffix}`,
+        nip,
         fullName: "Pegawai Uji M3",
         positionTitle: "Jabatan Uji",
         workUnit: "Unit Uji",
