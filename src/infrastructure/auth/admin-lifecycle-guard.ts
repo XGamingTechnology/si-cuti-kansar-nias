@@ -5,8 +5,13 @@ import { ADMIN_LIFECYCLE_ADVISORY_LOCK_KEY } from "@/application/authentication/
 type Transaction = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 
 export async function lockAdminLifecycle(transaction: Transaction) {
-  await transaction.$queryRaw(
-    Prisma.sql`SELECT pg_advisory_xact_lock(${ADMIN_LIFECYCLE_ADVISORY_LOCK_KEY}::bigint)`,
+  await transaction.$queryRaw<Array<{ locked: number }>>(
+    Prisma.sql`
+      SELECT 1::integer AS locked
+      FROM (
+        SELECT pg_advisory_xact_lock(${ADMIN_LIFECYCLE_ADVISORY_LOCK_KEY}::bigint)
+      ) AS advisory_lock_call
+    `,
   );
 }
 

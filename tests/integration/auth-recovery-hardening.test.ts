@@ -7,6 +7,7 @@ import { LAST_LOGIN_CAPABLE_ADMIN_MESSAGE } from "@/application/authentication/a
 import { PrismaAccountAdministrationRepository } from "@/infrastructure/accounts/prisma-account-administration-repository";
 import { PrismaEmployeeRepository } from "@/infrastructure/employees/prisma-employee-repository";
 import { PrismaAuthenticationRecoveryRepository } from "@/infrastructure/auth/prisma-authentication-recovery-repository";
+import { lockAdminLifecycle } from "@/infrastructure/auth/admin-lifecycle-guard";
 import { createDatabaseClient } from "@/infrastructure/database/client";
 import { verifyPassword } from "@/modules/auth/password";
 
@@ -80,6 +81,14 @@ if (!databaseUrl) {
           data: { isActive: state.isActive },
         });
       await database.$disconnect();
+    });
+
+    it("acquires the transaction-scoped Admin lifecycle lock through Prisma", async () => {
+      await expect(
+        database.$transaction(async (transaction) => {
+          await lockAdminLifecycle(transaction);
+        }),
+      ).resolves.toBeUndefined();
     });
 
     it("protects the only login-capable Admin from User deactivation, demotion, and Employee deactivation", async () => {
