@@ -49,6 +49,20 @@ services:
       environment-guard: { condition: service_completed_successfully }
     networks: [database]
     restart: "no"
+  auth-recovery:
+    image: ${RECOVERY_IMAGE_REF:-si-cuti-auth-recovery:local}
+    build: { context: ., target: recovery }
+    profiles: [recovery]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?required}
+    depends_on:
+      environment-guard: { condition: service_completed_successfully }
+    networks: [database]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: "no"
   private-storage-init:
     image: ${IMAGE_REF:-si-cuti:local}
     user: "0:0"

@@ -28,7 +28,11 @@ export interface EmployeeRepository {
   setActive(employeeId: string, isActive: boolean): Promise<Employee>;
 }
 
-export type EmployeeErrorCode = "VALIDATION" | "CONFLICT" | "NOT_FOUND";
+export type EmployeeErrorCode =
+  | "VALIDATION"
+  | "CONFLICT"
+  | "NOT_FOUND"
+  | "INVARIANT";
 export class EmployeeError extends Error {
   constructor(
     public readonly code: EmployeeErrorCode,
