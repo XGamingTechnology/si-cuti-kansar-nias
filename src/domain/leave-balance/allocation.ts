@@ -14,6 +14,23 @@ export type AnnualBalanceAllocation = Readonly<{
   totalAllocated: number;
 }>;
 
+export type RestoreAnnualBalanceInput = Readonly<{
+  committedAllocation: AnnualBalanceBuckets;
+  restoreDays: number;
+}>;
+
+export type OriginalCommitOperation = Readonly<{
+  operationId: string;
+  bucket: keyof AnnualBalanceBuckets;
+  days: number;
+}>;
+
+export type ReversalAllocation = Readonly<{
+  compensatesOperationId: string;
+  bucket: keyof AnnualBalanceBuckets;
+  days: number;
+}>;
+
 function requireNonNegativeInteger(value: number, field: string): void {
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new LeaveBalancePolicyError(
@@ -21,6 +38,87 @@ function requireNonNegativeInteger(value: number, field: string): void {
       `${field} harus berupa bilangan bulat non-negatif.`,
     );
   }
+}
+
+/** Reconstructs a known COMMIT in reverse bucket order for compensating REVERSAL rows. */
+export function calculateAnnualBalanceRestoration({
+  committedAllocation,
+  restoreDays,
+}: RestoreAnnualBalanceInput): AnnualBalanceAllocation {
+  if (!Number.isSafeInteger(restoreDays) || restoreDays <= 0) {
+    throw new LeaveBalancePolicyError(
+      "VALIDATION",
+      "Jumlah hari pemulihan harus berupa bilangan bulat positif.",
+    );
+  }
+
+  let totalCommitted = 0;
+  for (const bucket of ANNUAL_BALANCE_BUCKET_PRIORITY) {
+    requireNonNegativeInteger(committedAllocation[bucket], `Alokasi ${bucket}`);
+    totalCommitted += committedAllocation[bucket];
+  }
+  if (restoreDays > totalCommitted) {
+    throw new LeaveBalancePolicyError(
+      "EXCESSIVE_RESTORATION",
+      "Hari yang dipulihkan tidak boleh melebihi alokasi COMMIT asal.",
+    );
+  }
+
+  let remaining = restoreDays;
+  const allocations: Record<keyof AnnualBalanceBuckets, number> = {
+    JOINT_LEAVE_CLAIM: 0,
+    N2: 0,
+    N1: 0,
+    N: 0,
+  };
+  for (const bucket of [...ANNUAL_BALANCE_BUCKET_PRIORITY].reverse()) {
+    allocations[bucket] = Math.min(committedAllocation[bucket], remaining);
+    remaining -= allocations[bucket];
+  }
+  return Object.freeze({
+    allocations: Object.freeze(allocations),
+    totalAllocated: restoreDays,
+  });
+}
+
+/** Returns append-only REVERSAL instructions tied to the original COMMIT rows. */
+export function calculateRestorationOperations(
+  originalCommits: readonly OriginalCommitOperation[],
+  restoreDays: number,
+): readonly ReversalAllocation[] {
+  const committedAllocation: Record<keyof AnnualBalanceBuckets, number> = {
+    JOINT_LEAVE_CLAIM: 0,
+    N2: 0,
+    N1: 0,
+    N: 0,
+  };
+  for (const operation of originalCommits) {
+    if (!operation.operationId) {
+      throw new LeaveBalancePolicyError(
+        "VALIDATION",
+        "COMMIT asal harus memiliki ID operasi.",
+      );
+    }
+    requireNonNegativeInteger(operation.days, `COMMIT ${operation.operationId}`);
+    committedAllocation[operation.bucket] += operation.days;
+  }
+  calculateAnnualBalanceRestoration({ committedAllocation, restoreDays });
+
+  let remaining = restoreDays;
+  const reversals: ReversalAllocation[] = [];
+  for (const operation of [...originalCommits].reverse()) {
+    if (remaining === 0) break;
+    const days = Math.min(operation.days, remaining);
+    if (days > 0) {
+      reversals.push({
+        compensatesOperationId: operation.operationId,
+        bucket: operation.bucket,
+        days,
+      });
+    }
+    remaining -= days;
+  }
+  return Object.freeze(reversals.map(Object.freeze));
 }
 
 export function allocateAnnualBalance({

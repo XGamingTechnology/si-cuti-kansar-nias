@@ -42,6 +42,9 @@ run("M3 Batch 2 leave-balance persistence", () => {
     await database.annualRolloverCommit.deleteMany({
       where: { employeeId: { in: employeeIds } },
     });
+    await database.n2QualifyingPeriod.deleteMany({
+      where: { employeeId: { in: employeeIds } },
+    });
     await database.annualBalanceAccount.deleteMany({
       where: { employeeId: { in: employeeIds } },
     });
@@ -51,6 +54,9 @@ run("M3 Batch 2 leave-balance persistence", () => {
       where: { name: { startsWith: "Uji M3" } },
     });
     await database.jointLeaveEvent.deleteMany({
+      where: { policy: { name: { startsWith: "Uji M3" } } },
+    });
+    await database.jointLeavePolicy.deleteMany({
       where: { name: { startsWith: "Uji M3" } },
     });
   });
@@ -257,33 +263,56 @@ run("M3 Batch 2 leave-balance persistence", () => {
     ).rejects.toThrow();
   });
 
-  it("persists valid joint-leave events and rejects invalid claims and ranges", async () => {
-    const valid = await catalog.createJointLeaveEvent({
-      name: "Uji M3 acara valid",
-      startDate: new Date("2099-02-01T00:00:00.000Z"),
-      endDate: new Date("2099-02-02T00:00:00.000Z"),
-      claimDays: 2,
-      sourceReference: "Referensi uji",
+  it("persists configurable and cross-year joint-leave policy data", async () => {
+    const policy = await catalog.createJointLeavePolicy({
+      name: "Uji M3 kebijakan lintas tahun",
+      applicableYear: 2098,
+      quotaDays: 4,
+      claimOpensAt: new Date("2099-01-01T00:00:00.000Z"),
+      claimDeadlineAt: new Date("2099-02-15T23:59:59.000Z"),
+      creditYear: 2099,
+      eventDates: [
+        {
+          eventDate: new Date("2098-12-24T00:00:00.000Z"),
+          name: "Uji M3 tanggal",
+        },
+      ],
     });
-    expect(valid).toMatchObject({ claimDays: 2, isActive: true });
-    expect(valid.startDate.toISOString().slice(0, 10)).toBe("2099-02-01");
-    expect(valid.endDate.toISOString().slice(0, 10)).toBe("2099-02-02");
+    expect(policy).toMatchObject({
+      applicableYear: 2098,
+      quotaDays: 4,
+      creditYear: 2099,
+    });
+    expect(policy.eventDates[0]?.eventDate.toISOString().slice(0, 10)).toBe(
+      "2098-12-24",
+    );
     await expect(
-      catalog.createJointLeaveEvent({
-        name: "Uji M3 klaim nol",
-        startDate: new Date("2099-03-01T00:00:00.000Z"),
-        endDate: new Date("2099-03-01T00:00:00.000Z"),
-        claimDays: 0,
-      }),
-    ).rejects.toThrow();
-    await expect(
-      catalog.createJointLeaveEvent({
+      catalog.createJointLeavePolicy({
         name: "Uji M3 rentang salah",
-        startDate: new Date("2099-04-02T00:00:00.000Z"),
-        endDate: new Date("2099-04-01T00:00:00.000Z"),
-        claimDays: 1,
+        applicableYear: 2099,
+        quotaDays: 1,
+        claimOpensAt: new Date("2099-02-01Z"),
+        claimDeadlineAt: new Date("2099-01-01Z"),
+        creditYear: 2099,
+        eventDates: [
+          { eventDate: new Date("2099-01-01Z"), name: "Uji M3 tanggal" },
+        ],
       }),
     ).rejects.toThrow();
+  });
+
+  it("consumes each N2 qualifying period only once", async () => {
+    const employeeId = await createEmployee();
+    const period = {
+      employeeId,
+      firstZeroUsageYear: 2096,
+      secondZeroUsageYear: 2097,
+      creditedYear: 2098,
+      grantedDays: 6,
+      consumedAt: new Date(),
+    };
+    await catalog.createN2QualifyingPeriod(period);
+    await expect(catalog.createN2QualifyingPeriod(period)).rejects.toThrow();
   });
 
   it("serializes concurrent account mutations under a row lock", async () => {

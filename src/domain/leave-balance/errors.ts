@@ -1,7 +1,8 @@
 export type LeaveBalancePolicyErrorCode =
   | "VALIDATION"
   | "DUPLICATE_CALENDAR_DATE"
-  | "INSUFFICIENT_BALANCE";
+  | "INSUFFICIENT_BALANCE"
+  | "EXCESSIVE_RESTORATION";
 
 export class LeaveBalancePolicyError extends Error {
   constructor(

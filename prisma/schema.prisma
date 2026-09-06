@@ -20,7 +20,6 @@ enum WorkingCalendarExceptionType {
   PUBLIC_HOLIDAY
   JOINT_LEAVE
   INSTITUTION_NON_WORKING
-  WORKING_DAY_OVERRIDE
 }
 
 enum AnnualBalanceBucket {
@@ -56,6 +55,7 @@ model Employee {
   annualBalanceAccounts   AnnualBalanceAccount[]
   annualBalanceOperations AnnualBalanceOperation[]
   annualRolloverCommits   AnnualRolloverCommit[]
+  n2QualifyingPeriods     N2QualifyingPeriod[]
 
   @@index([directSupervisorId])
 }
@@ -123,17 +123,51 @@ model AnnualRolloverCommit {
   @@unique([employeeId, targetYear])
 }
 
-model JointLeaveEvent {
+model N2QualifyingPeriod {
+  id                    String   @id @default(uuid()) @db.Uuid
+  employeeId            String   @db.Uuid
+  firstZeroUsageYear    Int
+  secondZeroUsageYear   Int
+  creditedYear          Int
+  grantedDays           Int
+  consumedAt            DateTime @db.Timestamptz(3)
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([employeeId, firstZeroUsageYear, secondZeroUsageYear])
+  @@index([employeeId, creditedYear])
+}
+
+model JointLeavePolicy {
   id              String   @id @default(uuid()) @db.Uuid
   name            String   @db.VarChar(200)
-  startDate       DateTime @db.Date
-  endDate         DateTime @db.Date
-  claimDays       Int
+  applicableYear  Int
+  quotaDays       Int
+  claimOpensAt    DateTime @db.Timestamptz(3)
+  claimDeadlineAt DateTime @db.Timestamptz(3)
+  creditYear      Int
   isActive        Boolean  @default(true)
   sourceReference String?  @db.VarChar(500)
   notes           String?  @db.Text
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  eventDates JointLeaveEvent[]
+
+  @@unique([applicableYear, name])
+}
+
+model JointLeaveEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  policyId  String   @db.Uuid
+  eventDate DateTime @db.Date
+  name      String   @db.VarChar(200)
+
+  policy JointLeavePolicy @relation(fields: [policyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([policyId, eventDate])
+  @@index([eventDate])
 }
 
 model User {

@@ -12,17 +12,17 @@ M2 must follow `docs/m2-baseline-decisions.md`. Do not use M2 implementation as 
 
 ## 2. Milestones
 
-| Milestone | Scope                                      | Gate                                                           |
-| --------- | ------------------------------------------ | -------------------------------------------------------------- |
-| M0        | Product/documentation foundation           | Complete                                                       |
-| **M1**    | Technical foundation only                  | Implemented; staging runtime verified                          |
-| **M2**    | Local auth, Employee, RBAC/resource policy | **COMPLETE — staging-verified**                                |
-| M3        | Leave Balance engine                       | **APPROVED — executable under `docs/m3-balance-decisions.md`** |
-| M4        | Leave/permission workflow                  | WF-001–004, PERM-001/002, VAL-001                              |
-| M5        | Verification/document archive              | DOC-001/002/004, AUD-001                                       |
-| M6        | Dashboard/calendar/analytics               | CAL-001, RPT-002, relevant NOT/DATA                            |
-| M7        | Reporting/export                           | RPT-001, AUTH/AUD scope as applicable                          |
-| M8        | Notification, hardening, UAT/production    | NOT-001/002, DEP details, retention/DR                         |
+| Milestone | Scope                                      | Gate                                                         |
+| --------- | ------------------------------------------ | ------------------------------------------------------------ |
+| M0        | Product/documentation foundation           | Complete                                                     |
+| **M1**    | Technical foundation only                  | Implemented; staging runtime verified                        |
+| **M2**    | Local auth, Employee, RBAC/resource policy | **COMPLETE — staging-verified**                              |
+| M3        | Leave Balance engine                       | **IN PROGRESS — Rule Alignment 2.1 required before Batch 3** |
+| M4        | Leave/permission workflow                  | WF-001–004, PERM-001/002, VAL-001                            |
+| M5        | Verification/document archive              | DOC-001/002/004, AUD-001                                     |
+| M6        | Dashboard/calendar/analytics               | CAL-001, RPT-002, relevant NOT/DATA                          |
+| M7        | Reporting/export                           | RPT-001, AUTH/AUD scope as applicable                        |
+| M8        | Notification, hardening, UAT/production    | NOT-001/002, DEP details, retention/DR                       |
 
 ## 3. Approved technical baseline
 
@@ -60,9 +60,10 @@ The `atasanLangsung` relationship may exist as optional master data, but it does
 
 M2 is complete: authentication, session handling, employee lifecycle, two-role RBAC, owner isolation, Admin employee/account administration, Excel import validation, migration, and staging runtime verification passed without secrets or real employee data in staging. The immutable artifacts and verification outcomes are recorded in `docs/m2-verification-record.md`.
 
-M3 is approved for implementation under `docs/m3-balance-decisions.md`, but implementation has not
-started and M3 is not complete. `BAL-004` is a provisional stakeholder-approved baseline and must be
-revisited if an authoritative Basarnas/BKN/other applicable policy supersedes it. M4/M5 remain blocked
+M3 is in progress under `docs/m3-balance-decisions.md` and is not complete. M3 Rule Alignment 2.1
+is required before Batch 3: it removes WORKING_DAY_OVERRIDE, finalizes N-2 qualifying-period
+consumption, replaces the old BAL-005 assumption, and adds the deferral-restoration foundation.
+M4/M5 remain blocked
 by workflow/document authority decisions. Before production, M8 must decide off-VPS destination,
 retention/rotation/encryption, restore cadence, RPO/RTO, and DR runbook; same-VPS backup is not
 complete DR.

@@ -94,3 +94,58 @@ describe("allocateAnnualBalance", () => {
     expect(balances).toEqual(snapshot);
   });
 });
+
+describe("calculateAnnualBalanceRestoration", () => {
+  it("restores the authoritative sample in reverse original-allocation order", async () => {
+    const { calculateAnnualBalanceRestoration } =
+      await import("@/domain/leave-balance");
+    const committed = { JOINT_LEAVE_CLAIM: 2, N2: 0, N1: 3, N: 2 } as const;
+    expect(
+      calculateAnnualBalanceRestoration({
+        committedAllocation: committed,
+        restoreDays: 5,
+      }),
+    ).toEqual({
+      allocations: { JOINT_LEAVE_CLAIM: 0, N2: 0, N1: 3, N: 2 },
+      totalAllocated: 5,
+    });
+  });
+
+  it("ties reverse-order restoration to original COMMIT operation IDs", async () => {
+    const { calculateRestorationOperations } = await import("@/domain/leave-balance");
+    const commits = [
+      { operationId: "commit-joint", bucket: "JOINT_LEAVE_CLAIM" as const, days: 2 },
+      { operationId: "commit-n1", bucket: "N1" as const, days: 3 },
+      { operationId: "commit-n", bucket: "N" as const, days: 2 },
+    ];
+    expect(calculateRestorationOperations(commits, 5)).toEqual([
+      { compensatesOperationId: "commit-n", bucket: "N", days: 2 },
+      { compensatesOperationId: "commit-n1", bucket: "N1", days: 3 },
+    ]);
+  });
+
+  it("supports partial restoration and does not mutate its input", async () => {
+    const { calculateAnnualBalanceRestoration } =
+      await import("@/domain/leave-balance");
+    const committed = { JOINT_LEAVE_CLAIM: 2, N2: 1, N1: 3, N: 2 };
+    const snapshot = { ...committed };
+    expect(
+      calculateAnnualBalanceRestoration({
+        committedAllocation: committed,
+        restoreDays: 3,
+      }).allocations,
+    ).toEqual({ JOINT_LEAVE_CLAIM: 0, N2: 0, N1: 1, N: 2 });
+    expect(committed).toEqual(snapshot);
+  });
+
+  it("cannot restore more than the original COMMIT", async () => {
+    const { calculateAnnualBalanceRestoration } =
+      await import("@/domain/leave-balance");
+    expect(() =>
+      calculateAnnualBalanceRestoration({
+        committedAllocation: { JOINT_LEAVE_CLAIM: 0, N2: 0, N1: 1, N: 2 },
+        restoreDays: 4,
+      }),
+    ).toThrowError(expect.objectContaining({ code: "EXCESSIVE_RESTORATION" }));
+  });
+});

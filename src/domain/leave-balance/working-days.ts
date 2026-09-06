@@ -7,7 +7,6 @@ export const CALENDAR_OVERRIDE_TYPES = [
   "PUBLIC_HOLIDAY",
   "JOINT_LEAVE",
   "INSTITUTION_NON_WORKING",
-  "WORKING_DAY_OVERRIDE",
 ] as const;
 
 export type CalendarOverrideType = (typeof CALENDAR_OVERRIDE_TYPES)[number];
@@ -95,10 +94,6 @@ export function countWorkingDays({
   let workingDays = 0;
   for (let epochDay = startEpochDay; epochDay <= endEpochDay; epochDay += 1) {
     const override = overridesByEpochDay.get(epochDay);
-    if (override === "WORKING_DAY_OVERRIDE") {
-      workingDays += 1;
-      continue;
-    }
     if (override !== undefined) continue;
 
     const weekday = new Date(epochDay * MILLISECONDS_PER_DAY).getUTCDay();

@@ -31,16 +31,16 @@ describe("countWorkingDays", () => {
     ).toBe(4);
   });
 
-  it("counts a weekend WORKING_DAY_OVERRIDE", () => {
-    expect(
+  it("rejects WORKING_DAY_OVERRIDE because it is no longer supported", () => {
+    expect(() =>
       countWorkingDays({
         startDate: "2026-09-05",
-        endDate: "2026-09-06",
+        endDate: "2026-09-05",
         calendarOverrides: [
-          { date: "2026-09-05", type: "WORKING_DAY_OVERRIDE" },
+          { date: "2026-09-05", type: "WORKING_DAY_OVERRIDE" as never },
         ],
       }),
-    ).toBe(1);
+    ).toThrowError(LeaveBalancePolicyError);
   });
 
   it("counts one working day", () => {
@@ -87,7 +87,7 @@ describe("countWorkingDays", () => {
         endDate: "2026-09-07",
         calendarOverrides: [
           { date: "2026-09-07", type: "PUBLIC_HOLIDAY" },
-          { date: "2026-09-07", type: "WORKING_DAY_OVERRIDE" },
+          { date: "2026-09-07", type: "JOINT_LEAVE" },
         ],
       }),
     ).toThrowError(
