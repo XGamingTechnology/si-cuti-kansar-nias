@@ -99,7 +99,10 @@ export function calculateRestorationOperations(
         "COMMIT asal harus memiliki ID operasi.",
       );
     }
-    requireNonNegativeInteger(operation.days, `COMMIT ${operation.operationId}`);
+    requireNonNegativeInteger(
+      operation.days,
+      `COMMIT ${operation.operationId}`,
+    );
     committedAllocation[operation.bucket] += operation.days;
   }
   calculateAnnualBalanceRestoration({ committedAllocation, restoreDays });
@@ -118,7 +121,7 @@ export function calculateRestorationOperations(
     }
     remaining -= days;
   }
-  return Object.freeze(reversals.map(Object.freeze));
+  return Object.freeze(reversals.map((reversal) => Object.freeze(reversal)));
 }
 
 export function allocateAnnualBalance({
