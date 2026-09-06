@@ -125,15 +125,23 @@ run("M3 Batch 2 leave-balance persistence", () => {
     ).rejects.toThrow();
   });
 
-  it("uses PostgreSQL whole-integer semantics for balance counters", async () => {
-    const employeeId = await createEmployee();
-    await expect(
-      database.$executeRawUnsafe(
-        `INSERT INTO "AnnualBalanceAccount" ("id", "employeeId", "entitlementYear", "bucket", "grantedDays", "reservedDays", "committedDays", "updatedAt") VALUES ($1::uuid, $2::uuid, 2099, 'N', 1.5, 0, 0, NOW())`,
-        randomUUID(),
-        employeeId,
-      ),
-    ).rejects.toThrow();
+  it("stores annual balance counters as PostgreSQL integer columns", async () => {
+    const columns = await database.$queryRaw<
+      { column_name: string; data_type: string }[]
+    >`
+      SELECT column_name, data_type
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name = 'AnnualBalanceAccount'
+        AND column_name IN ('grantedDays', 'reservedDays', 'committedDays')
+      ORDER BY column_name
+    `;
+
+    expect(columns).toEqual([
+      { column_name: "committedDays", data_type: "integer" },
+      { column_name: "grantedDays", data_type: "integer" },
+      { column_name: "reservedDays", data_type: "integer" },
+    ]);
   });
 
   it("enforces positive ledger days, idempotency, compensation, and append-only repository API", async () => {
