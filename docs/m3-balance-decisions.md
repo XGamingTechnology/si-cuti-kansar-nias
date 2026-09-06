@@ -1,120 +1,104 @@
 # SI CUTI — M3 Leave Balance Decision Amendment
 
-Status: **AUTHORITATIVE AMENDMENT — APPROVED FOR CURRENT M3 BASELINE**
+Status: **AUTHORITATIVE RULE ALIGNMENT 2.1 — REQUIRED BEFORE M3 BATCH 3**
 Scope: **BAL-001 through BAL-005**
 
-## 1. Authority and scope
+## 1. Authority, supersession, and scope
 
-This document is the authoritative amendment for `BAL-001` through `BAL-005` for the current M3
-baseline. It supersedes the implementation status of those decisions in `docs/decision-log.md` while
-preserving the original ambiguity and recommendation text there as historical context. It authorizes
-M3 implementation only within the decisions below; it does not mark M3 complete and does not resolve
-M4 or M5 workflow, approval-authority, or document-authority decisions.
+This document is the authoritative amendment for the current M3 baseline. Rule Alignment 2.1
+supersedes (a) `WORKING_DAY_OVERRIDE`, (b) the former BAL-005 one-claim-per-event and event-owned
+fixed-value assumption, and (c) the earlier incomplete N-2 regeneration semantics. The old wording
+remains visible in Git and `docs/decision-log.md` as historical decision-log context; it is not a
+supported business rule.
+
+This alignment supplies domain and not-yet-deployed persistence foundations only. It does not
+implement LeaveRequest, claim/deferral approval workflow, evidence storage, API, UI, notification,
+reporting, approval hierarchy, or an M4 state machine. M3 remains in progress.
 
 ## 2. Approved decisions
 
 ### BAL-001 — Balance reservation and commit
 
-Status: **RESOLVED**
+For Cuti Tahunan, reserve required days atomically on submission and commit them when Admin
+Kepegawaian declares the final administrative file complete. Reserved days cannot be double-spent.
+Workflow authority remains M4 scope.
 
-- For annual leave, reserve the required number of days atomically when the leave request is
-  submitted.
-- Reserved days are not available to another request.
-- Commit the reservation as final annual-leave consumption when Admin Kepegawaian declares the final
-  administrative file complete.
-- Do not define reject/cancel restoration here; BAL-002 governs that.
+### BAL-002 — Release, reversal, and authorized deferral
 
-### BAL-002 — Reject/cancel/reversal
+A rejected/cancelled reservation is released. An unused part of an already committed Cuti Tahunan
+period may be returned when interrupted/deferred by official assignment or another authorized basis.
+The return must reference the original committed allocation, may cover only authorized unused days,
+and reconstructs that allocation in reverse order. It creates append-only compensating `REVERSAL`
+operations referencing original `COMMIT` operations; original rows are never edited or deleted.
+Authority and evidence decisions remain M4/M5 scope.
 
-Status: **RESOLVED**
-
-- If a request is still reserved and is rejected/cancelled, release the full reservation.
-- If already committed but leave has not started, create a full compensating reversal.
-- If leave has partially occurred, reverse only the portion not used.
-- Never edit or delete historical balance ledger entries.
-- Corrections must be new compensating transactions.
-- Who may reject/cancel and workflow transition permissions remain M4/WF-004 scope.
+Example: a seven-day COMMIT allocated 2 JOINT_LEAVE_CLAIM + 3 N1 + 2 N. Restoring five unused days
+returns 2 N then 3 N1. It does not recreate JOINT_LEAVE_CLAIM and creates no arbitrary entitlement.
 
 ### BAL-003 — Working-day calculation
 
-Status: **RESOLVED**
+- One shared office calendar applies; no employee roster/shift calendar is introduced.
+- Monday–Friday are working days; Saturday/Sunday are non-working.
+- `PUBLIC_HOLIDAY`, `JOINT_LEAVE`, and Admin-maintained `INSTITUTION_NON_WORKING` dates are
+  non-working.
+- There is **no `WORKING_DAY_OVERRIDE` concept**. Admin cannot turn weekends/non-working dates into
+  working days.
+- Ranges are inclusive and M3 uses full-day units. Calculation stays in domain/application logic and
+  calendar data is maintainable per year.
 
-- Use one shared office working calendar, not per-employee roster/shift calendars.
-- Baseline working days are Monday through Friday.
-- Saturday and Sunday do not consume leave.
-- Official Indonesian public holidays do not consume leave.
-- Official government joint-leave dates recorded in the working calendar do not consume annual
-  leave.
-- Allow authoritative institution-specific calendar overrides through calendar master data.
-- Date ranges are inclusive.
-- M3 baseline supports full-day units only; no 0.5-day leave.
-- Day calculation must be centralized domain/application logic and must not be hard-coded in
-  React/routes/database triggers.
-- Calendar data must be maintainable per year rather than requiring source-code changes.
+### BAL-004 — Final N / N-1 / N-2 baseline
 
-### BAL-004 — N / N-1 / N-2 rollover
+- N is 12 days. N-1 derives only from unused prior-year N and is capped at 6 days.
+- N-2 is capped at 6 days and becomes available after two consecutive calendar years with zero
+  committed Cuti Tahunan usage. Any committed usage breaks that pair.
+- N-2 never grows beyond 6. There is no indefinite carry/cascade.
+- A qualifying two-year period is consumed when it issues N-2 and must be persisted uniquely per
+  employee/year pair. Spending the issued balance cannot cause the same pair to issue it again.
+- A new entitlement needs a new independently recorded pair of two consecutive zero-usage years.
+- Rollover remains idempotent preview → Admin review → explicit commit; corrections are auditable
+  compensations, never history deletion. N remains 12 without mid-year proration under this baseline.
 
-Status: **PROVISIONAL APPROVED FOR CURRENT M3 BASELINE**
+### BAL-005 — Admin-configured Joint Leave policy and future claims
 
-This policy is revisable if an authoritative Basarnas/BKN/other applicable rule later requires a
-different formula.
+- Admin defines a policy for the applicable year, its individual eligible event dates, annual/event
+  quota under the applicable regulation, claim opening, claim deadline, and balance credit year.
+  No global cap, deadline, or annual number of Joint Leave days is hard-coded.
+- Employee JOINT_LEAVE_CLAIM balance starts at 0. A future employee claim may contain multiple
+  eligible dates and evidence; multiple claims are allowed.
+- Admin may approve all or some requested eligible dates. Only approved days credit the balance.
+  An employee cannot choose arbitrary credited days, cannot receive credit twice for the same event
+  date, and cumulative approved days cannot exceed the applicable configured quota.
+- `eventDate`/applicable year, submission time, and `creditYear` are distinct. For example,
+  `eventDate=2025-12-24`, submission in January 2026, one approved day, and `creditYear=2026`.
+- This task persists policy/event-date masters only. Employee claim, per-date approval uniqueness,
+  evidence, and workflow entities are deliberately deferred to M4/M5.
 
-Current baseline:
+## 3. Authoritative leave types and balance priority
 
-- N annual entitlement = 12 days.
-- N-1 is carry-over of unused N from the previous year, capped at 6 days.
-- N-2 is capped at 6 days and only applies when the provisional two-year condition is satisfied.
-- A calendar year counts as "tidak mengambil Cuti Tahunan" when committed annual-leave consumption
-  for that year is exactly 0 days.
-- The N-2 condition is satisfied only when two consecutive calendar years each have committed
-  annual-leave consumption of 0 days.
-- If either year has at least 1 committed annual-leave day, the two-year condition is not satisfied.
-- N-1 and N-2 must not automatically cascade indefinitely without the defined policy condition.
-- For the current provisional baseline, a new employee entering mid-year receives N = 12 days; no
-  prorating.
-- Annual rollover is an idempotent batch: preview -> Admin review -> explicit commit.
-- The same employee/year rollover must not be applied twice.
-- Corrections to an already committed rollover must use auditable adjustment/reversal entries rather
-  than deleting history.
+Only **Cuti Tahunan** reduces annual-leave balance. Cuti Sakit, Cuti Besar, Cuti Melahirkan, Cuti
+Alasan Penting, and Cuti Luar Tanggungan / CLTN do not reduce it; their workflows are not implemented
+in M3.
 
-### BAL-005 — Joint Leave Claim
+Consumption order remains exactly `JOINT_LEAVE_CLAIM → N2 → N1 → N`. Restoration is not a new
+priority calculation: it reverses a known original allocation in reverse (`N → N1 → N2 →
+JOINT_LEAVE_CLAIM`) only until the authorized count is reached.
 
-Status: **RESOLVED**
+## 4. Persistence and migration safety decision
 
-- Admin maintains an official Joint Leave event/catalog.
-- Each event has authoritative date/period, claim value in full days, active/eligibility state, and
-  source/basis reference.
-- Employee selects an eligible event and uploads supporting evidence.
-- Maximum one claim per employee per event.
-- Initial claim state is pending.
-- Admin approval adds the event's configured Joint Leave quota.
-- Rejection adds no quota.
-- Employee must not freely enter the number of claim days.
-- Corrections use adjustment/reversal; do not overwrite ledger history.
-- Detailed document-authority/workflow rules remain M4/M5 scope.
+Batch 2's migration has not been applied to staging and there is no M3 staging data. Therefore Rule
+Alignment 2.1 edits the existing not-yet-deployed migration in place so a first deployment never
+creates the removed enum value or obsolete fixed-claim schema. This is safer than a PostgreSQL enum
+value-removal migration and avoids temporarily installing an invalid business value.
 
-## 3. Preserved annual-balance rules
+The migration adds `N2QualifyingPeriod` (unique employee + qualifying year pair, issuance/credit
+metadata), `JointLeavePolicy` (applicable year, configurable quota/window, credit year), and
+`JointLeaveEvent` child dates. Constraints enforce consecutive N-2 years, a maximum six-day issuance,
+valid claim windows, and unique event dates within a policy. A fresh disposable PostgreSQL database
+must pass migration-from-zero verification. **No migration may be applied to staging in this task.**
 
-Annual balance consumption priority remains:
+## 5. Design constraints and next gate
 
-1. Joint Leave Claim
-2. N-2
-3. N-1
-4. N
-
-The following leave types do not reduce annual-leave balance under the existing source requirement:
-
-- Sick Leave
-- Leave for Important Reasons
-- Long Leave
-- Maternity Leave
-- Leave Outside State Responsibility / CLTN
-
-## 4. Design constraints
-
-- Ledger/history must be append-only from the business perspective.
-- Reservation, commit, release, reversal, adjustment, and rollover must be auditable.
-- Critical balance logic belongs in domain/application services.
-- Concurrency must prevent double-spend.
-- There must be no hidden automatic policy changes.
-- M3 must not invent M4 approval authority or document authority.
+Ledger/history is append-only at the business boundary; concurrency must prevent double spend and
+all sensitive mutations remain auditable. Batch 3 may implement atomic annual-balance mutation
+services (reserve/commit/release/reversal and idempotent rollover) against this alignment, but not
+claim/deferral workflows, evidence, UI/API, or M4 authority.

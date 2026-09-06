@@ -12,15 +12,33 @@ export class PrismaLeaveBalanceCatalogRepository {
     return this.database.annualRolloverCommit.create({ data: input });
   }
 
-  createJointLeaveEvent(input: {
+  createN2QualifyingPeriod(input: {
+    employeeId: string;
+    firstZeroUsageYear: number;
+    secondZeroUsageYear: number;
+    creditedYear: number;
+    grantedDays: number;
+    consumedAt: Date;
+  }) {
+    return this.database.n2QualifyingPeriod.create({ data: input });
+  }
+
+  createJointLeavePolicy(input: {
     name: string;
-    startDate: Date;
-    endDate: Date;
-    claimDays: number;
+    applicableYear: number;
+    quotaDays: number;
+    claimOpensAt: Date;
+    claimDeadlineAt: Date;
+    creditYear: number;
+    eventDates: ReadonlyArray<{ eventDate: Date; name: string }>;
     isActive?: boolean;
     sourceReference?: string | null;
     notes?: string | null;
   }) {
-    return this.database.jointLeaveEvent.create({ data: input });
+    const { eventDates, ...policy } = input;
+    return this.database.jointLeavePolicy.create({
+      data: { ...policy, eventDates: { create: [...eventDates] } },
+      include: { eventDates: true },
+    });
   }
 }

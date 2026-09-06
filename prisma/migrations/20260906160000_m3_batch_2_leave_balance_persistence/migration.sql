@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "WorkingCalendarExceptionType" AS ENUM ('PUBLIC_HOLIDAY', 'JOINT_LEAVE', 'INSTITUTION_NON_WORKING', 'WORKING_DAY_OVERRIDE');
+CREATE TYPE "WorkingCalendarExceptionType" AS ENUM ('PUBLIC_HOLIDAY', 'JOINT_LEAVE', 'INSTITUTION_NON_WORKING');
 
 -- CreateEnum
 CREATE TYPE "AnnualBalanceBucket" AS ENUM ('JOINT_LEAVE_CLAIM', 'N2', 'N1', 'N');
@@ -69,20 +69,46 @@ CREATE TABLE "AnnualRolloverCommit" (
 );
 
 -- CreateTable
-CREATE TABLE "JointLeaveEvent" (
+CREATE TABLE "N2QualifyingPeriod" (
+    "id" UUID NOT NULL,
+    "employeeId" UUID NOT NULL,
+    "firstZeroUsageYear" INTEGER NOT NULL,
+    "secondZeroUsageYear" INTEGER NOT NULL,
+    "creditedYear" INTEGER NOT NULL,
+    "grantedDays" INTEGER NOT NULL,
+    "consumedAt" TIMESTAMPTZ(3) NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "N2QualifyingPeriod_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "N2QualifyingPeriod_consecutive_years" CHECK ("secondZeroUsageYear" = "firstZeroUsageYear" + 1),
+    CONSTRAINT "N2QualifyingPeriod_granted_days" CHECK ("grantedDays" > 0 AND "grantedDays" <= 6)
+);
+
+-- CreateTable
+CREATE TABLE "JointLeavePolicy" (
     "id" UUID NOT NULL,
     "name" VARCHAR(200) NOT NULL,
-    "startDate" DATE NOT NULL,
-    "endDate" DATE NOT NULL,
-    "claimDays" INTEGER NOT NULL,
+    "applicableYear" INTEGER NOT NULL,
+    "quotaDays" INTEGER NOT NULL,
+    "claimOpensAt" TIMESTAMPTZ(3) NOT NULL,
+    "claimDeadlineAt" TIMESTAMPTZ(3) NOT NULL,
+    "creditYear" INTEGER NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "sourceReference" VARCHAR(500),
     "notes" TEXT,
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
-    CONSTRAINT "JointLeaveEvent_pkey" PRIMARY KEY ("id"),
-    CONSTRAINT "JointLeaveEvent_claimDays_positive" CHECK ("claimDays" > 0),
-    CONSTRAINT "JointLeaveEvent_valid_date_range" CHECK ("startDate" <= "endDate")
+    CONSTRAINT "JointLeavePolicy_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "JointLeavePolicy_quota_nonnegative" CHECK ("quotaDays" >= 0),
+    CONSTRAINT "JointLeavePolicy_valid_claim_window" CHECK ("claimOpensAt" <= "claimDeadlineAt")
+);
+
+-- CreateTable
+CREATE TABLE "JointLeaveEvent" (
+    "id" UUID NOT NULL,
+    "policyId" UUID NOT NULL,
+    "eventDate" DATE NOT NULL,
+    "name" VARCHAR(200) NOT NULL,
+    CONSTRAINT "JointLeaveEvent_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -93,9 +119,17 @@ CREATE INDEX "AnnualBalanceOperation_employeeId_entitlementYear_bucket_occurredA
 CREATE INDEX "AnnualBalanceOperation_compensatesOperationId_idx" ON "AnnualBalanceOperation"("compensatesOperationId");
 CREATE UNIQUE INDEX "AnnualRolloverCommit_idempotencyKey_key" ON "AnnualRolloverCommit"("idempotencyKey");
 CREATE UNIQUE INDEX "AnnualRolloverCommit_employeeId_targetYear_key" ON "AnnualRolloverCommit"("employeeId", "targetYear");
+CREATE UNIQUE INDEX "N2QualifyingPeriod_employeeId_firstZeroUsageYear_secondZeroUsageYear_key" ON "N2QualifyingPeriod"("employeeId", "firstZeroUsageYear", "secondZeroUsageYear");
+CREATE INDEX "N2QualifyingPeriod_employeeId_creditedYear_idx" ON "N2QualifyingPeriod"("employeeId", "creditedYear");
+CREATE UNIQUE INDEX "JointLeavePolicy_applicableYear_name_key" ON "JointLeavePolicy"("applicableYear", "name");
+CREATE UNIQUE INDEX "JointLeaveEvent_policyId_eventDate_key" ON "JointLeaveEvent"("policyId", "eventDate");
+CREATE INDEX "JointLeaveEvent_eventDate_idx" ON "JointLeaveEvent"("eventDate");
 
 -- AddForeignKey
 ALTER TABLE "AnnualBalanceAccount" ADD CONSTRAINT "AnnualBalanceAccount_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE "AnnualBalanceOperation" ADD CONSTRAINT "AnnualBalanceOperation_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE "AnnualBalanceOperation" ADD CONSTRAINT "AnnualBalanceOperation_compensatesOperationId_fkey" FOREIGN KEY ("compensatesOperationId") REFERENCES "AnnualBalanceOperation"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE "AnnualRolloverCommit" ADD CONSTRAINT "AnnualRolloverCommit_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+ALTER TABLE "N2QualifyingPeriod" ADD CONSTRAINT "N2QualifyingPeriod_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "JointLeaveEvent" ADD CONSTRAINT "JointLeaveEvent_policyId_fkey" FOREIGN KEY ("policyId") REFERENCES "JointLeavePolicy"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;

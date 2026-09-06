@@ -24,3 +24,11 @@ The persistence suite runs only when `DATABASE_URL` is explicitly present and is
 disposable PostgreSQL database to which all migrations have first been deployed. It creates only
 synthetic `TEST-*` employees and `Uji M3` catalog records and removes them after each test. It must
 never be pointed at staging or production.
+
+## Rule Alignment 2.1 migration note
+
+Because this migration has not been deployed to staging and no M3 staging data exists, Rule
+Alignment 2.1 amends this migration in place. A fresh database therefore never receives
+`WORKING_DAY_OVERRIDE` or the superseded fixed-value event schema. This deliberately avoids unsafe
+PostgreSQL enum-value removal. Verification must migrate a disposable database from zero; this task
+must not deploy migrations to staging.
