@@ -16,6 +16,29 @@ enum AuthenticationProvider {
   LOCAL
 }
 
+enum WorkingCalendarExceptionType {
+  PUBLIC_HOLIDAY
+  JOINT_LEAVE
+  INSTITUTION_NON_WORKING
+  WORKING_DAY_OVERRIDE
+}
+
+enum AnnualBalanceBucket {
+  JOINT_LEAVE_CLAIM
+  N2
+  N1
+  N
+}
+
+enum AnnualBalanceOperationType {
+  GRANT
+  RESERVE
+  RELEASE
+  COMMIT
+  REVERSAL
+  ADJUSTMENT
+}
+
 model Employee {
   id                 String     @id @default(uuid()) @db.Uuid
   nip                String     @unique @db.VarChar(32)
@@ -30,8 +53,87 @@ model Employee {
   directSupervisor Employee?  @relation("EmployeeDirectSupervisor", fields: [directSupervisorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   directReports    Employee[] @relation("EmployeeDirectSupervisor")
   user             User?
+  annualBalanceAccounts   AnnualBalanceAccount[]
+  annualBalanceOperations AnnualBalanceOperation[]
+  annualRolloverCommits   AnnualRolloverCommit[]
 
   @@index([directSupervisorId])
+}
+
+model WorkingCalendarException {
+  id              String                       @id @default(uuid()) @db.Uuid
+  date            DateTime                     @unique @db.Date
+  type            WorkingCalendarExceptionType
+  name            String                       @db.VarChar(200)
+  sourceReference String?                      @db.VarChar(500)
+  notes           String?                      @db.Text
+  createdAt       DateTime                     @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                     @updatedAt @db.Timestamptz(3)
+}
+
+model AnnualBalanceAccount {
+  id              String              @id @default(uuid()) @db.Uuid
+  employeeId      String              @db.Uuid
+  entitlementYear Int
+  bucket          AnnualBalanceBucket
+  grantedDays     Int                 @default(0)
+  reservedDays    Int                 @default(0)
+  committedDays   Int                 @default(0)
+  createdAt       DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime            @updatedAt @db.Timestamptz(3)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([employeeId, entitlementYear, bucket])
+}
+
+model AnnualBalanceOperation {
+  id                     String                     @id @default(uuid()) @db.Uuid
+  employeeId             String                     @db.Uuid
+  entitlementYear        Int
+  bucket                  AnnualBalanceBucket
+  operationType           AnnualBalanceOperationType
+  days                    Int
+  occurredAt              DateTime                   @db.Timestamptz(3)
+  idempotencyKey          String                     @unique @db.VarChar(191)
+  referenceType           String?                    @db.VarChar(100)
+  referenceId             String?                    @db.VarChar(191)
+  compensatesOperationId  String?                    @db.Uuid
+  reason                  String?                    @db.Text
+  createdAt               DateTime                   @default(now()) @db.Timestamptz(3)
+
+  employee              Employee                  @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  compensatesOperation AnnualBalanceOperation?    @relation("AnnualBalanceCompensation", fields: [compensatesOperationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  compensatingOperations AnnualBalanceOperation[] @relation("AnnualBalanceCompensation")
+
+  @@index([employeeId, entitlementYear, bucket, occurredAt])
+  @@index([compensatesOperationId])
+}
+
+model AnnualRolloverCommit {
+  id             String   @id @default(uuid()) @db.Uuid
+  employeeId     String   @db.Uuid
+  targetYear     Int
+  committedAt    DateTime @db.Timestamptz(3)
+  idempotencyKey String   @unique @db.VarChar(191)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([employeeId, targetYear])
+}
+
+model JointLeaveEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @db.VarChar(200)
+  startDate       DateTime @db.Date
+  endDate         DateTime @db.Date
+  claimDays       Int
+  isActive        Boolean  @default(true)
+  sourceReference String?  @db.VarChar(500)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model User {
