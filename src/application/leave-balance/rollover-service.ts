@@ -12,7 +12,6 @@ import type {
   AnnualRolloverCommitState,
   AnnualRolloverRepository,
   AnnualRolloverSnapshot,
-  LockedAnnualRolloverTransaction,
 } from "./ports";
 
 export type AnnualRolloverErrorCode =
