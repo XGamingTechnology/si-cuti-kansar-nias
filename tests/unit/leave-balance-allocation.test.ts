@@ -32,6 +32,31 @@ describe("allocateAnnualBalance", () => {
     });
   });
 
+  it("allows Joint Leave Claim to increase total availability above the regular 24-day cap", () => {
+    expect(
+      allocateAnnualBalance({
+        requestedDays: 27,
+        available: { JOINT_LEAVE_CLAIM: 3, N2: 6, N1: 6, N: 12 },
+      }),
+    ).toEqual({
+      allocations: { JOINT_LEAVE_CLAIM: 3, N2: 6, N1: 6, N: 12 },
+      totalAllocated: 27,
+    });
+  });
+
+  it("rejects a regular N + N1 + N2 balance above 24 even when Claim is zero", () => {
+    expect(() =>
+      allocateAnnualBalance({
+        requestedDays: 1,
+        available: { JOINT_LEAVE_CLAIM: 0, N2: 6, N1: 6, N: 13 },
+      }),
+    ).toThrowError(
+      expect.objectContaining<Partial<LeaveBalancePolicyError>>({
+        code: "VALIDATION",
+      }),
+    );
+  });
+
   it("allocates a request exactly equal to all available balance", () => {
     const balances = available({ JOINT_LEAVE_CLAIM: 1, N2: 1, N1: 1, N: 1 });
     expect(
