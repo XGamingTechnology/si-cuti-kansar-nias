@@ -27,6 +27,17 @@ The return must reference the original committed allocation, may cover only auth
 
 Example: a seven-day COMMIT allocated 2 JOINT_LEAVE_CLAIM + 3 N1 + 2 N. Restoring five unused days returns 2 N then 3 N1. It does not recreate JOINT_LEAVE_CLAIM and creates no arbitrary entitlement.
 
+#### Locked N-2 reversal interpretation
+
+For the N-2 lifecycle, whether the active entitlement has been used is determined by the net effective N-2 commitment after compensating reversals, not merely by the historical existence of a `COMMIT` row.
+
+`netN2CommittedDays = SUM(N2 COMMIT days) - SUM(N2 REVERSAL days)`
+
+- If `netN2CommittedDays = 0`, the active N-2 entitlement is treated as not used for rollover purposes. A full authorized reversal therefore restores the unused status of that N-2 entitlement.
+- If `netN2CommittedDays > 0`, the active N-2 entitlement is treated as used. Any remaining N-2 balance may be used only through the end of that calendar year and expires at the next year boundary.
+- A partial reversal reduces the net effective N-2 usage only by the reversed amount.
+- The original `COMMIT` and compensating `REVERSAL` rows remain in the append-only ledger. This rule changes lifecycle interpretation only; it never deletes or rewrites history.
+
 Authority and evidence decisions remain M4/M5 scope.
 
 ### BAL-003 — Working-day calculation
@@ -70,6 +81,7 @@ Authority and evidence decisions remain M4/M5 scope.
 - If the active N-2 entitlement has never been used at all, its remaining balance carries into the next calendar year.
 - The same unused N-2 may continue to carry across later calendar years until it is first used.
 - Carry-forward does not increase the amount above the existing active entitlement and never above 6 days.
+- A fully reversed N-2 commitment does not make the entitlement "used" for this rollover rule because its net effective N-2 commitment returns to zero.
 
 Example:
 
@@ -81,7 +93,7 @@ Example:
 
 - If N-2 is used partially during a year, only the amount actually consumed is reduced during that year.
 - The remainder stays available until the end of that same calendar year.
-- Once the active N-2 entitlement has been used at least once, any remainder does not carry into the next calendar year.
+- Once the active N-2 entitlement has net effective usage above zero, any remainder does not carry into the next calendar year.
 - At the next year boundary, the remaining amount from that used entitlement becomes 0.
 - The employee must later satisfy a new qualifying two-year period to receive a new N-2 entitlement.
 
@@ -162,7 +174,7 @@ Current persistence already supplies:
 - `N2QualifyingPeriod` for uniquely consumed qualifying two-year pairs;
 - `JointLeavePolicy` and `JointLeaveEvent` for Admin-configured Joint Leave policy/event dates.
 
-For the current Rule Alignment 2.2 domain amendment, N-2 used-vs-unused lifecycle is passed explicitly into rollover calculation. Batch 3 application orchestration must derive that status from authoritative balance/ledger history and must not infer a new entitlement merely from a lower N-2 balance.
+For the current Rule Alignment 2.2 domain amendment, N-2 used-vs-unused lifecycle is passed explicitly into rollover calculation. Batch 3 application orchestration must derive that status from authoritative ledger history. The locked derivation is the net N-2 `COMMIT` amount after subtracting compensating N-2 `REVERSAL` amounts. A zero net amount means not used; a positive net amount means used. The system must not infer a new entitlement merely from a lower N-2 balance.
 
 If later implementation proves that an additional persisted lifecycle marker is necessary, it must be introduced only through a new forward migration.
 
@@ -172,7 +184,7 @@ Ledger/history remains append-only at the business boundary. Concurrency must pr
 
 Before M3 Batch 3 is accepted:
 
-- Rule Alignment 2.2 domain tests must prove unused N-2 carry-forward, no active-entitlement top-up, partial-use year-end expiry, and the regular 24-day cap with Claim outside that cap.
+- Rule Alignment 2.2 domain tests must prove unused N-2 carry-forward, no active-entitlement top-up, partial-use year-end expiry, full-reversal restoration of unused N-2 status, and the regular 24-day cap with Claim outside that cap.
 - Existing BAL-001/BAL-002/BAL-003/BAL-005 behavior must remain regression-safe.
 - No existing deployed migration may be edited.
 
