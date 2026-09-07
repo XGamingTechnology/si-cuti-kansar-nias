@@ -38,6 +38,19 @@ For the N-2 lifecycle, whether the active entitlement has been used is determine
 - A partial reversal reduces the net effective N-2 usage only by the reversed amount.
 - The original `COMMIT` and compensating `REVERSAL` rows remain in the append-only ledger. This rule changes lifecycle interpretation only; it never deletes or rewrites history.
 
+#### Locked zero-usage interpretation for N-2 qualification
+
+A calendar year counts as a zero-usage year for N-2 qualification when the employee's net effective committed Cuti Tahunan usage for that year is zero after authorized compensating reversals.
+
+`netAnnualLeaveUsageDays = SUM(all Cuti Tahunan COMMIT days) - SUM(all compensating Cuti Tahunan REVERSAL days)`
+
+- If `netAnnualLeaveUsageDays = 0`, the year counts as zero usage and may participate in a qualifying two-year pair.
+- If `netAnnualLeaveUsageDays > 0`, the year is not a zero-usage year and breaks the qualifying pair.
+- A full authorized reversal can therefore restore a year to zero-usage status.
+- A partial reversal still counts as usage whenever the remaining net amount is positive.
+- `RELEASE` of a reservation does not count as committed usage because no `COMMIT` occurred.
+- Historical `COMMIT` and `REVERSAL` rows remain append-only and auditable; qualification uses their net effective result rather than deleting history.
+
 Authority and evidence decisions remain M4/M5 scope.
 
 ### BAL-003 — Working-day calculation
@@ -64,8 +77,9 @@ Authority and evidence decisions remain M4/M5 scope.
 #### N-2 qualification
 
 - N-2 is capped at 6 days.
-- N-2 becomes available only after two consecutive calendar years with zero committed Cuti Tahunan usage.
-- Any committed Cuti Tahunan usage breaks that qualifying pair.
+- N-2 becomes available only after two consecutive calendar years with zero net effective committed Cuti Tahunan usage.
+- Any positive net effective committed Cuti Tahunan usage breaks that qualifying pair.
+- A fully reversed year with net effective usage returned to zero may still count as a zero-usage year.
 - A qualifying two-year period may issue N-2 only once and must be persisted uniquely per employee/year pair.
 - A new N-2 entitlement requires a new independently qualifying pair after the previous active N-2 entitlement has ended.
 
@@ -158,7 +172,7 @@ Example with Claim 3, N2 6, N1 6, N 12 and a seven-day Cuti Tahunan request:
 - consume N2 4
 - remaining balances: Claim 0, N2 2, N1 6, N 12
 
-Restoration is not a new priority calculation. It reverses a known original allocation in reverse order (`N → N1 → N2 → JOINT_LEAVE_CLAIM`) only until the authorized restoration count is reached.
+Restoration is not a new priority calculation. It reverses a known original allocation in reverse order (`N → N1 → N2 → JOINT_LEAVE_CLAIM`) only until the authorized count is reached.
 
 ## 4. Persistence and migration safety decision
 
@@ -174,7 +188,9 @@ Current persistence already supplies:
 - `N2QualifyingPeriod` for uniquely consumed qualifying two-year pairs;
 - `JointLeavePolicy` and `JointLeaveEvent` for Admin-configured Joint Leave policy/event dates.
 
-For the current Rule Alignment 2.2 domain amendment, N-2 used-vs-unused lifecycle is passed explicitly into rollover calculation. Batch 3 application orchestration must derive that status from authoritative ledger history. The locked derivation is the net N-2 `COMMIT` amount after subtracting compensating N-2 `REVERSAL` amounts. A zero net amount means not used; a positive net amount means used. The system must not infer a new entitlement merely from a lower N-2 balance.
+For the current Rule Alignment 2.2 domain amendment, N-2 used-vs-unused lifecycle is passed explicitly into rollover calculation. Batch 3 application orchestration must derive that status from authoritative ledger history. The locked derivation is the net N-2 `COMMIT` amount after subtracting compensating N-2 `REVERSAL` amounts. A zero net amount means not used; a positive net amount means used.
+
+The same net-effective interpretation applies to the two calendar years used for N-2 qualification: total Cuti Tahunan `COMMIT` days minus authorized compensating `REVERSAL` days. A zero result counts as zero usage; a positive result breaks the qualifying pair. The system must not infer a new entitlement merely from a lower balance counter.
 
 If later implementation proves that an additional persisted lifecycle marker is necessary, it must be introduced only through a new forward migration.
 
@@ -184,7 +200,7 @@ Ledger/history remains append-only at the business boundary. Concurrency must pr
 
 Before M3 Batch 3 is accepted:
 
-- Rule Alignment 2.2 domain tests must prove unused N-2 carry-forward, no active-entitlement top-up, partial-use year-end expiry, full-reversal restoration of unused N-2 status, and the regular 24-day cap with Claim outside that cap.
+- Rule Alignment 2.2 domain tests must prove unused N-2 carry-forward, no active-entitlement top-up, partial-use year-end expiry, full-reversal restoration of unused N-2 status, full-reversal restoration of annual zero-usage qualification, and the regular 24-day cap with Claim outside that cap.
 - Existing BAL-001/BAL-002/BAL-003/BAL-005 behavior must remain regression-safe.
 - No existing deployed migration may be edited.
 
