@@ -113,8 +113,19 @@ Status: PROVISIONAL APPROVED
 8. Specific permission types, duration limits, required-document rules, and other type-specific automatic validation are not inferred under PERM-001 and remain dependent on VAL-001 or later approved policy.
 9. TUKIN and disciplinary calculations are not implemented under PERM-001 and remain governed by PERM-002.
 
+## PERM-002 - TUKIN and disciplinary boundary
+
+Status: PROVISIONAL APPROVED
+
+1. SI CUTI does not calculate, determine, or automatically apply TUKIN deductions in the current M4 baseline.
+2. SI CUTI does not determine disciplinary violations, disciplinary points, sanctions, or other disciplinary consequences from a PermissionRequest.
+3. The source proposal statement that permission may affect TUKIN according to applicable rules and is not counted as discipline is treated as informational context only until an authoritative regulation, deterministic formula, exceptions, process owner, and implementation authority are approved.
+4. SI CUTI may retain neutral administrative metadata indicating that an approved permission record may require downstream review or processing outside the current SI CUTI workflow, but such metadata must not itself calculate or assert a financial or disciplinary outcome.
+5. No percentage, amount, deduction formula, disciplinary classification, exception, or automated export effect may be hard-coded from assumptions under PERM-002.
+6. If a future approved policy places TUKIN or disciplinary processing inside SI CUTI, it must be introduced through an explicit stakeholder-approved amendment with its authoritative source, calculation rules, ownership, audit behavior, correction behavior, and integration boundary.
+
 ## Current workflow gate status
 
-WF-001 through WF-004 and PERM-001 are PROVISIONAL APPROVED for the current M4 baseline. They may be superseded later only through an explicit stakeholder-approved amendment with preservation of existing audit history.
+WF-001 through WF-004, PERM-001, and PERM-002 are PROVISIONAL APPROVED for the current M4 baseline. They may be superseded later only through an explicit stakeholder-approved amendment with preservation of existing audit history.
 
-PERM-002 and VAL-001 remain to be decided before their dependent M4 behavior is finalized.
+VAL-001 remains to be decided before its dependent M4 automatic validation behavior is finalized.
