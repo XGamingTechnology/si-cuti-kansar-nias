@@ -96,6 +96,7 @@ export type AnnualRolloverSnapshot = Readonly<{
   employeeId: string;
   targetYear: number;
   previousYearAccounts: readonly AnnualBalanceAccountState[];
+  twoYearsAgoAccounts: readonly AnnualBalanceAccountState[];
   previousYearOperations: readonly AnnualBalanceOperationRecord[];
   twoYearsAgoOperations: readonly AnnualBalanceOperationRecord[];
   consumedQualifyingPeriods: readonly N2QualifyingPeriodState[];
