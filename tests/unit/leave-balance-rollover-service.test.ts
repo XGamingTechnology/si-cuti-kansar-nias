@@ -64,9 +64,9 @@ function baseSnapshot(): AnnualRolloverSnapshot {
     targetYear: 2026,
     previousYearAccounts: [
       account(2025, "JOINT_LEAVE_CLAIM", 0),
-      account(2025, "N2", 6),
-      account(2025, "N1", 4),
-      account(2025, "N", 12, 8),
+      account(2025, "N2", 0),
+      account(2025, "N1", 0),
+      account(2025, "N", 12),
     ],
     twoYearsAgoAccounts: [
       account(2024, "JOINT_LEAVE_CLAIM", 0),
@@ -155,7 +155,7 @@ describe("AnnualRolloverService", () => {
 
     expect(preview.calculation).toMatchObject({
       n: 12,
-      n1: 4,
+      n1: 6,
       n2: 6,
       n2GrantedDays: 6,
       n2ExpiredDays: 0,
@@ -188,7 +188,7 @@ describe("AnnualRolloverService", () => {
       previousYearAccounts: [
         account(2025, "JOINT_LEAVE_CLAIM", 0),
         account(2025, "N2", 6),
-        account(2025, "N1", 4),
+        account(2025, "N1", 0),
         account(2025, "N", 12),
       ],
       previousYearOperations: [
@@ -201,7 +201,66 @@ describe("AnnualRolloverService", () => {
     const preview = await service.previewAnnualRollover(input);
 
     expect(preview.currentN2WasUsed).toBe(false);
-    expect(preview.calculation).toMatchObject({ n2: 6, n2GrantedDays: 0 });
+    expect(preview.calculation).toMatchObject({
+      n2: 6,
+      n2GrantedDays: 0,
+      n2ExpiredDays: 0,
+    });
+  });
+
+  it("carries active unused N2 without topping up or consuming a new qualifying pair", async () => {
+    const repository = new FakeRolloverRepository();
+    repository.snapshot = {
+      ...repository.snapshot,
+      previousYearAccounts: [
+        account(2025, "JOINT_LEAVE_CLAIM", 0),
+        account(2025, "N2", 6),
+        account(2025, "N1", 0),
+        account(2025, "N", 12),
+      ],
+    };
+    const service = new AnnualRolloverService(repository);
+
+    const result = await service.commitAnnualRollover({
+      ...input,
+      idempotencyKey: "rollover-carry-n2-2026",
+      committedAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+
+    expect(result.preview.calculation).toMatchObject({
+      n2: 6,
+      n2GrantedDays: 0,
+    });
+    expect(repository.qualifyingPeriods).toHaveLength(0);
+    expect(
+      result.targetYearAccounts.find(({ bucket }) => bucket === "N2")?.grantedDays,
+    ).toBe(6);
+  });
+
+  it("expires remaining N2 at rollover after partial effective N2 use", async () => {
+    const repository = new FakeRolloverRepository();
+    repository.snapshot = {
+      ...repository.snapshot,
+      previousYearAccounts: [
+        account(2025, "JOINT_LEAVE_CLAIM", 0),
+        account(2025, "N2", 6, 2),
+        account(2025, "N1", 0),
+        account(2025, "N", 12),
+      ],
+      previousYearOperations: [
+        operation("commit-n2", 2025, "N2", "COMMIT", 2),
+      ],
+    };
+    const service = new AnnualRolloverService(repository);
+
+    const preview = await service.previewAnnualRollover(input);
+
+    expect(preview.currentN2WasUsed).toBe(true);
+    expect(preview.calculation).toMatchObject({
+      n2: 0,
+      n2GrantedDays: 0,
+      n2ExpiredDays: 4,
+    });
   });
 
   it("commits four target accounts, grant ledger rows and the consumed N2 pair", async () => {
@@ -220,12 +279,12 @@ describe("AnnualRolloverService", () => {
     ).toEqual([
       ["JOINT_LEAVE_CLAIM", 0],
       ["N2", 6],
-      ["N1", 4],
+      ["N1", 6],
       ["N", 12],
     ]);
     expect(result.operations.map(({ bucket, days }) => [bucket, days])).toEqual([
       ["N2", 6],
-      ["N1", 4],
+      ["N1", 6],
       ["N", 12],
     ]);
     expect(repository.qualifyingPeriods).toHaveLength(1);
