@@ -124,8 +124,23 @@ Status: PROVISIONAL APPROVED
 5. No percentage, amount, deduction formula, disciplinary classification, exception, or automated export effect may be hard-coded from assumptions under PERM-002.
 6. If a future approved policy places TUKIN or disciplinary processing inside SI CUTI, it must be introduced through an explicit stakeholder-approved amendment with its authoritative source, calculation rules, ownership, audit behavior, correction behavior, and integration boundary.
 
+## VAL-001 - Automatic validation and evidence requirements
+
+Status: PROVISIONAL APPROVED
+
+1. SI CUTI may automatically block a submission only when the underlying rule is stakeholder-approved, deterministic, and represented by an authoritative source or an already approved SI CUTI business rule.
+2. Existing approved M3 rules remain automatic, including working-day calculation, available annual-leave balance validation, annual-balance reservation/commit/release behavior, rollover behavior, and approved annual-balance bucket priority.
+3. Examples contained in the source proposal must not be converted into blocking business rules merely because they appear in the proposal. In particular, an example such as Cuti Sakit exceeding 14 days is not by itself an approved automatic rejection rule.
+4. For Cuti Sakit, Cuti Alasan Penting, Cuti Besar, Cuti Melahirkan, CLTN, PermissionRequest types, and other categories whose detailed eligibility or evidence rules have not been approved, Admin performs manual verification using only an approved checklist or applicable authoritative process.
+5. SI CUTI may display requirement checklists, but an item may block submission or approval only when that blocking requirement has been explicitly approved.
+6. Every future configurable or automated validation rule that can affect workflow eligibility must identify at minimum its authoritative source or stakeholder decision, rule version, effective date, affected request type, deterministic condition, and outcome classification such as BLOCK or WARNING.
+7. A WARNING is informational and must not silently behave as a BLOCK. Changing a validation outcome from WARNING to BLOCK requires an explicit approved policy change.
+8. APPROVED remains prohibited when evidence that has already been explicitly designated as required for that request is missing or unverified under WF-002.
+9. Request categories may exist in the data model before every detailed eligibility rule is automated, but developers must not infer limits for length of leave, CAP eligibility, Cuti Besar service requirements, Cuti Melahirkan eligibility, CLTN eligibility, medical evidence thresholds, or similar policy from examples or general assumptions.
+10. New automated validation rules must be introduced in a way that preserves historical interpretation. A later rule or effective date must not silently reclassify a request that was validly processed under an earlier rule set.
+
 ## Current workflow gate status
 
-WF-001 through WF-004, PERM-001, and PERM-002 are PROVISIONAL APPROVED for the current M4 baseline. They may be superseded later only through an explicit stakeholder-approved amendment with preservation of existing audit history.
+WF-001 through WF-004, PERM-001, PERM-002, and VAL-001 are PROVISIONAL APPROVED for the current M4 baseline. They may be superseded later only through an explicit stakeholder-approved amendment with preservation of existing audit history.
 
-VAL-001 remains to be decided before its dependent M4 automatic validation behavior is finalized.
+The M4 workflow policy gate is now complete for the current provisional baseline. Implementation must remain within these decisions and must not infer M5 document-retention, formal document-numbering, reporting, notification, or later production policy.
