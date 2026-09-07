@@ -99,6 +99,22 @@ Leave or permission types that do not reduce the annual leave balance use the sa
 
 All transition authorization and balance side effects are enforced server side. UI visibility is not an authorization boundary. A workflow transition and its required balance mutation must succeed or fail atomically where they form one business action.
 
+## PERM-001 - Non-leave permission workflow
+
+Status: PROVISIONAL APPROVED
+
+1. Non-leave permission is modeled as a separate PermissionRequest workflow and is not represented as a LeaveRequest.
+2. PermissionRequest reuses the approved M4 workflow primitives and states: DRAFT, SUBMITTED, RETURNED_FOR_CORRECTION, APPROVED, REJECTED, and CANCELLED.
+3. The owning Pegawai creates, submits, corrects, resubmits, and may cancel a non-final PermissionRequest according to WF-003 and WF-004 owner-isolation rules.
+4. ADMIN_KEPEGAWAIAN may return, approve, or reject a submitted PermissionRequest according to WF-002 and WF-004.
+5. Approval requires the supporting evidence applicable to the current hybrid permission process. The physical signed evidence remains the formal supporting basis, while Admin records the application status in SI CUTI.
+6. PermissionRequest revisions are immutable and auditable in the same manner as leave-request revisions.
+7. PermissionRequest never calls the annual leave balance mutation service and therefore does not create RESERVE, RELEASE, COMMIT, or REVERSAL operations against Cuti Tahunan balances.
+8. Specific permission types, duration limits, required-document rules, and other type-specific automatic validation are not inferred under PERM-001 and remain dependent on VAL-001 or later approved policy.
+9. TUKIN and disciplinary calculations are not implemented under PERM-001 and remain governed by PERM-002.
+
 ## Current workflow gate status
 
-WF-001 through WF-004 are PROVISIONAL APPROVED for the current M4 baseline. They may be superseded later only through an explicit stakeholder-approved amendment with preservation of existing audit history.
+WF-001 through WF-004 and PERM-001 are PROVISIONAL APPROVED for the current M4 baseline. They may be superseded later only through an explicit stakeholder-approved amendment with preservation of existing audit history.
+
+PERM-002 and VAL-001 remain to be decided before their dependent M4 behavior is finalized.
