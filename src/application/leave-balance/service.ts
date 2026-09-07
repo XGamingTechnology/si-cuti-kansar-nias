@@ -2,7 +2,6 @@ import {
   ANNUAL_BALANCE_BUCKET_PRIORITY,
   allocateAnnualBalance,
   calculateRestorationOperations,
-  LeaveBalancePolicyError,
   type AnnualBalanceBucket,
   type AnnualBalanceBuckets,
 } from "@/domain/leave-balance";
@@ -72,12 +71,31 @@ function requireYear(value: number): number {
   return value;
 }
 
-function operationKey(base: string, action: string, bucket: AnnualBalanceBucket): string {
+function operationKey(
+  base: string,
+  action: string,
+  bucket: AnnualBalanceBucket,
+): string {
   const key = `${base}:${action}:${bucket}`;
   if (key.length > 191) {
     throw new BalanceMutationError(
       "VALIDATION",
       "Idempotency key terlalu panjang setelah penambahan bucket.",
+    );
+  }
+  return key;
+}
+
+function reversalOperationKey(
+  base: string,
+  bucket: AnnualBalanceBucket,
+  commitOperationId: string,
+): string {
+  const key = `${base}:reversal:${bucket}:${commitOperationId}`;
+  if (key.length > 191) {
+    throw new BalanceMutationError(
+      "VALIDATION",
+      "Idempotency key reversal terlalu panjang.",
     );
   }
   return key;
@@ -137,7 +155,13 @@ function sumByBucket(
   return totals;
 }
 
-function validateReference(reference: BalanceMutationReference): BalanceMutationReference {
+function totalDays(operations: readonly AnnualBalanceOperationRecord[]): number {
+  return operations.reduce((total, operation) => total + operation.days, 0);
+}
+
+function validateReference(
+  reference: BalanceMutationReference,
+): BalanceMutationReference {
   return {
     referenceType: requireText(reference.referenceType, "referenceType", 100),
     referenceId: requireText(reference.referenceId, "referenceId"),
@@ -169,11 +193,17 @@ async function persistAccountUpdate(
 export class AnnualBalanceMutationService {
   constructor(private readonly repository: AnnualBalanceMutationRepository) {}
 
-  reserveAnnualLeave(input: ReserveAnnualLeaveInput): Promise<AnnualBalanceMutationResult> {
+  reserveAnnualLeave(
+    input: ReserveAnnualLeaveInput,
+  ): Promise<AnnualBalanceMutationResult> {
     const employeeId = requireText(input.employeeId, "employeeId");
     const entitlementYear = requireYear(input.entitlementYear);
     const reference = validateReference(input.reference);
-    const idempotencyKey = requireText(input.idempotencyKey, "idempotencyKey", 140);
+    const idempotencyKey = requireText(
+      input.idempotencyKey,
+      "idempotencyKey",
+      140,
+    );
     const occurredAt = input.occurredAt ?? new Date();
 
     return this.repository.withLockedAccounts(
@@ -187,9 +217,15 @@ export class AnnualBalanceMutationService {
         );
         const priorReserves = operationsByType(existing, "RESERVE");
         if (priorReserves.length > 0) {
+          if (totalDays(priorReserves) !== input.requestedDays) {
+            throw new BalanceMutationError(
+              "CONFLICT",
+              "Referensi sudah memiliki reservasi dengan jumlah hari yang berbeda.",
+            );
+          }
           return { operations: priorReserves, accounts: transaction.accounts };
         }
-        if (existing.some(({ operationType }) => operationType !== "RESERVE")) {
+        if (existing.length > 0) {
           throw new BalanceMutationError(
             "CONFLICT",
             "Referensi ini sudah memiliki mutasi saldo lain dan tidak dapat di-reserve ulang.",
@@ -197,16 +233,10 @@ export class AnnualBalanceMutationService {
         }
 
         const accounts = requireAllBuckets(transaction.accounts);
-        let allocation;
-        try {
-          allocation = allocateAnnualBalance({
-            requestedDays: input.requestedDays,
-            available: availableBuckets(accounts),
-          });
-        } catch (error) {
-          if (error instanceof LeaveBalancePolicyError) throw error;
-          throw error;
-        }
+        const allocation = allocateAnnualBalance({
+          requestedDays: input.requestedDays,
+          available: availableBuckets(accounts),
+        });
 
         const created: AnnualBalanceOperationRecord[] = [];
         for (const bucket of ANNUAL_BALANCE_BUCKET_PRIORITY) {
@@ -234,7 +264,9 @@ export class AnnualBalanceMutationService {
     );
   }
 
-  commitAnnualLeave(input: AnnualBalanceMutationInput): Promise<AnnualBalanceMutationResult> {
+  commitAnnualLeave(
+    input: AnnualBalanceMutationInput,
+  ): Promise<AnnualBalanceMutationResult> {
     return this.finishReservation(input, "COMMIT");
   }
 
@@ -250,7 +282,11 @@ export class AnnualBalanceMutationService {
     const employeeId = requireText(input.employeeId, "employeeId");
     const entitlementYear = requireYear(input.entitlementYear);
     const reference = validateReference(input.reference);
-    const idempotencyKey = requireText(input.idempotencyKey, "idempotencyKey", 140);
+    const idempotencyKey = requireText(
+      input.idempotencyKey,
+      "idempotencyKey",
+      140,
+    );
     const occurredAt = input.occurredAt ?? new Date();
 
     if (!Number.isSafeInteger(input.restoreDays) || input.restoreDays <= 0) {
@@ -277,6 +313,20 @@ export class AnnualBalanceMutationService {
           );
         }
 
+        const retryPrefix = `${idempotencyKey}:reversal:`;
+        const priorRetry = operationsByType(existing, "REVERSAL").filter(
+          ({ idempotencyKey: key }) => key.startsWith(retryPrefix),
+        );
+        if (priorRetry.length > 0) {
+          if (totalDays(priorRetry) !== input.restoreDays) {
+            throw new BalanceMutationError(
+              "CONFLICT",
+              "Idempotency key reversal sudah digunakan dengan jumlah hari berbeda.",
+            );
+          }
+          return { operations: priorRetry, accounts: transaction.accounts };
+        }
+
         const reversals = await transaction.findReversalsForOperationIds(
           commits.map(({ id }) => id),
         );
@@ -285,7 +335,8 @@ export class AnnualBalanceMutationService {
           if (!reversal.compensatesOperationId) continue;
           reversedByCommit.set(
             reversal.compensatesOperationId,
-            (reversedByCommit.get(reversal.compensatesOperationId) ?? 0) + reversal.days,
+            (reversedByCommit.get(reversal.compensatesOperationId) ?? 0) +
+              reversal.days,
           );
         }
 
@@ -315,7 +366,11 @@ export class AnnualBalanceMutationService {
               operationType: "REVERSAL",
               days: instruction.days,
               occurredAt,
-              idempotencyKey: `${operationKey(idempotencyKey, "reversal", instruction.bucket)}:${instruction.compensatesOperationId}`.slice(0, 191),
+              idempotencyKey: reversalOperationKey(
+                idempotencyKey,
+                instruction.bucket,
+                instruction.compensatesOperationId,
+              ),
               referenceType: reference.referenceType,
               referenceId: reference.referenceId,
               compensatesOperationId: instruction.compensatesOperationId,
@@ -335,7 +390,11 @@ export class AnnualBalanceMutationService {
     const employeeId = requireText(input.employeeId, "employeeId");
     const entitlementYear = requireYear(input.entitlementYear);
     const reference = validateReference(input.reference);
-    const idempotencyKey = requireText(input.idempotencyKey, "idempotencyKey", 140);
+    const idempotencyKey = requireText(
+      input.idempotencyKey,
+      "idempotencyKey",
+      140,
+    );
     const occurredAt = input.occurredAt ?? new Date();
 
     return this.repository.withLockedAccounts(
