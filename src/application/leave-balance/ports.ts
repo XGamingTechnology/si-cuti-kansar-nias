@@ -76,3 +76,66 @@ export interface AnnualBalanceMutationRepository {
     work: (transaction: LockedAnnualBalanceTransaction) => Promise<T>,
   ): Promise<T>;
 }
+
+export type N2QualifyingPeriodState = Readonly<{
+  firstZeroUsageYear: number;
+  secondZeroUsageYear: number;
+  creditedYear: number;
+  grantedDays: number;
+}>;
+
+export type AnnualRolloverCommitState = Readonly<{
+  id: string;
+  employeeId: string;
+  targetYear: number;
+  committedAt: Date;
+  idempotencyKey: string;
+}>;
+
+export type AnnualRolloverSnapshot = Readonly<{
+  employeeId: string;
+  targetYear: number;
+  previousYearAccounts: readonly AnnualBalanceAccountState[];
+  previousYearOperations: readonly AnnualBalanceOperationRecord[];
+  twoYearsAgoOperations: readonly AnnualBalanceOperationRecord[];
+  consumedQualifyingPeriods: readonly N2QualifyingPeriodState[];
+  existingRolloverCommit: AnnualRolloverCommitState | null;
+  targetYearAccounts: readonly AnnualBalanceAccountState[];
+}>;
+
+export interface LockedAnnualRolloverTransaction {
+  readonly snapshot: AnnualRolloverSnapshot;
+  createAccount(input: Readonly<{
+    employeeId: string;
+    entitlementYear: number;
+    bucket: AnnualBalanceBucket;
+    grantedDays: number;
+  }>): Promise<AnnualBalanceAccountState>;
+  append(input: AppendBalanceOperation): Promise<AnnualBalanceOperationRecord>;
+  createN2QualifyingPeriod(input: Readonly<{
+    employeeId: string;
+    firstZeroUsageYear: number;
+    secondZeroUsageYear: number;
+    creditedYear: number;
+    grantedDays: number;
+    consumedAt: Date;
+  }>): Promise<N2QualifyingPeriodState>;
+  createRolloverCommit(input: Readonly<{
+    employeeId: string;
+    targetYear: number;
+    committedAt: Date;
+    idempotencyKey: string;
+  }>): Promise<AnnualRolloverCommitState>;
+}
+
+export interface AnnualRolloverRepository {
+  getRolloverSnapshot(
+    employeeId: string,
+    targetYear: number,
+  ): Promise<AnnualRolloverSnapshot>;
+  withLockedRollover<T>(
+    employeeId: string,
+    targetYear: number,
+    work: (transaction: LockedAnnualRolloverTransaction) => Promise<T>,
+  ): Promise<T>;
+}
