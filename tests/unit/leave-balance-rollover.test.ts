@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateAnnualRollover,
+  deriveN2WasUsed,
   LeaveBalancePolicyError,
 } from "@/domain/leave-balance";
 
@@ -20,6 +21,26 @@ const calculate = (
     consumedQualifyingPeriods: [],
     ...overrides,
   });
+
+describe("deriveN2WasUsed", () => {
+  it("treats a fully reversed N2 commitment as unused", () => {
+    expect(deriveN2WasUsed({ committedDays: 2, reversedDays: 2 })).toBe(false);
+  });
+
+  it("treats remaining net N2 commitment as used", () => {
+    expect(deriveN2WasUsed({ committedDays: 4, reversedDays: 2 })).toBe(true);
+  });
+
+  it("treats zero N2 commitment as unused", () => {
+    expect(deriveN2WasUsed({ committedDays: 0, reversedDays: 0 })).toBe(false);
+  });
+
+  it("rejects reversal above committed N2 days", () => {
+    expect(() =>
+      deriveN2WasUsed({ committedDays: 1, reversedDays: 2 }),
+    ).toThrowError(LeaveBalancePolicyError);
+  });
+});
 
 describe("calculateAnnualRollover", () => {
   it.each([
