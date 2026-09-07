@@ -1,56 +1,25 @@
 import type {
   AnnualBalanceAccount,
   AnnualBalanceOperation,
-  AnnualBalanceOperationType,
   PrismaClient,
 } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import type { AnnualBalanceBucket } from "@/domain/leave-balance";
+import type {
+  AnnualBalanceAccountState,
+  AnnualBalanceMutationRepository,
+  AnnualRolloverRepository,
+  AnnualRolloverSnapshot,
+  AppendBalanceOperation,
+  BalanceCounterUpdate,
+  LockedAnnualBalanceTransaction,
+  LockedAnnualRolloverTransaction,
+} from "@/application/leave-balance/ports";
 
-export type LockedAnnualBalanceAccount = Readonly<
-  Pick<
-    AnnualBalanceAccount,
-    | "id"
-    | "employeeId"
-    | "entitlementYear"
-    | "bucket"
-    | "grantedDays"
-    | "reservedDays"
-    | "committedDays"
-  > & { availableDays: number }
->;
+export type LockedAnnualBalanceAccount = AnnualBalanceAccountState;
 
-export type BalanceCounterUpdate = Readonly<{
-  accountId: string;
-  grantedDays: number;
-  reservedDays: number;
-  committedDays: number;
-}>;
-
-export type AppendBalanceOperation = Readonly<{
-  employeeId: string;
-  entitlementYear: number;
-  bucket: AnnualBalanceBucket;
-  operationType: AnnualBalanceOperationType;
-  days: number;
-  occurredAt: Date;
-  idempotencyKey: string;
-  referenceType?: string | null;
-  referenceId?: string | null;
-  compensatesOperationId?: string | null;
-  reason?: string | null;
-}>;
-
-/** Append-only business boundary: intentionally has no update or delete operation. */
 export interface AnnualBalanceLedgerWriter {
   append(input: AppendBalanceOperation): Promise<AnnualBalanceOperation>;
-}
-
-export interface LockedAnnualBalanceTransaction extends AnnualBalanceLedgerWriter {
-  readonly accounts: readonly LockedAnnualBalanceAccount[];
-  updateCounters(
-    input: BalanceCounterUpdate,
-  ): Promise<LockedAnnualBalanceAccount>;
 }
 
 export type LockedAnnualBalanceWork<T> = (
@@ -58,6 +27,7 @@ export type LockedAnnualBalanceWork<T> = (
 ) => Promise<T>;
 
 type LockedAccountRow = Omit<LockedAnnualBalanceAccount, "availableDays">;
+type RolloverDatabase = PrismaClient | Prisma.TransactionClient;
 
 function withAvailable(account: LockedAccountRow): LockedAnnualBalanceAccount {
   return {
@@ -67,7 +37,65 @@ function withAvailable(account: LockedAccountRow): LockedAnnualBalanceAccount {
   };
 }
 
-class PrismaLockedAnnualBalanceTransaction implements LockedAnnualBalanceTransaction {
+async function buildRolloverSnapshot(
+  database: RolloverDatabase,
+  employeeId: string,
+  targetYear: number,
+): Promise<AnnualRolloverSnapshot> {
+  const previousYear = targetYear - 1;
+  const twoYearsAgo = targetYear - 2;
+  const [accounts, operations, consumedQualifyingPeriods, existingRolloverCommit] =
+    await Promise.all([
+      database.annualBalanceAccount.findMany({
+        where: {
+          employeeId,
+          entitlementYear: { in: [twoYearsAgo, previousYear, targetYear] },
+        },
+        orderBy: [{ entitlementYear: "asc" }, { bucket: "asc" }],
+      }),
+      database.annualBalanceOperation.findMany({
+        where: {
+          employeeId,
+          entitlementYear: { in: [twoYearsAgo, previousYear] },
+          operationType: { in: ["COMMIT", "REVERSAL"] },
+        },
+        orderBy: [{ entitlementYear: "asc" }, { occurredAt: "asc" }, { createdAt: "asc" }],
+      }),
+      database.n2QualifyingPeriod.findMany({
+        where: { employeeId },
+        orderBy: [{ firstZeroUsageYear: "asc" }, { secondZeroUsageYear: "asc" }],
+      }),
+      database.annualRolloverCommit.findFirst({
+        where: { employeeId, targetYear },
+      }),
+    ]);
+
+  return {
+    employeeId,
+    targetYear,
+    previousYearAccounts: accounts
+      .filter(({ entitlementYear }) => entitlementYear === previousYear)
+      .map(withAvailable),
+    twoYearsAgoAccounts: accounts
+      .filter(({ entitlementYear }) => entitlementYear === twoYearsAgo)
+      .map(withAvailable),
+    previousYearOperations: operations.filter(
+      ({ entitlementYear }) => entitlementYear === previousYear,
+    ),
+    twoYearsAgoOperations: operations.filter(
+      ({ entitlementYear }) => entitlementYear === twoYearsAgo,
+    ),
+    consumedQualifyingPeriods,
+    existingRolloverCommit,
+    targetYearAccounts: accounts
+      .filter(({ entitlementYear }) => entitlementYear === targetYear)
+      .map(withAvailable),
+  };
+}
+
+class PrismaLockedAnnualBalanceTransaction
+  implements LockedAnnualBalanceTransaction
+{
   constructor(
     private readonly transaction: Prisma.TransactionClient,
     public readonly accounts: readonly LockedAnnualBalanceAccount[],
@@ -93,9 +121,78 @@ class PrismaLockedAnnualBalanceTransaction implements LockedAnnualBalanceTransac
   append(input: AppendBalanceOperation): Promise<AnnualBalanceOperation> {
     return this.transaction.annualBalanceOperation.create({ data: input });
   }
+
+  findOperationsByReference(
+    referenceType: string,
+    referenceId: string,
+  ): Promise<AnnualBalanceOperation[]> {
+    return this.transaction.annualBalanceOperation.findMany({
+      where: { referenceType, referenceId },
+      orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  findReversalsForOperationIds(
+    operationIds: readonly string[],
+  ): Promise<AnnualBalanceOperation[]> {
+    if (operationIds.length === 0) return Promise.resolve([]);
+    return this.transaction.annualBalanceOperation.findMany({
+      where: {
+        operationType: "REVERSAL",
+        compensatesOperationId: { in: [...operationIds] },
+      },
+      orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
+    });
+  }
 }
 
-export class PrismaAnnualBalanceRepository {
+class PrismaLockedAnnualRolloverTransaction
+  implements LockedAnnualRolloverTransaction
+{
+  constructor(
+    private readonly transaction: Prisma.TransactionClient,
+    public readonly snapshot: AnnualRolloverSnapshot,
+  ) {}
+
+  async createAccount(input: {
+    employeeId: string;
+    entitlementYear: number;
+    bucket: AnnualBalanceBucket;
+    grantedDays: number;
+  }): Promise<AnnualBalanceAccountState> {
+    return withAvailable(
+      await this.transaction.annualBalanceAccount.create({ data: input }),
+    );
+  }
+
+  append(input: AppendBalanceOperation): Promise<AnnualBalanceOperation> {
+    return this.transaction.annualBalanceOperation.create({ data: input });
+  }
+
+  createN2QualifyingPeriod(input: {
+    employeeId: string;
+    firstZeroUsageYear: number;
+    secondZeroUsageYear: number;
+    creditedYear: number;
+    grantedDays: number;
+    consumedAt: Date;
+  }) {
+    return this.transaction.n2QualifyingPeriod.create({ data: input });
+  }
+
+  createRolloverCommit(input: {
+    employeeId: string;
+    targetYear: number;
+    committedAt: Date;
+    idempotencyKey: string;
+  }) {
+    return this.transaction.annualRolloverCommit.create({ data: input });
+  }
+}
+
+export class PrismaAnnualBalanceRepository
+  implements AnnualBalanceMutationRepository, AnnualRolloverRepository
+{
   constructor(private readonly database: PrismaClient) {}
 
   createAccount(input: {
@@ -107,6 +204,13 @@ export class PrismaAnnualBalanceRepository {
     committedDays?: number;
   }): Promise<AnnualBalanceAccount> {
     return this.database.annualBalanceAccount.create({ data: input });
+  }
+
+  getRolloverSnapshot(
+    employeeId: string,
+    targetYear: number,
+  ): Promise<AnnualRolloverSnapshot> {
+    return buildRolloverSnapshot(this.database, employeeId, targetYear);
   }
 
   withLockedAccounts<T>(
@@ -141,6 +245,32 @@ export class PrismaAnnualBalanceRepository {
           transaction,
           accounts.map(withAvailable),
         ),
+      );
+    });
+  }
+
+  withLockedRollover<T>(
+    employeeId: string,
+    targetYear: number,
+    work: (transaction: LockedAnnualRolloverTransaction) => Promise<T>,
+  ): Promise<T> {
+    return this.database.$transaction(async (transaction) => {
+      const employees = await transaction.$queryRaw<{ id: string }[]>(Prisma.sql`
+        SELECT "id"
+        FROM "Employee"
+        WHERE "id" = ${employeeId}::uuid
+        FOR UPDATE
+      `);
+      if (employees.length === 0) {
+        throw new Error("Pegawai untuk rollover tidak ditemukan.");
+      }
+      const snapshot = await buildRolloverSnapshot(
+        transaction,
+        employeeId,
+        targetYear,
+      );
+      return work(
+        new PrismaLockedAnnualRolloverTransaction(transaction, snapshot),
       );
     });
   }
