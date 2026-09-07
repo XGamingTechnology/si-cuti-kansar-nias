@@ -27,6 +27,20 @@ Status: PROVISIONAL APPROVED
 5. A request must not move to the final approved state when required evidence is missing.
 6. A later move to a fully digital approval process may supersede this rule through a new stakeholder-approved amendment.
 
+## WF-003 - Correction, revision, and resubmission
+
+Status: PROVISIONAL APPROVED
+
+1. Admin may return a submitted request for correction before a final APPROVED or REJECTED decision and must record a return reason.
+2. A returned request keeps the same parent Request ID, while every resubmission creates a new immutable revision/version.
+3. Only the Pegawai who owns the request may edit the request content after it has been returned. Admin does not directly rewrite employee-submitted request data.
+4. Prior revisions remain preserved and auditable; a resubmission never overwrites earlier submitted content.
+5. For Cuti Tahunan, returning a submitted request releases the balance reservation associated with the submitted revision. A later resubmission recalculates working days from the latest revision and creates a new atomic reservation using the current available balance.
+6. If the available annual-leave balance is insufficient at resubmission time, the resubmission must fail validation and no new reservation is committed.
+7. A final APPROVED request is immutable as a submitted request. Any later authorized correction that affects committed annual-leave balance must use the applicable auditable correction or compensating reversal process rather than rewriting the approved revision or ledger history.
+8. A final REJECTED request cannot be reopened or resubmitted. A Pegawai who wishes to apply again creates a new request with a new Request ID.
+9. The exact status names and transition permissions implementing this behavior are defined under WF-004.
+
 ## Pending
 
-WF-003 correction and resubmission behavior, and WF-004 state machine and transition permissions remain to be decided before implementation is finalized.
+WF-004 state machine and transition permissions remain to be decided before implementation is finalized.
