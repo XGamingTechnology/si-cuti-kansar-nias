@@ -41,6 +41,64 @@ Status: PROVISIONAL APPROVED
 8. A final REJECTED request cannot be reopened or resubmitted. A Pegawai who wishes to apply again creates a new request with a new Request ID.
 9. The exact status names and transition permissions implementing this behavior are defined under WF-004.
 
-## Pending
+## WF-004 - State machine and transition permissions
 
-WF-004 state machine and transition permissions remain to be decided before implementation is finalized.
+Status: PROVISIONAL APPROVED
+
+### Request states
+
+The current M4 baseline uses these request states:
+
+- DRAFT
+- SUBMITTED
+- RETURNED_FOR_CORRECTION
+- APPROVED
+- REJECTED
+- CANCELLED
+
+RESUBMITTED is not a separate state. A resubmitted revision returns to SUBMITTED, while the immutable revision number records that it is a later submission.
+
+### Pegawai transitions
+
+1. Pegawai may create and edit only their own DRAFT request.
+2. DRAFT to SUBMITTED is performed by the owning Pegawai.
+3. RETURNED_FOR_CORRECTION may be edited only by the owning Pegawai.
+4. RETURNED_FOR_CORRECTION to SUBMITTED creates a new immutable revision and is performed by the owning Pegawai.
+5. The owning Pegawai may cancel a non-final request while it is DRAFT, SUBMITTED, or RETURNED_FOR_CORRECTION.
+6. Pegawai cannot directly transition a request to APPROVED or REJECTED.
+
+### Admin Kepegawaian transitions
+
+1. SUBMITTED to RETURNED_FOR_CORRECTION is performed by ADMIN_KEPEGAWAIAN and requires a recorded reason.
+2. SUBMITTED to REJECTED is performed by ADMIN_KEPEGAWAIAN and requires a recorded reason.
+3. SUBMITTED to APPROVED is performed by ADMIN_KEPEGAWAIAN only after the required supporting evidence has been received and verified under WF-002.
+4. Admin does not directly edit the Pegawai submitted request content.
+
+### Terminal states
+
+APPROVED, REJECTED, and CANCELLED are terminal for the original request workflow and cannot be reopened.
+
+A later authorized correction after APPROVED must use a separate auditable correction or compensating process. A later attempt after REJECTED requires a new Request ID.
+
+### Annual leave balance effects
+
+For Cuti Tahunan only:
+
+1. DRAFT has no balance effect.
+2. DRAFT to SUBMITTED creates an atomic RESERVE for the calculated working days.
+3. SUBMITTED to RETURNED_FOR_CORRECTION releases the reservation associated with the submitted revision.
+4. RETURNED_FOR_CORRECTION to SUBMITTED recalculates working days and creates a new atomic RESERVE from the latest available balance.
+5. SUBMITTED to REJECTED releases the outstanding reservation.
+6. SUBMITTED to CANCELLED releases the outstanding reservation.
+7. SUBMITTED to APPROVED commits the exact outstanding reservation allocation.
+8. Cancelling a DRAFT or RETURNED_FOR_CORRECTION request has no additional balance mutation when no reservation is outstanding.
+
+Leave or permission types that do not reduce the annual leave balance use the same workflow state machine but do not call the annual balance mutation service.
+
+### Transition safety
+
+All transition authorization and balance side effects are enforced server side. UI visibility is not an authorization boundary. A workflow transition and its required balance mutation must succeed or fail atomically where they form one business action.
+
+## Current workflow gate status
+
+WF-001 through WF-004 are PROVISIONAL APPROVED for the current M4 baseline. They may be superseded later only through an explicit stakeholder-approved amendment with preservation of existing audit history.
