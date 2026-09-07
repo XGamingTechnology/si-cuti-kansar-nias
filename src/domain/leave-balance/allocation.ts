@@ -1,6 +1,7 @@
 import { LeaveBalancePolicyError } from "./errors";
 import {
   ANNUAL_BALANCE_BUCKET_PRIORITY,
+  ANNUAL_REGULAR_BALANCE_CAP_DAYS,
   type AnnualBalanceBuckets,
 } from "./policy";
 
@@ -38,6 +39,24 @@ function requireNonNegativeInteger(value: number, field: string): void {
       `${field} harus berupa bilangan bulat non-negatif.`,
     );
   }
+}
+
+function validateAvailableBalance(available: AnnualBalanceBuckets): number {
+  let totalAvailable = 0;
+  for (const bucket of ANNUAL_BALANCE_BUCKET_PRIORITY) {
+    requireNonNegativeInteger(available[bucket], `Saldo ${bucket}`);
+    totalAvailable += available[bucket];
+  }
+
+  const regularBalance = available.N2 + available.N1 + available.N;
+  if (regularBalance > ANNUAL_REGULAR_BALANCE_CAP_DAYS) {
+    throw new LeaveBalancePolicyError(
+      "VALIDATION",
+      "Saldo reguler N + N-1 + N-2 tidak boleh melebihi 24 hari.",
+    );
+  }
+
+  return totalAvailable;
 }
 
 /** Reconstructs a known COMMIT in reverse bucket order for compensating REVERSAL rows. */
@@ -135,11 +154,7 @@ export function allocateAnnualBalance({
     );
   }
 
-  let totalAvailable = 0;
-  for (const bucket of ANNUAL_BALANCE_BUCKET_PRIORITY) {
-    requireNonNegativeInteger(available[bucket], `Saldo ${bucket}`);
-    totalAvailable += available[bucket];
-  }
+  const totalAvailable = validateAvailableBalance(available);
   if (totalAvailable < requestedDays) {
     throw new LeaveBalancePolicyError(
       "INSUFFICIENT_BALANCE",
