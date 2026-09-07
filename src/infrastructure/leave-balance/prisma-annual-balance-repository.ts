@@ -1,56 +1,22 @@
 import type {
   AnnualBalanceAccount,
   AnnualBalanceOperation,
-  AnnualBalanceOperationType,
   PrismaClient,
 } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import type { AnnualBalanceBucket } from "@/domain/leave-balance";
+import type {
+  AnnualBalanceAccountState,
+  AnnualBalanceMutationRepository,
+  AppendBalanceOperation,
+  BalanceCounterUpdate,
+  LockedAnnualBalanceTransaction,
+} from "@/application/leave-balance/ports";
 
-export type LockedAnnualBalanceAccount = Readonly<
-  Pick<
-    AnnualBalanceAccount,
-    | "id"
-    | "employeeId"
-    | "entitlementYear"
-    | "bucket"
-    | "grantedDays"
-    | "reservedDays"
-    | "committedDays"
-  > & { availableDays: number }
->;
+export type LockedAnnualBalanceAccount = AnnualBalanceAccountState;
 
-export type BalanceCounterUpdate = Readonly<{
-  accountId: string;
-  grantedDays: number;
-  reservedDays: number;
-  committedDays: number;
-}>;
-
-export type AppendBalanceOperation = Readonly<{
-  employeeId: string;
-  entitlementYear: number;
-  bucket: AnnualBalanceBucket;
-  operationType: AnnualBalanceOperationType;
-  days: number;
-  occurredAt: Date;
-  idempotencyKey: string;
-  referenceType?: string | null;
-  referenceId?: string | null;
-  compensatesOperationId?: string | null;
-  reason?: string | null;
-}>;
-
-/** Append-only business boundary: intentionally has no update or delete operation. */
 export interface AnnualBalanceLedgerWriter {
   append(input: AppendBalanceOperation): Promise<AnnualBalanceOperation>;
-}
-
-export interface LockedAnnualBalanceTransaction extends AnnualBalanceLedgerWriter {
-  readonly accounts: readonly LockedAnnualBalanceAccount[];
-  updateCounters(
-    input: BalanceCounterUpdate,
-  ): Promise<LockedAnnualBalanceAccount>;
 }
 
 export type LockedAnnualBalanceWork<T> = (
@@ -93,9 +59,34 @@ class PrismaLockedAnnualBalanceTransaction implements LockedAnnualBalanceTransac
   append(input: AppendBalanceOperation): Promise<AnnualBalanceOperation> {
     return this.transaction.annualBalanceOperation.create({ data: input });
   }
+
+  findOperationsByReference(
+    referenceType: string,
+    referenceId: string,
+  ): Promise<AnnualBalanceOperation[]> {
+    return this.transaction.annualBalanceOperation.findMany({
+      where: { referenceType, referenceId },
+      orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
+    });
+  }
+
+  findReversalsForOperationIds(
+    operationIds: readonly string[],
+  ): Promise<AnnualBalanceOperation[]> {
+    if (operationIds.length === 0) return Promise.resolve([]);
+    return this.transaction.annualBalanceOperation.findMany({
+      where: {
+        operationType: "REVERSAL",
+        compensatesOperationId: { in: [...operationIds] },
+      },
+      orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
+    });
+  }
 }
 
-export class PrismaAnnualBalanceRepository {
+export class PrismaAnnualBalanceRepository
+  implements AnnualBalanceMutationRepository
+{
   constructor(private readonly database: PrismaClient) {}
 
   createAccount(input: {
