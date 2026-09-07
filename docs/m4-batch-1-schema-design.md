@@ -36,6 +36,8 @@ The baseline may represent only leave categories explicitly named in the product
 
 These enum values identify categories only. They do not imply unapproved eligibility, duration, evidence, gender, service-period, or other policy rules.
 
+Permission type is intentionally not a hard-coded enum. It is modeled as configurable reference data under `PermissionType` so categories can be maintained without a database migration when administrative terminology changes.
+
 ## 3. LeaveRequest
 
 Parent workflow record.
@@ -113,7 +115,31 @@ Proposed fields:
 
 APPROVED transitions must contain the acting Admin, timestamp, exact revision, and non-empty evidence reference at the application boundary.
 
-## 6. PermissionRequest
+## 6. PermissionType
+
+Configurable reference data for non-leave permission categories.
+
+Proposed fields:
+
+- `id` UUID primary key
+- `code` varchar(64), unique and treated as the stable application identifier
+- `name` varchar(200)
+- `description` text nullable
+- `isActive` boolean, default true
+- `createdAt` timestamptz
+- `updatedAt` timestamptz
+
+Rules:
+
+- Permission categories are not hard-coded as a Prisma enum.
+- `code` is stable and must not be silently repurposed to mean a different category.
+- Deactivation prevents the category from being selected for new revisions but does not invalidate or delete historical requests that already reference it.
+- A category alone does not imply duration limits, evidence requirements, TUKIN effects, disciplinary effects, or eligibility rules.
+- Admin management UI/API for PermissionType is outside Batch 1 schema persistence and may be delivered in a later M4 batch.
+
+This design allows the organization to add or deactivate permission categories later without creating a new database migration merely to change a category list.
+
+## 7. PermissionRequest
 
 Separate parent workflow record as required by PERM-001.
 
@@ -130,13 +156,14 @@ Relations and indexes parallel LeaveRequest.
 
 PermissionRequest has no relation to AnnualBalanceAccount or AnnualBalanceOperation.
 
-## 7. PermissionRequestRevision
+## 8. PermissionRequestRevision
 
 Proposed fields:
 
 - `id` UUID primary key
 - `permissionRequestId` UUID FK
 - `revisionNumber` integer
+- `permissionTypeId` UUID FK to PermissionType
 - `startDate` date
 - `endDate` date
 - `reason` text
@@ -149,10 +176,13 @@ Constraints/indexes:
 - unique request + revisionNumber
 - revisionNumber >= 1
 - endDate >= startDate
+- index permissionTypeId
 
-No permission-type enum, duration limit, TUKIN field, or disciplinary classification is invented in Batch 1 because PERM-001/PERM-002/VAL-001 explicitly defer those unapproved rules.
+The referenced PermissionType identifies only the administrative category selected for that revision. No duration limit, TUKIN field, disciplinary classification, or automatic eligibility rule is inferred from that relation.
 
-## 8. PermissionRequestTransition
+A revision continues to reference its historical PermissionType even if that category is later deactivated. Existing submitted revisions are not rewritten because the category lifecycle changes.
+
+## 9. PermissionRequestTransition
 
 Append-only transition table parallel to LeaveRequestTransition.
 
@@ -172,7 +202,7 @@ Proposed fields:
 
 The same WF-002 evidence rule applies to APPROVED permission transitions. No annual-balance mutation is permitted for PermissionRequest.
 
-## 9. Employee and User relations
+## 10. Employee and User relations
 
 Employee receives relations to owned LeaveRequest and PermissionRequest records.
 
@@ -180,7 +210,7 @@ User receives relations to transition records where the User acted as the authen
 
 Existing Employee/User lifecycle remains unchanged. No new application role is added.
 
-## 10. Persistence invariants for the forward migration
+## 11. Persistence invariants for the forward migration
 
 The Batch 1 migration should add database constraints for structural invariants that PostgreSQL can enforce safely, including:
 
@@ -188,12 +218,13 @@ The Batch 1 migration should add database constraints for structural invariants 
 - end date >= start date;
 - calculated working days > 0 when present;
 - unique revision number per parent request;
+- unique PermissionType code;
 - unique transition idempotency key;
 - restrictive foreign keys preserving history.
 
-State-transition authorization, owner isolation, reason-required semantics, evidence-required approval, immutable-submitted-revision behavior, and balance side effects remain domain/application-service rules and must not be implemented in React, route handlers, Prisma hooks, or database triggers.
+State-transition authorization, owner isolation, reason-required semantics, evidence-required approval, immutable-submitted-revision behavior, permission-type activation checks, and balance side effects remain domain/application-service rules and must not be implemented in React, route handlers, Prisma hooks, or database triggers.
 
-## 11. Explicit Batch 1 exclusions
+## 12. Explicit Batch 1 exclusions
 
 Batch 1 does not add:
 
@@ -201,15 +232,16 @@ Batch 1 does not add:
 - official registration number/pattern from DOC-004;
 - general audit trail from AUD-001;
 - JointLeaveClaim workflow/evidence/partial-approval persistence;
-- TUKIN/disciplinal calculations;
-- unapproved leave-type eligibility or duration rules;
+- TUKIN/disciplinary calculations;
+- unapproved leave-type or permission-type eligibility, evidence, or duration rules;
+- PermissionType management UI/API;
 - notifications, reporting, dashboard, calendar UI, API, or pages;
 - production migration;
 - edits to any previously deployed migration.
 
 JointLeaveClaim remains a separate later M4/M5 batch because BAL-005 requires event/date linkage, evidence, partial approval, quota bounding, and duplicate employee/date protection that should not be hidden inside LeaveRequest.
 
-## 12. Proposed Batch 1 verification gate
+## 13. Proposed Batch 1 verification gate
 
 Before this schema is accepted:
 
@@ -217,5 +249,5 @@ Before this schema is accepted:
 2. A new forward migration is reviewed; no deployed migration is edited.
 3. Migration from zero passes against disposable PostgreSQL 18.1.
 4. Existing M1-M3 tests remain green.
-5. New persistence integration tests prove revision uniqueness, restrictive foreign keys, check constraints, and transition idempotency uniqueness.
+5. New persistence integration tests prove revision uniqueness, PermissionType code uniqueness, restrictive foreign keys, check constraints, and transition idempotency uniqueness.
 6. No staging database is touched until the branch is reviewed and merged through the normal staging flow.
