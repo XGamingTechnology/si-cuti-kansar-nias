@@ -20,7 +20,7 @@ export type AnnualRollover = Readonly<{
   n2ExpiredDays: number;
 }>;
 
-export type N2UsageInput = Readonly<{
+export type EffectiveCommittedUsageInput = Readonly<{
   committedDays: number;
   reversedDays: number;
 }>;
@@ -35,24 +35,31 @@ function requireWholeNonNegativeDays(value: number, field: string): void {
 }
 
 /**
- * Locked Rule Alignment 2.2 interpretation:
- * N2 counts as used only when its effective committed usage remains positive
- * after compensating REVERSAL operations. A full reversal returns the usage
- * marker to unused without deleting ledger history.
+ * Locked Rule Alignment 2.2 interpretation: effective annual-leave usage is
+ * committed days minus authorized compensating reversals. Full reversal returns
+ * a year to zero-usage status without deleting ledger history.
  */
-export function deriveN2WasUsed({
+export function deriveNetAnnualLeaveUsageDays({
   committedDays,
   reversedDays,
-}: N2UsageInput): boolean {
-  requireWholeNonNegativeDays(committedDays, "COMMIT Cuti N-2");
-  requireWholeNonNegativeDays(reversedDays, "REVERSAL Cuti N-2");
+}: EffectiveCommittedUsageInput): number {
+  requireWholeNonNegativeDays(committedDays, "COMMIT Cuti Tahunan");
+  requireWholeNonNegativeDays(reversedDays, "REVERSAL Cuti Tahunan");
   if (reversedDays > committedDays) {
     throw new LeaveBalancePolicyError(
       "VALIDATION",
-      "REVERSAL Cuti N-2 tidak boleh melebihi COMMIT Cuti N-2.",
+      "REVERSAL Cuti Tahunan tidak boleh melebihi COMMIT Cuti Tahunan.",
     );
   }
-  return committedDays - reversedDays > 0;
+  return committedDays - reversedDays;
+}
+
+/**
+ * Locked Rule Alignment 2.2 interpretation: N2 counts as used only while its
+ * net effective committed usage remains positive after compensating reversals.
+ */
+export function deriveN2WasUsed(input: EffectiveCommittedUsageInput): boolean {
+  return deriveNetAnnualLeaveUsageDays(input) > 0;
 }
 
 /**
@@ -92,11 +99,11 @@ export function calculateAnnualRollover({
 
   requireWholeNonNegativeDays(
     previousYearCommittedAnnualLeaveDays,
-    "Pemakaian Cuti Tahunan committed tahun sebelumnya",
+    "Pemakaian efektif Cuti Tahunan tahun sebelumnya",
   );
   requireWholeNonNegativeDays(
     twoYearsAgoCommittedAnnualLeaveDays,
-    "Pemakaian Cuti Tahunan committed dua tahun sebelumnya",
+    "Pemakaian efektif Cuti Tahunan dua tahun sebelumnya",
   );
   if (
     !Number.isSafeInteger(firstQualifyingYear) ||
