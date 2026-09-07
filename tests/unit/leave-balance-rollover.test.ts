@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateAnnualRollover,
   deriveN2WasUsed,
+  deriveNetAnnualLeaveUsageDays,
   LeaveBalancePolicyError,
 } from "@/domain/leave-balance";
 
@@ -21,6 +22,26 @@ const calculate = (
     consumedQualifyingPeriods: [],
     ...overrides,
   });
+
+describe("deriveNetAnnualLeaveUsageDays", () => {
+  it("returns zero after a full authorized reversal", () => {
+    expect(
+      deriveNetAnnualLeaveUsageDays({ committedDays: 4, reversedDays: 4 }),
+    ).toBe(0);
+  });
+
+  it("keeps positive effective usage after a partial reversal", () => {
+    expect(
+      deriveNetAnnualLeaveUsageDays({ committedDays: 4, reversedDays: 1 }),
+    ).toBe(3);
+  });
+
+  it("rejects reversal above committed annual leave", () => {
+    expect(() =>
+      deriveNetAnnualLeaveUsageDays({ committedDays: 1, reversedDays: 2 }),
+    ).toThrowError(LeaveBalancePolicyError);
+  });
+});
 
 describe("deriveN2WasUsed", () => {
   it("treats a fully reversed N2 commitment as unused", () => {
@@ -77,11 +98,13 @@ describe("calculateAnnualRollover", () => {
   });
 
   it("expires the remainder at rollover after N2 was used during the year", () => {
-    expect(calculate({
-      currentN2Remaining: 4,
-      currentN2WasUsed: true,
-      previousYearCommittedAnnualLeaveDays: 2,
-    })).toMatchObject({
+    expect(
+      calculate({
+        currentN2Remaining: 4,
+        currentN2WasUsed: true,
+        previousYearCommittedAnnualLeaveDays: 2,
+      }),
+    ).toMatchObject({
       n2: 0,
       n2GrantedDays: 0,
       n2ExpiredDays: 4,
