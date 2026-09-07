@@ -25,10 +25,14 @@ disposable PostgreSQL database to which all migrations have first been deployed.
 synthetic `TEST-*` employees and `Uji M3` catalog records and removes them after each test. It must
 never be pointed at staging or production.
 
-## Rule Alignment 2.1 migration note
+## Rule Alignment 2.1 migration history and Rule Alignment 2.2 safety
 
-Because this migration has not been deployed to staging and no M3 staging data exists, Rule
-Alignment 2.1 amends this migration in place. A fresh database therefore never receives
-`WORKING_DAY_OVERRIDE` or the superseded fixed-value event schema. This deliberately avoids unsafe
-PostgreSQL enum-value removal. Verification must migrate a disposable database from zero; this task
-must not deploy migrations to staging.
+Before its first official staging deployment, Rule Alignment 2.1 amended the then-not-yet-deployed
+M3 Batch 2 migration in place so a fresh database never received `WORKING_DAY_OVERRIDE` or the
+superseded fixed-value event schema. That historical in-place amendment was valid only because the
+migration had not yet been deployed anywhere authoritative.
+
+The M3 Batch 2 migration has now been successfully applied to official staging. It is therefore
+immutable. Rule Alignment 2.2 must not rewrite that migration. Any future persistence change must be
+introduced through a new forward migration and verified first against a disposable PostgreSQL
+database migrated from zero.
