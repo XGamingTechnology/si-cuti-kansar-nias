@@ -20,6 +20,11 @@ export type AnnualRollover = Readonly<{
   n2ExpiredDays: number;
 }>;
 
+export type N2UsageInput = Readonly<{
+  committedDays: number;
+  reversedDays: number;
+}>;
+
 function requireWholeNonNegativeDays(value: number, field: string): void {
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new LeaveBalancePolicyError(
@@ -27,6 +32,27 @@ function requireWholeNonNegativeDays(value: number, field: string): void {
       `${field} harus berupa bilangan bulat non-negatif.`,
     );
   }
+}
+
+/**
+ * Locked Rule Alignment 2.2 interpretation:
+ * N2 counts as used only when its effective committed usage remains positive
+ * after compensating REVERSAL operations. A full reversal returns the usage
+ * marker to unused without deleting ledger history.
+ */
+export function deriveN2WasUsed({
+  committedDays,
+  reversedDays,
+}: N2UsageInput): boolean {
+  requireWholeNonNegativeDays(committedDays, "COMMIT Cuti N-2");
+  requireWholeNonNegativeDays(reversedDays, "REVERSAL Cuti N-2");
+  if (reversedDays > committedDays) {
+    throw new LeaveBalancePolicyError(
+      "VALIDATION",
+      "REVERSAL Cuti N-2 tidak boleh melebihi COMMIT Cuti N-2.",
+    );
+  }
+  return committedDays - reversedDays > 0;
 }
 
 /**
