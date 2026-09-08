@@ -142,22 +142,24 @@ run("M4 workflow services on PostgreSQL", () => {
       permissionContent(await type()),
     );
     for (const attempt of [
-      leave.get(outsider, leaveDraft.id),
-      leave.updateDraft(outsider, leaveDraft.id, leaveContent),
-      leave.submit(outsider, leaveDraft.id, key("foreign-leave")),
-      permission.get(outsider, permissionDraft.id),
-      permission.updateDraft(
-        outsider,
-        permissionDraft.id,
-        permissionContent(permissionDraft.currentRevision.permissionTypeId),
-      ),
-      permission.submit(
-        outsider,
-        permissionDraft.id,
-        key("foreign-permission"),
-      ),
+      () => leave.get(outsider, leaveDraft.id),
+      () => leave.updateDraft(outsider, leaveDraft.id, leaveContent),
+      () => leave.submit(outsider, leaveDraft.id, key("foreign-leave")),
+      () => permission.get(outsider, permissionDraft.id),
+      () =>
+        permission.updateDraft(
+          outsider,
+          permissionDraft.id,
+          permissionContent(permissionDraft.currentRevision.permissionTypeId),
+        ),
+      () =>
+        permission.submit(
+          outsider,
+          permissionDraft.id,
+          key("foreign-permission"),
+        ),
     ])
-      await expect(attempt).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(attempt()).rejects.toMatchObject({ code: "FORBIDDEN" });
     await leave.submit(owner, leaveDraft.id, key("submit-leave"));
     await permission.submit(
       owner,
