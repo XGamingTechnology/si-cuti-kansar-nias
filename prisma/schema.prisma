@@ -237,6 +237,7 @@ model LeaveRequestRevision {
   transitions LeaveRequestTransition[]
 
   @@unique([leaveRequestId, revisionNumber])
+  @@unique([id, leaveRequestId])
 }
 
 model LeaveRequestTransition {
@@ -253,7 +254,7 @@ model LeaveRequestTransition {
   createdAt         DateTime              @default(now()) @db.Timestamptz(3)
 
   leaveRequest LeaveRequest         @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  revision     LeaveRequestRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision     LeaveRequestRevision @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
   actor        User                 @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 }
 
@@ -302,6 +303,7 @@ model PermissionRequestRevision {
   transitions       PermissionRequestTransition[]
 
   @@unique([permissionRequestId, revisionNumber])
+  @@unique([id, permissionRequestId])
   @@index([permissionTypeId])
 }
 
@@ -319,7 +321,7 @@ model PermissionRequestTransition {
   createdAt           DateTime              @default(now()) @db.Timestamptz(3)
 
   permissionRequest PermissionRequest         @relation(fields: [permissionRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  revision          PermissionRequestRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision          PermissionRequestRevision @relation(fields: [revisionId, permissionRequestId], references: [id, permissionRequestId], onDelete: Restrict, onUpdate: Restrict)
   actor             User                      @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 }
 

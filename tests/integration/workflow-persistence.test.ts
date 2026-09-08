@@ -199,6 +199,44 @@ run("M4 Batch 1 workflow persistence", () => {
     await expect(database.permissionRequestTransition.create({ data })).rejects.toThrow();
   });
 
+  it("rejects a leave transition whose revision belongs to another request", async () => {
+    const { request: requestA, user } = await createLeaveRevision();
+    const { revision: revisionB } = await createLeaveRevision();
+
+    await expect(
+      database.leaveRequestTransition.create({
+        data: {
+          leaveRequestId: requestA.id,
+          revisionId: revisionB.id,
+          fromStatus: "DRAFT",
+          toStatus: "SUBMITTED",
+          actorUserId: user.id,
+          occurredAt: new Date(),
+          idempotencyKey: randomUUID(),
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a permission transition whose revision belongs to another request", async () => {
+    const { request: requestA, user } = await createPermissionRevision();
+    const { revision: revisionB } = await createPermissionRevision();
+
+    await expect(
+      database.permissionRequestTransition.create({
+        data: {
+          permissionRequestId: requestA.id,
+          revisionId: revisionB.id,
+          fromStatus: "DRAFT",
+          toStatus: "SUBMITTED",
+          actorUserId: user.id,
+          occurredAt: new Date(),
+          idempotencyKey: randomUUID(),
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
   it("restricts deletion of workflow history references", async () => {
     const { request, revision, user } = await createLeaveRevision();
     await database.leaveRequestTransition.create({
