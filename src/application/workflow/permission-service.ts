@@ -20,7 +20,10 @@ function validateContent(content: PermissionRevisionContent) {
 
 function retryMatches(
   value: TransitionRecord,
-  input: Omit<TransitionRecord, "id" | "occurredAt">,
+  input: Pick<
+    TransitionRecord,
+    "requestId" | "toStatus" | "actorUserId" | "reason" | "evidenceReference"
+  >,
 ) {
   return (
     value.requestId === input.requestId &&
@@ -163,20 +166,17 @@ export class PermissionWorkflowService {
       const request = await tx.lockPermissionRequest(requestId);
       if (!request)
         throw new WorkflowError("NOT_FOUND", "Pengajuan izin tidak ditemukan.");
-      const expected = {
+      const command = {
         requestId,
-        revisionId: request.currentRevision.id,
-        fromStatus: target === "SUBMITTED" ? request.status : "SUBMITTED",
         toStatus: target,
         actorUserId: actor.userId,
         reason,
         evidenceReference,
-        idempotencyKey,
       } as const;
       const retry = await tx.findPermissionTransitionByKey(idempotencyKey);
       if (retry) {
         if (
-          !retryMatches(retry, expected) ||
+          !retryMatches(retry, command) ||
           (target === "SUBMITTED" &&
             retry.revisionId !== request.currentRevision.id) ||
           (target === "RETURNED_FOR_CORRECTION" &&
@@ -188,6 +188,14 @@ export class PermissionWorkflowService {
           );
         return retry;
       }
+      // The locked parent row is the audit source of truth. Idempotent retries
+      // are handled first because they correctly observe the resulting state.
+      const expected = {
+        ...command,
+        revisionId: request.currentRevision.id,
+        fromStatus: request.status,
+        idempotencyKey,
+      } as const;
       if (target === "SUBMITTED") {
         requireOwner(actor, request.employeeId);
         if (!["DRAFT", "RETURNED_FOR_CORRECTION"].includes(request.status))

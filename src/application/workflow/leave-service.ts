@@ -21,7 +21,10 @@ function validateDates(content: LeaveRevisionContent) {
 
 function sameTransition(
   existing: TransitionRecord,
-  expected: Omit<TransitionRecord, "id" | "occurredAt">,
+  expected: Pick<
+    TransitionRecord,
+    "requestId" | "toStatus" | "actorUserId" | "reason" | "evidenceReference"
+  >,
 ) {
   return (
     existing.requestId === expected.requestId &&
@@ -195,21 +198,17 @@ export class LeaveWorkflowService {
       const request = await tx.lockLeaveRequest(requestId);
       if (!request)
         throw new WorkflowError("NOT_FOUND", "Pengajuan cuti tidak ditemukan.");
-      const fromStatus = target === "SUBMITTED" ? request.status : "SUBMITTED";
-      const expected = {
+      const command = {
         requestId,
-        revisionId: request.currentRevision.id,
-        fromStatus,
         toStatus: target,
         actorUserId: actor.userId,
         reason,
         evidenceReference,
-        idempotencyKey,
       } as const;
       const retry = await tx.findLeaveTransitionByKey(idempotencyKey);
       if (retry) {
         if (
-          !sameTransition(retry, expected) ||
+          !sameTransition(retry, command) ||
           (target === "SUBMITTED" &&
             retry.revisionId !== request.currentRevision.id) ||
           (target === "RETURNED_FOR_CORRECTION" &&
@@ -221,6 +220,17 @@ export class LeaveWorkflowService {
           );
         return retry;
       }
+
+      // This value comes from the parent row while its FOR UPDATE lock is
+      // held. Capture it only after an idempotent retry has been recognized:
+      // a retry observes the post-transition state, not the original state.
+      const fromStatus = request.status;
+      const expected = {
+        ...command,
+        revisionId: request.currentRevision.id,
+        fromStatus,
+        idempotencyKey,
+      } as const;
 
       if (target === "SUBMITTED") {
         requireOwner(actor, request.employeeId);
