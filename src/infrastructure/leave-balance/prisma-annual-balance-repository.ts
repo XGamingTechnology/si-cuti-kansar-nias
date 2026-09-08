@@ -44,31 +44,39 @@ async function buildRolloverSnapshot(
 ): Promise<AnnualRolloverSnapshot> {
   const previousYear = targetYear - 1;
   const twoYearsAgo = targetYear - 2;
-  const [accounts, operations, consumedQualifyingPeriods, existingRolloverCommit] =
-    await Promise.all([
-      database.annualBalanceAccount.findMany({
-        where: {
-          employeeId,
-          entitlementYear: { in: [twoYearsAgo, previousYear, targetYear] },
-        },
-        orderBy: [{ entitlementYear: "asc" }, { bucket: "asc" }],
-      }),
-      database.annualBalanceOperation.findMany({
-        where: {
-          employeeId,
-          entitlementYear: { in: [twoYearsAgo, previousYear] },
-          operationType: { in: ["COMMIT", "REVERSAL"] },
-        },
-        orderBy: [{ entitlementYear: "asc" }, { occurredAt: "asc" }, { createdAt: "asc" }],
-      }),
-      database.n2QualifyingPeriod.findMany({
-        where: { employeeId },
-        orderBy: [{ firstZeroUsageYear: "asc" }, { secondZeroUsageYear: "asc" }],
-      }),
-      database.annualRolloverCommit.findFirst({
-        where: { employeeId, targetYear },
-      }),
-    ]);
+  const [
+    accounts,
+    operations,
+    consumedQualifyingPeriods,
+    existingRolloverCommit,
+  ] = await Promise.all([
+    database.annualBalanceAccount.findMany({
+      where: {
+        employeeId,
+        entitlementYear: { in: [twoYearsAgo, previousYear, targetYear] },
+      },
+      orderBy: [{ entitlementYear: "asc" }, { bucket: "asc" }],
+    }),
+    database.annualBalanceOperation.findMany({
+      where: {
+        employeeId,
+        entitlementYear: { in: [twoYearsAgo, previousYear] },
+        operationType: { in: ["COMMIT", "REVERSAL"] },
+      },
+      orderBy: [
+        { entitlementYear: "asc" },
+        { occurredAt: "asc" },
+        { createdAt: "asc" },
+      ],
+    }),
+    database.n2QualifyingPeriod.findMany({
+      where: { employeeId },
+      orderBy: [{ firstZeroUsageYear: "asc" }, { secondZeroUsageYear: "asc" }],
+    }),
+    database.annualRolloverCommit.findFirst({
+      where: { employeeId, targetYear },
+    }),
+  ]);
 
   return {
     employeeId,
@@ -93,9 +101,7 @@ async function buildRolloverSnapshot(
   };
 }
 
-class PrismaLockedAnnualBalanceTransaction
-  implements LockedAnnualBalanceTransaction
-{
+class PrismaLockedAnnualBalanceTransaction implements LockedAnnualBalanceTransaction {
   constructor(
     private readonly transaction: Prisma.TransactionClient,
     public readonly accounts: readonly LockedAnnualBalanceAccount[],
@@ -146,9 +152,7 @@ class PrismaLockedAnnualBalanceTransaction
   }
 }
 
-class PrismaLockedAnnualRolloverTransaction
-  implements LockedAnnualRolloverTransaction
-{
+class PrismaLockedAnnualRolloverTransaction implements LockedAnnualRolloverTransaction {
   constructor(
     private readonly transaction: Prisma.TransactionClient,
     public readonly snapshot: AnnualRolloverSnapshot,
@@ -193,7 +197,15 @@ class PrismaLockedAnnualRolloverTransaction
 export class PrismaAnnualBalanceRepository
   implements AnnualBalanceMutationRepository, AnnualRolloverRepository
 {
-  constructor(private readonly database: PrismaClient) {}
+  constructor(
+    private readonly database: PrismaClient | Prisma.TransactionClient,
+    private readonly transactionScoped = false,
+  ) {}
+
+  /** Participate in an existing transaction without opening a nested one. */
+  static inTransaction(transaction: Prisma.TransactionClient) {
+    return new PrismaAnnualBalanceRepository(transaction, true);
+  }
 
   createAccount(input: {
     employeeId: string;
@@ -222,7 +234,7 @@ export class PrismaAnnualBalanceRepository
     if (buckets.length === 0)
       throw new Error("Sedikitnya satu bucket saldo harus dikunci.");
 
-    return this.database.$transaction(async (transaction) => {
+    const execute = async (transaction: Prisma.TransactionClient) => {
       const accounts = await transaction.$queryRaw<
         LockedAccountRow[]
       >(Prisma.sql`
@@ -246,7 +258,10 @@ export class PrismaAnnualBalanceRepository
           accounts.map(withAvailable),
         ),
       );
-    });
+    };
+    return this.transactionScoped
+      ? execute(this.database as Prisma.TransactionClient)
+      : (this.database as PrismaClient).$transaction(execute);
   }
 
   withLockedRollover<T>(
@@ -254,8 +269,10 @@ export class PrismaAnnualBalanceRepository
     targetYear: number,
     work: (transaction: LockedAnnualRolloverTransaction) => Promise<T>,
   ): Promise<T> {
-    return this.database.$transaction(async (transaction) => {
-      const employees = await transaction.$queryRaw<{ id: string }[]>(Prisma.sql`
+    const execute = async (transaction: Prisma.TransactionClient) => {
+      const employees = await transaction.$queryRaw<
+        { id: string }[]
+      >(Prisma.sql`
         SELECT "id"
         FROM "Employee"
         WHERE "id" = ${employeeId}::uuid
@@ -272,6 +289,9 @@ export class PrismaAnnualBalanceRepository
       return work(
         new PrismaLockedAnnualRolloverTransaction(transaction, snapshot),
       );
-    });
+    };
+    return this.transactionScoped
+      ? execute(this.database as Prisma.TransactionClient)
+      : (this.database as PrismaClient).$transaction(execute);
   }
 }
