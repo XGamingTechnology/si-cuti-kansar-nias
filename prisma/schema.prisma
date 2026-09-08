@@ -38,6 +38,24 @@ enum AnnualBalanceOperationType {
   ADJUSTMENT
 }
 
+enum WorkflowRequestStatus {
+  DRAFT
+  SUBMITTED
+  RETURNED_FOR_CORRECTION
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  IMPORTANT_REASON
+  LARGE
+  MATERNITY
+  CLTN
+}
+
 model Employee {
   id                 String     @id @default(uuid()) @db.Uuid
   nip                String     @unique @db.VarChar(32)
@@ -56,6 +74,8 @@ model Employee {
   annualBalanceOperations AnnualBalanceOperation[]
   annualRolloverCommits   AnnualRolloverCommit[]
   n2QualifyingPeriods     N2QualifyingPeriod[]
+  leaveRequests           LeaveRequest[]
+  permissionRequests      PermissionRequest[]
 
   @@index([directSupervisorId])
 }
@@ -171,15 +191,136 @@ model JointLeaveEvent {
 }
 
 model User {
-  id        String          @id @default(uuid()) @db.Uuid
+  id         String          @id @default(uuid()) @db.Uuid
   employeeId String          @unique @db.Uuid
-  role      ApplicationRole
-  isActive  Boolean         @default(true)
-  createdAt DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime        @updatedAt @db.Timestamptz(3)
+  role       ApplicationRole
+  isActive   Boolean         @default(true)
+  createdAt  DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime        @updatedAt @db.Timestamptz(3)
 
-  employee                Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  authenticationIdentities AuthenticationIdentity[]
+  employee                     Employee                      @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  authenticationIdentities      AuthenticationIdentity[]
+  leaveRequestTransitions       LeaveRequestTransition[]
+  permissionRequestTransitions PermissionRequestTransition[]
+}
+
+model LeaveRequest {
+  id                    String                @id @default(uuid()) @db.Uuid
+  employeeId            String                @db.Uuid
+  status                WorkflowRequestStatus @default(DRAFT)
+  currentRevisionNumber Int                   @default(1)
+  createdAt             DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime              @updatedAt @db.Timestamptz(3)
+
+  employee    Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revisions   LeaveRequestRevision[]
+  transitions LeaveRequestTransition[]
+
+  @@index([employeeId, status])
+  @@index([employeeId, createdAt])
+}
+
+model LeaveRequestRevision {
+  id                    String    @id @default(uuid()) @db.Uuid
+  leaveRequestId        String    @db.Uuid
+  revisionNumber        Int
+  leaveType             LeaveType
+  startDate             DateTime  @db.Date
+  endDate               DateTime  @db.Date
+  reason                String    @db.Text
+  calculatedWorkingDays Int?
+  submittedAt           DateTime? @db.Timestamptz(3)
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+
+  leaveRequest LeaveRequest             @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  transitions LeaveRequestTransition[]
+
+  @@unique([leaveRequestId, revisionNumber])
+}
+
+model LeaveRequestTransition {
+  id                String                @id @default(uuid()) @db.Uuid
+  leaveRequestId    String                @db.Uuid
+  revisionId        String                @db.Uuid
+  fromStatus        WorkflowRequestStatus
+  toStatus          WorkflowRequestStatus
+  actorUserId       String                @db.Uuid
+  reason            String?               @db.Text
+  evidenceReference String?               @db.VarChar(191)
+  occurredAt        DateTime              @db.Timestamptz(3)
+  idempotencyKey    String                @unique @db.VarChar(191)
+  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
+
+  leaveRequest LeaveRequest         @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision     LeaveRequestRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor        User                 @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model PermissionType {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(64)
+  name        String   @db.VarChar(200)
+  description String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  revisions PermissionRequestRevision[]
+}
+
+model PermissionRequest {
+  id                    String                @id @default(uuid()) @db.Uuid
+  employeeId            String                @db.Uuid
+  status                WorkflowRequestStatus @default(DRAFT)
+  currentRevisionNumber Int                   @default(1)
+  createdAt             DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime              @updatedAt @db.Timestamptz(3)
+
+  employee    Employee                      @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revisions   PermissionRequestRevision[]
+  transitions PermissionRequestTransition[]
+
+  @@index([employeeId, status])
+  @@index([employeeId, createdAt])
+}
+
+model PermissionRequestRevision {
+  id                  String    @id @default(uuid()) @db.Uuid
+  permissionRequestId String    @db.Uuid
+  revisionNumber      Int
+  permissionTypeId    String    @db.Uuid
+  startDate           DateTime  @db.Date
+  endDate             DateTime  @db.Date
+  reason              String    @db.Text
+  submittedAt         DateTime? @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
+
+  permissionRequest PermissionRequest             @relation(fields: [permissionRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  permissionType    PermissionType                @relation(fields: [permissionTypeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  transitions       PermissionRequestTransition[]
+
+  @@unique([permissionRequestId, revisionNumber])
+  @@index([permissionTypeId])
+}
+
+model PermissionRequestTransition {
+  id                  String                @id @default(uuid()) @db.Uuid
+  permissionRequestId String                @db.Uuid
+  revisionId          String                @db.Uuid
+  fromStatus          WorkflowRequestStatus
+  toStatus            WorkflowRequestStatus
+  actorUserId         String                @db.Uuid
+  reason              String?               @db.Text
+  evidenceReference   String?               @db.VarChar(191)
+  occurredAt          DateTime              @db.Timestamptz(3)
+  idempotencyKey      String                @unique @db.VarChar(191)
+  createdAt           DateTime              @default(now()) @db.Timestamptz(3)
+
+  permissionRequest PermissionRequest         @relation(fields: [permissionRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision          PermissionRequestRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor             User                      @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 }
 
 model AuthenticationIdentity {
