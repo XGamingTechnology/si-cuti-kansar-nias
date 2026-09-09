@@ -87,6 +87,12 @@ export class LeaveWorkflowService {
     return request;
   }
 
+  list(actor: WorkflowActor) {
+    return this.repository.listLeaves(
+      actor.role === "PEGAWAI" ? actor.employeeId : undefined,
+    );
+  }
+
   async revisions(actor: WorkflowActor, requestId: string) {
     await this.get(actor, requestId);
     return this.repository.listLeaveRevisions(requestId);

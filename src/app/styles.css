@@ -2072,3 +2072,139 @@ select:focus-visible {
     transition: none;
   }
 }
+.workflow-surface {
+  background: #fff;
+  border-radius: 14px;
+  margin-top: 24px;
+  padding: 28px;
+}
+.workflow-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+}
+.workflow-heading h2 {
+  margin: 0;
+}
+.workflow-tabs {
+  display: flex;
+  gap: 6px;
+}
+.workflow-tabs button {
+  background: #edf3f8;
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 18px;
+}
+.workflow-tabs button.active {
+  background: var(--navy);
+  color: #fff;
+}
+.workflow-grid {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.7fr) minmax(0, 1.5fr);
+  gap: 24px;
+  margin-top: 20px;
+}
+.request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.request-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  text-align: left;
+}
+.request-card.selected {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px #ddecf9;
+}
+.request-card small {
+  color: var(--muted);
+}
+.workflow-status {
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  width: max-content;
+}
+.status-draft {
+  background: #edf1f5;
+}
+.status-submitted {
+  background: #e1effc;
+  color: #145c99;
+}
+.status-returned_for_correction {
+  background: #fff1ce;
+  color: #765500;
+}
+.status-approved {
+  background: #dcf7e9;
+  color: #17613b;
+}
+.status-rejected,
+.status-cancelled {
+  background: #fbe7e7;
+  color: #8b2626;
+}
+.workflow-form {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+.workflow-form h3 {
+  margin: 0;
+}
+.workflow-form label {
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 6px;
+}
+.workflow-form input,
+.workflow-form select,
+.workflow-form textarea {
+  border: 1px solid #d9e0e7;
+  border-radius: 7px;
+  padding: 10px;
+  width: 100%;
+}
+.workflow-form textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+.detail-summary,
+.history-row {
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+}
+.history-row {
+  display: grid;
+  gap: 5px;
+}
+.history-row p {
+  margin: 0;
+}
+.history-row span,
+.history-row small {
+  color: var(--muted);
+}
+@media (max-width: 800px) {
+  .workflow-grid {
+    grid-template-columns: 1fr;
+  }
+  .workflow-surface {
+    padding: 18px;
+  }
+}

@@ -85,6 +85,15 @@ export class PermissionWorkflowService {
     assertReadable(actor, request.employeeId);
     return request;
   }
+  list(actor: WorkflowActor) {
+    return this.repository.listPermissions(
+      actor.role === "PEGAWAI" ? actor.employeeId : undefined,
+    );
+  }
+  activeTypes(actor: WorkflowActor) {
+    if (!actor) throw new WorkflowError("FORBIDDEN", "Forbidden");
+    return this.repository.listActivePermissionTypes();
+  }
   async revisions(actor: WorkflowActor, id: string) {
     await this.get(actor, id);
     return this.repository.listPermissionRevisions(id);

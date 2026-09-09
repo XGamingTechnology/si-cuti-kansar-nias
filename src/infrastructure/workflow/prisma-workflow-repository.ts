@@ -17,7 +17,6 @@ import type {
 import { WorkflowError } from "@/application/workflow/types";
 import { PrismaAnnualBalanceRepository } from "@/infrastructure/leave-balance/prisma-annual-balance-repository";
 
-type Db = Prisma.TransactionClient | PrismaClient;
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 const businessDate = (value: Date) => value.toISOString().slice(0, 10);
 
@@ -396,6 +395,31 @@ export class PrismaWorkflowRepository implements WorkflowRepository {
       include: permissionInclude,
     });
     return v ? permissionRequest(v) : null;
+  }
+  async listLeaves(employeeId?: string) {
+    return (
+      await this.db.leaveRequest.findMany({
+        where: employeeId ? { employeeId } : undefined,
+        include: leaveInclude,
+        orderBy: { createdAt: "desc" },
+      })
+    ).map(leaveRequest);
+  }
+  async listPermissions(employeeId?: string) {
+    return (
+      await this.db.permissionRequest.findMany({
+        where: employeeId ? { employeeId } : undefined,
+        include: permissionInclude,
+        orderBy: { createdAt: "desc" },
+      })
+    ).map(permissionRequest);
+  }
+  async listActivePermissionTypes() {
+    return this.db.permissionType.findMany({
+      where: { isActive: true },
+      select: { id: true, code: true, name: true, description: true },
+      orderBy: [{ name: "asc" }, { code: "asc" }],
+    });
   }
   async listLeaveRevisions(id: string) {
     return (

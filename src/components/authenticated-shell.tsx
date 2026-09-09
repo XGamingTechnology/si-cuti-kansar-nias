@@ -5,6 +5,7 @@ import type { Principal } from "@/modules/auth/service";
 import { EmployeeManagement } from "@/components/employee-management";
 import { BrandMark } from "@/components/login-preview";
 import { Icon } from "@/components/ui";
+import { WorkflowWorkspace } from "@/components/workflow-workspace";
 
 function initials(name: string) {
   return name
@@ -52,6 +53,9 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
           >
             <Icon name="people" /> {isAdmin ? "Pegawai" : "Profil Saya"}
           </a>
+          <a href="#pengajuan" onClick={() => setMenuOpen(false)}>
+            <Icon name="calendar" /> Pengajuan
+          </a>
         </nav>
         <div className="sidebar-user">
           <span className="avatar">{initials(principal.fullName)}</span>
@@ -97,9 +101,8 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
           </div>
         </header>
         <main className="authenticated-content">
-          {isAdmin ? (
-            <EmployeeManagement />
-          ) : (
+          {isAdmin && <EmployeeManagement />}
+          {!isAdmin && (
             <section className="profile-surface" id="profil">
               <p className="eyebrow">PROFIL SAYA</p>
               <h1>{principal.fullName}</h1>
@@ -115,6 +118,7 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
               </a>
             </section>
           )}
+          <WorkflowWorkspace role={principal.role} />
         </main>
       </div>
     </div>
