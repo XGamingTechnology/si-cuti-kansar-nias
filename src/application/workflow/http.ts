@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { authorizationResponse } from "@/application/authorization/http";
+import { BalanceMutationError } from "@/application/leave-balance/service";
+import { LeaveBalancePolicyError } from "@/domain/leave-balance/errors";
 import {
   LEAVE_TYPES,
   WorkflowError,
@@ -16,14 +18,76 @@ const statusByCode = {
   UNSUPPORTED_POLICY: 422,
 } as const;
 
+const balanceMutationResponseByCode = {
+  VALIDATION: {
+    status: 400,
+    message: "Data saldo cuti tahunan tidak valid.",
+  },
+  NOT_FOUND: {
+    status: 404,
+    message: "Saldo cuti tahunan tidak ditemukan.",
+  },
+  CONFLICT: {
+    status: 409,
+    message:
+      "Kondisi saldo cuti tahunan bertentangan dengan tindakan ini atau telah berubah.",
+  },
+  INVARIANT: {
+    status: 409,
+    message:
+      "Saldo cuti tahunan belum siap untuk pengajuan ini. Hubungi Admin Kepegawaian.",
+  },
+} as const;
+
+const balancePolicyResponseByCode = {
+  VALIDATION: {
+    status: 400,
+    message: "Data saldo cuti tahunan tidak valid.",
+  },
+  INSUFFICIENT_BALANCE: {
+    status: 422,
+    message: "Saldo cuti tahunan tidak mencukupi untuk pengajuan ini.",
+  },
+  DUPLICATE_CALENDAR_DATE: {
+    status: 409,
+    message: "Konfigurasi kalender cuti tahunan memiliki tanggal yang sama.",
+  },
+  EXCESSIVE_RESTORATION: {
+    status: 422,
+    message: "Pemulihan saldo cuti tahunan tidak valid.",
+  },
+} as const;
+
 export function workflowErrorResponse(error: unknown) {
   const authorization = authorizationResponse(error);
   if (authorization) return authorization;
-  if (!(error instanceof WorkflowError)) return null;
-  return Response.json(
-    { error: error.message, code: error.code },
-    { status: statusByCode[error.code] },
-  );
+  if (error instanceof WorkflowError) {
+    return Response.json(
+      { error: error.message, code: error.code },
+      { status: statusByCode[error.code] },
+    );
+  }
+  if (error instanceof BalanceMutationError) {
+    const response = balanceMutationResponseByCode[error.code];
+    return Response.json(
+      {
+        error: response.message,
+        code: `BALANCE_MUTATION_${error.code}`,
+      },
+      { status: response.status },
+    );
+  }
+  if (error instanceof LeaveBalancePolicyError) {
+    const response = balancePolicyResponseByCode[error.code];
+    return Response.json(
+      {
+        error: response.message,
+        code: `LEAVE_BALANCE_POLICY_${error.code}`,
+      },
+      { status: response.status },
+    );
+  }
+  return null;
 }
 
 async function objectBody(request: Request): Promise<Record<string, unknown>> {
