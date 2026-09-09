@@ -49,6 +49,12 @@ export type TransitionRecord = Readonly<{
 }>;
 
 export type TransitionWrite = Omit<TransitionRecord, "id">;
+export type PermissionTypeRecord = Readonly<{
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+}>;
 
 export interface WorkflowTransaction {
   readonly annualBalanceRepository: AnnualBalanceMutationRepository;
@@ -106,6 +112,11 @@ export interface WorkflowRepository {
   ): Promise<PermissionRequestRecord>;
   getLeave(id: string): Promise<LeaveRequestRecord | null>;
   getPermission(id: string): Promise<PermissionRequestRecord | null>;
+  listLeaves(employeeId?: string): Promise<readonly LeaveRequestRecord[]>;
+  listPermissions(
+    employeeId?: string,
+  ): Promise<readonly PermissionRequestRecord[]>;
+  listActivePermissionTypes(): Promise<readonly PermissionTypeRecord[]>;
   listLeaveRevisions(id: string): Promise<readonly LeaveRevision[]>;
   listPermissionRevisions(id: string): Promise<readonly PermissionRevision[]>;
   listLeaveTransitions(id: string): Promise<readonly TransitionRecord[]>;
