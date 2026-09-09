@@ -6,6 +6,8 @@ import {
   createPermissionTypesHandler,
   type WorkflowRuntime,
 } from "@/application/workflow/delivery";
+import { BalanceMutationError } from "@/application/leave-balance/service";
+import { LeaveBalancePolicyError } from "@/domain/leave-balance/errors";
 import { WorkflowError } from "@/application/workflow/types";
 import type { Principal } from "@/modules/auth/service";
 
@@ -161,6 +163,7 @@ describe("workflow HTTP delivery", () => {
   it.each([
     ["VALIDATION", 400],
     ["NOT_FOUND", 404],
+    ["FORBIDDEN", 403],
     ["ILLEGAL_TRANSITION", 409],
     ["CONFLICT", 409],
     ["UNSUPPORTED_POLICY", 422],
@@ -174,6 +177,117 @@ describe("workflow HTTP delivery", () => {
     ).GET(request());
     expect(response.status).toBe(status);
     expect(await response.json()).toEqual({ error: "Pesan aman", code });
+  });
+
+  it.each([
+    ["VALIDATION", 400, "Data saldo cuti tahunan tidak valid."],
+    ["NOT_FOUND", 404, "Saldo cuti tahunan tidak ditemukan."],
+    [
+      "CONFLICT",
+      409,
+      "Kondisi saldo cuti tahunan bertentangan dengan tindakan ini atau telah berubah.",
+    ],
+  ] as const)(
+    "memetakan BalanceMutationError %s ke respons aman",
+    async (code, status, message) => {
+      const mock = runtime(pegawai, {
+        submit: vi
+          .fn()
+          .mockRejectedValue(
+            new BalanceMutationError(code, "SQL SELECT bucket N2 rahasia"),
+          ),
+      });
+      const response = await createActionHandler("leave", () => mock.value)(
+        request("POST", { action: "SUBMIT" }),
+        context,
+      );
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual({
+        error: message,
+        code: `BALANCE_MUTATION_${code}`,
+      });
+    },
+  );
+
+  it("memetakan invariant saldo yang belum siap tanpa membocorkan detail internal", async () => {
+    const internal =
+      "Akun saldo N2 pada AnnualBalanceAccount id=db-123 belum tersedia; SELECT * FROM account";
+    const mock = runtime(pegawai, {
+      submit: vi
+        .fn()
+        .mockRejectedValue(new BalanceMutationError("INVARIANT", internal)),
+    });
+    const response = await createActionHandler("leave", () => mock.value)(
+      request("POST", { action: "SUBMIT" }),
+      context,
+    );
+    const body = await response.json();
+    expect(response.status).toBe(409);
+    expect(body).toEqual({
+      error:
+        "Saldo cuti tahunan belum siap untuk pengajuan ini. Hubungi Admin Kepegawaian.",
+      code: "BALANCE_MUTATION_INVARIANT",
+    });
+    expect(JSON.stringify(body)).not.toContain(internal);
+    expect(JSON.stringify(body)).not.toMatch(
+      /N2|AnnualBalanceAccount|SELECT|db-123/,
+    );
+  });
+
+  it.each([
+    [
+      "INSUFFICIENT_BALANCE",
+      422,
+      "Saldo cuti tahunan tidak mencukupi untuk pengajuan ini.",
+    ],
+    ["VALIDATION", 400, "Data saldo cuti tahunan tidak valid."],
+    [
+      "DUPLICATE_CALENDAR_DATE",
+      409,
+      "Konfigurasi kalender cuti tahunan memiliki tanggal yang sama.",
+    ],
+    ["EXCESSIVE_RESTORATION", 422, "Pemulihan saldo cuti tahunan tidak valid."],
+  ] as const)(
+    "memetakan LeaveBalancePolicyError %s ke respons aman",
+    async (code, status, message) => {
+      const mock = runtime(pegawai, {
+        submit: vi
+          .fn()
+          .mockRejectedValue(
+            new LeaveBalancePolicyError(
+              code,
+              "Raw bucket N detail with SQL and stack trace",
+            ),
+          ),
+      });
+      const response = await createActionHandler("leave", () => mock.value)(
+        request("POST", { action: "SUBMIT" }),
+        context,
+      );
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual({
+        error: message,
+        code: `LEAVE_BALANCE_POLICY_${code}`,
+      });
+    },
+  );
+
+  it("mempertahankan fallback 500 generik untuk error tak terduga", async () => {
+    const mock = runtime(pegawai, {
+      submit: vi
+        .fn()
+        .mockRejectedValue(
+          new Error("SELECT secret FROM AnnualBalanceAccount"),
+        ),
+    });
+    const response = await createActionHandler("leave", () => mock.value)(
+      request("POST", { action: "SUBMIT" }),
+      context,
+    );
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: "Operasi alur kerja gagal.",
+    });
   });
 
   it("menyajikan hanya jenis izin aktif dari read path service", async () => {
