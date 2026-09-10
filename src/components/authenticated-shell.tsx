@@ -6,6 +6,7 @@ import { EmployeeManagement } from "@/components/employee-management";
 import { BrandMark } from "@/components/login-preview";
 import { Icon } from "@/components/ui";
 import { WorkflowWorkspace } from "@/components/workflow-workspace";
+import { AnnualBalanceManagement } from "@/components/annual-balance-management";
 
 function initials(name: string) {
   return name
@@ -18,6 +19,9 @@ function initials(name: string) {
 
 export function AuthenticatedShell({ principal }: { principal: Principal }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [adminSurface, setAdminSurface] = useState<
+    "pegawai" | "saldo" | "pengajuan"
+  >("pegawai");
   const isAdmin = principal.role === "ADMIN_KEPEGAWAIAN";
   const role = isAdmin ? "Admin Kepegawaian" : "Pegawai";
 
@@ -47,13 +51,35 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
         <p className="nav-label">NAVIGASI</p>
         <nav aria-label="Navigasi utama">
           <a
-            className="active"
+            className={!isAdmin || adminSurface === "pegawai" ? "active" : ""}
             href={isAdmin ? "#pegawai" : "#profil"}
-            onClick={() => setMenuOpen(false)}
+            onClick={() => {
+              if (isAdmin) setAdminSurface("pegawai");
+              setMenuOpen(false);
+            }}
           >
             <Icon name="people" /> {isAdmin ? "Pegawai" : "Profil Saya"}
           </a>
-          <a href="#pengajuan" onClick={() => setMenuOpen(false)}>
+          {isAdmin && (
+            <a
+              className={adminSurface === "saldo" ? "active" : ""}
+              href="#saldo-cuti"
+              onClick={() => {
+                setAdminSurface("saldo");
+                setMenuOpen(false);
+              }}
+            >
+              <Icon name="file" /> Saldo Cuti
+            </a>
+          )}
+          <a
+            className={isAdmin && adminSurface === "pengajuan" ? "active" : ""}
+            href="#pengajuan"
+            onClick={() => {
+              if (isAdmin) setAdminSurface("pengajuan");
+              setMenuOpen(false);
+            }}
+          >
             <Icon name="calendar" /> Pengajuan
           </a>
         </nav>
@@ -101,7 +127,8 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
           </div>
         </header>
         <main className="authenticated-content">
-          {isAdmin && <EmployeeManagement />}
+          {isAdmin && adminSurface === "pegawai" && <EmployeeManagement />}
+          {isAdmin && adminSurface === "saldo" && <AnnualBalanceManagement />}
           {!isAdmin && (
             <section className="profile-surface" id="profil">
               <p className="eyebrow">PROFIL SAYA</p>
@@ -118,7 +145,9 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
               </a>
             </section>
           )}
-          <WorkflowWorkspace role={principal.role} />
+          {(!isAdmin || adminSurface === "pengajuan") && (
+            <WorkflowWorkspace role={principal.role} />
+          )}
         </main>
       </div>
     </div>
