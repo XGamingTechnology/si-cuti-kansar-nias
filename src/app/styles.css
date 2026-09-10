@@ -9,6 +9,168 @@
   --line: #e5eaf0;
   --bg: #f5f7fa;
 }
+
+/* Admin annual balance management */
+.year-selector {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+  color: #334155;
+}
+.year-selector select {
+  min-width: 8rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.65rem;
+  background: white;
+}
+.balance-employee-list {
+  display: grid;
+}
+.balance-employee-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+}
+.balance-employee-row:first-child {
+  border-top: 0;
+}
+.balance-employee-row > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+.balance-employee-row > div:last-child {
+  align-items: flex-end;
+  justify-content: center;
+}
+.balance-employee-row span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+.balance-employee-row .status-badge {
+  font-style: normal;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: flex-end;
+  background: rgb(15 23 42 / 0.48);
+}
+.balance-detail-panel {
+  position: relative;
+  width: min(46rem, 100%);
+  height: 100%;
+  overflow-y: auto;
+  padding: 2rem;
+  background: #f8fafc;
+  box-shadow: -10px 0 30px rgb(15 23 42 / 0.16);
+}
+.panel-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  border: 0;
+  background: transparent;
+  font-size: 2rem;
+  cursor: pointer;
+}
+.balance-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1.5rem 0;
+}
+.balance-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid #dbe4ee;
+  border-radius: 0.8rem;
+  background: white;
+}
+.balance-card span,
+.balance-card small {
+  color: #64748b;
+}
+.balance-card strong {
+  font-size: 1.35rem;
+  color: #0f3b66;
+}
+.uninitialized-callout {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border-radius: 0.7rem;
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 700;
+}
+.balance-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+.balance-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+.balance-form input,
+.balance-form textarea {
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.6rem;
+  font: inherit;
+}
+.balance-form textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+.fixed-balance {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.8rem;
+  border-radius: 0.6rem;
+  background: #eaf4fb;
+}
+.balance-history {
+  display: grid;
+  gap: 0.65rem;
+}
+.balance-history > div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.8rem;
+  border-radius: 0.6rem;
+  background: white;
+}
+.balance-history span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+.feedback.error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+@media (max-width: 640px) {
+  .balance-employee-row {
+    flex-direction: column;
+  }
+  .balance-employee-row > div:last-child {
+    align-items: stretch;
+  }
+  .balance-card-grid {
+    grid-template-columns: 1fr;
+  }
+  .balance-detail-panel {
+    padding: 1.25rem;
+  }
+}
 * {
   box-sizing: border-box;
 }
