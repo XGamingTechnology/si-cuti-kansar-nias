@@ -61,12 +61,23 @@ export function LoginPreview({
           </p>
           <label>
             NIP
-            <input inputMode="numeric" placeholder="Masukkan NIP" />
+            <input
+              type="text"
+              autoComplete="username"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="Masukkan NIP"
+            />
           </label>
           <label>
             Kata sandi
             <div className="password-field">
-              <input type="password" placeholder="Masukkan kata sandi" />
+              <input
+                type="password"
+                autoComplete="current-password"
+                placeholder="Masukkan kata sandi"
+              />
               <button type="button" aria-label="Tampilkan kata sandi">
                 ◉
               </button>

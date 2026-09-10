@@ -278,6 +278,7 @@ export function AnnualBalanceManagement() {
                       Sisa Tahun Sebelumnya (N-1)
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="0"
                         max="6"
                         step="1"
@@ -290,6 +291,7 @@ export function AnnualBalanceManagement() {
                       Hak N-2
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="0"
                         max="6"
                         step="1"

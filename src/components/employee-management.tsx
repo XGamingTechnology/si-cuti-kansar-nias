@@ -589,7 +589,11 @@ function EmployeeForm({
             {label}
             <input
               required
+              type="text"
               maxLength={name === "nip" ? 32 : 200}
+              autoCapitalize={name === "nip" ? "off" : undefined}
+              autoCorrect={name === "nip" ? "off" : undefined}
+              spellCheck={name === "nip" ? false : undefined}
               value={form[name]}
               onChange={(event) =>
                 setForm({ ...form, [name]: event.target.value })
