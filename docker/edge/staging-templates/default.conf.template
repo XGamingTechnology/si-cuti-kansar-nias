@@ -11,6 +11,13 @@ server {
   ssl_certificate /etc/nginx/tls/fullchain.pem;
   ssl_certificate_key /etc/nginx/tls/privkey.pem;
 
+  # API Route Handlers are served by Next.js. The ^~ prefix keeps future
+  # regex/static-file locations from intercepting application API requests.
+  location ^~ /api/ {
+    proxy_pass http://si-cuti-staging-app:3000;
+    include /etc/nginx/proxy_params;
+  }
+
   # Keep application routes, including the Admin App Router subtree, on the
   # Next.js upstream. This explicit block also prevents a future generic
   # static-file location from shadowing /admin/.
