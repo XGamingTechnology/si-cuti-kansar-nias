@@ -17,11 +17,17 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-export function AuthenticatedShell({ principal }: { principal: Principal }) {
+export function AuthenticatedShell({
+  principal,
+  initialAdminSurface = "pegawai",
+}: {
+  principal: Principal;
+  initialAdminSurface?: "pegawai" | "saldo" | "pengajuan";
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [adminSurface, setAdminSurface] = useState<
     "pegawai" | "saldo" | "pengajuan"
-  >("pegawai");
+  >(initialAdminSurface);
   const isAdmin = principal.role === "ADMIN_KEPEGAWAIAN";
   const role = isAdmin ? "Admin Kepegawaian" : "Pegawai";
 
@@ -52,7 +58,7 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
         <nav aria-label="Navigasi utama">
           <a
             className={!isAdmin || adminSurface === "pegawai" ? "active" : ""}
-            href={isAdmin ? "#pegawai" : "#profil"}
+            href={isAdmin ? "/#pegawai" : "#profil"}
             onClick={() => {
               if (isAdmin) setAdminSurface("pegawai");
               setMenuOpen(false);
@@ -63,7 +69,7 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
           {isAdmin && (
             <a
               className={adminSurface === "saldo" ? "active" : ""}
-              href="#saldo-cuti"
+              href="/admin/saldo-cuti"
               onClick={() => {
                 setAdminSurface("saldo");
                 setMenuOpen(false);
@@ -74,7 +80,7 @@ export function AuthenticatedShell({ principal }: { principal: Principal }) {
           )}
           <a
             className={isAdmin && adminSurface === "pengajuan" ? "active" : ""}
-            href="#pengajuan"
+            href={isAdmin ? "/#pengajuan" : "#pengajuan"}
             onClick={() => {
               if (isAdmin) setAdminSurface("pengajuan");
               setMenuOpen(false);
