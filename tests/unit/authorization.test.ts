@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADMIN_KEPEGAWAIAN_ROLE,
   AuthorizationError,
   canReadEmployee,
+  isAdminPrincipal,
   requireAdmin,
   type ApplicationRole,
 } from "@/application/authorization/policy";
@@ -21,6 +23,12 @@ const employee: Principal = {
 };
 
 describe("employee authorization policy", () => {
+  it("uses the Prisma ApplicationRole value for Admin checks", () => {
+    expect(ADMIN_KEPEGAWAIAN_ROLE).toBe("ADMIN_KEPEGAWAIAN");
+    expect(isAdminPrincipal(admin)).toBe(true);
+    expect(isAdminPrincipal(employee)).toBe(false);
+  });
+
   it("allows an Admin to read their own Employee", () =>
     expect(canReadEmployee(admin, { id: admin.employeeId })).toBe(true));
   it("allows an Admin to read another Employee", () =>
