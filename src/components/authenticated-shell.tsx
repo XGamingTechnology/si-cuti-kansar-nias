@@ -7,6 +7,7 @@ import { BrandMark } from "@/components/login-preview";
 import { Icon } from "@/components/ui";
 import { WorkflowWorkspace } from "@/components/workflow-workspace";
 import { AnnualBalanceManagement } from "@/components/annual-balance-management";
+import { isAdminPrincipal } from "@/application/authorization/policy";
 
 function initials(name: string) {
   return name
@@ -28,7 +29,7 @@ export function AuthenticatedShell({
   const [adminSurface, setAdminSurface] = useState<
     "pegawai" | "saldo" | "pengajuan"
   >(initialAdminSurface);
-  const isAdmin = principal.role === "ADMIN_KEPEGAWAIAN";
+  const isAdmin = isAdminPrincipal(principal);
   const role = isAdmin ? "Admin Kepegawaian" : "Pegawai";
 
   async function logout() {

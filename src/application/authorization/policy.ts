@@ -1,6 +1,7 @@
 import type { Principal } from "@/modules/auth/service";
 
-export const APPLICATION_ROLES = ["ADMIN_KEPEGAWAIAN", "PEGAWAI"] as const;
+export const ADMIN_KEPEGAWAIAN_ROLE = "ADMIN_KEPEGAWAIAN" as const;
+export const APPLICATION_ROLES = [ADMIN_KEPEGAWAIAN_ROLE, "PEGAWAI"] as const;
 export type ApplicationRole = (typeof APPLICATION_ROLES)[number];
 
 export class AuthorizationError extends Error {
@@ -29,14 +30,18 @@ export function requireRole(
 }
 
 export function requireAdmin(principal: Principal): Principal {
-  return requireRole(principal, "ADMIN_KEPEGAWAIAN");
+  return requireRole(principal, ADMIN_KEPEGAWAIAN_ROLE);
+}
+
+export function isAdminPrincipal(principal: Principal): boolean {
+  return principal.role === ADMIN_KEPEGAWAIAN_ROLE;
 }
 
 export function canReadEmployee(
   principal: Principal,
   employee: Readonly<{ id: string }>,
 ): boolean {
-  if (principal.role === "ADMIN_KEPEGAWAIAN") return true;
+  if (isAdminPrincipal(principal)) return true;
   if (principal.role === "PEGAWAI") return employee.id === principal.employeeId;
   return false;
 }

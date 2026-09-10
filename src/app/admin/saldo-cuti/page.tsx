@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AuthenticatedShell } from "@/components/authenticated-shell";
 import { createRuntimeAuthentication } from "@/infrastructure/auth/runtime";
 import { SESSION_COOKIE_NAME } from "@/modules/auth/session";
+import { isAdminPrincipal } from "@/application/authorization/policy";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export default async function AnnualBalancePage() {
   const runtime = createRuntimeAuthentication();
   try {
     const principal = await runtime.authentication.validate(token);
-    if (!principal || principal.role !== "ADMIN_KEPEGAWAIAN") redirect("/");
+    if (!principal || !isAdminPrincipal(principal)) redirect("/");
 
     return (
       <AuthenticatedShell principal={principal} initialAdminSurface="saldo" />
