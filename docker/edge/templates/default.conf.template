@@ -9,6 +9,10 @@ server {
   server_name ${PRODUCTION_HOSTNAME};
   ssl_certificate /etc/nginx/tls/fullchain.pem;
   ssl_certificate_key /etc/nginx/tls/privkey.pem;
+  location ^~ /admin/ {
+    proxy_pass http://si-cuti-production-app:3000;
+    include /etc/nginx/proxy_params;
+  }
   location / { proxy_pass http://si-cuti-production-app:3000; include /etc/nginx/proxy_params; }
 }
 
@@ -17,5 +21,9 @@ server {
   server_name ${STAGING_HOSTNAME};
   ssl_certificate /etc/nginx/tls/fullchain.pem;
   ssl_certificate_key /etc/nginx/tls/privkey.pem;
+  location ^~ /admin/ {
+    proxy_pass http://si-cuti-staging-app:3000;
+    include /etc/nginx/proxy_params;
+  }
   location / { proxy_pass http://si-cuti-staging-app:3000; include /etc/nginx/proxy_params; }
 }
