@@ -10,6 +10,13 @@ type WorkflowAction = "SUBMIT" | "CANCEL" | ReviewAction;
 type RequestRecord = {
   id: string;
   employeeId: string;
+  employee: {
+    id: string;
+    nip: string;
+    fullName: string;
+    positionTitle: string;
+    workUnit: string;
+  };
   status: WorkflowStatus;
   currentRevisionNumber: number;
   currentRevision: {
@@ -30,9 +37,7 @@ type PermissionType = {
 };
 
 type Detail = {
-  revisions: Array<
-    RequestRecord["currentRevision"] & { revisionNumber: number }
-  >;
+  revisions: Array<RequestRecord["currentRevision"] & { revisionNumber: number }>;
   history: Array<{
     id: string;
     fromStatus: WorkflowStatus;
@@ -95,12 +100,12 @@ const reviewCopy: Record<
   },
   APPROVE: {
     eyebrow: "SETUJUI PENGAJUAN",
-    title: "Catat pengajuan sebagai disetujui",
+    title: "Setujui pengajuan ini",
     description:
-      "Pastikan bukti atau dasar administrasi telah diverifikasi sebelum melanjutkan.",
-    fieldLabel: "Referensi bukti yang diverifikasi",
-    placeholder: "Contoh: Surat persetujuan Kepala Kantor No. 123/IX/2026",
-    confirmLabel: "Catat Disetujui",
+      "Pastikan data pegawai, periode, saldo, dan dasar administrasi telah diperiksa.",
+    fieldLabel: "Referensi administrasi",
+    placeholder: "Contoh: Persetujuan Kepala Kantor / arsip administrasi terkait",
+    confirmLabel: "Setujui Pengajuan",
     tone: "success",
   },
 };
@@ -135,6 +140,24 @@ function formatDateTime(value: string) {
   });
 }
 
+function statusGuidance(status: WorkflowStatus, role: "ADMIN_KEPEGAWAIAN" | "PEGAWAI") {
+  if (role === "ADMIN_KEPEGAWAIAN") {
+    if (status === "SUBMITTED") return "Pengajuan menunggu keputusan administrasi.";
+    if (status === "RETURNED_FOR_CORRECTION") return "Pengajuan sedang diperbaiki oleh pegawai.";
+    if (status === "APPROVED") return "Pengajuan telah disetujui dan selesai diproses.";
+    if (status === "REJECTED") return "Pengajuan telah ditolak.";
+    if (status === "CANCELLED") return "Pengajuan telah dibatalkan oleh pegawai.";
+    return "Draf masih berada pada pegawai dan belum diajukan.";
+  }
+
+  if (status === "DRAFT") return "Draf belum dikirim. Periksa kembali sebelum diajukan.";
+  if (status === "SUBMITTED") return "Pengajuan sudah dikirim dan sedang menunggu tinjauan Admin Kepegawaian.";
+  if (status === "RETURNED_FOR_CORRECTION") return "Admin meminta perbaikan. Buka edit, perbaiki data, lalu ajukan kembali.";
+  if (status === "APPROVED") return "Pengajuan telah disetujui.";
+  if (status === "REJECTED") return "Pengajuan telah ditolak. Lihat riwayat untuk alasan keputusan.";
+  return "Pengajuan telah dibatalkan.";
+}
+
 export function WorkflowWorkspace({
   role,
 }: {
@@ -145,6 +168,8 @@ export function WorkflowWorkspace({
   const [types, setTypes] = useState<PermissionType[]>([]);
   const [selected, setSelected] = useState<RequestRecord | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState("Memuat pengajuan…");
   const [reviewAction, setReviewAction] = useState<ReviewAction | null>(null);
   const [reviewValue, setReviewValue] = useState("");
@@ -159,10 +184,12 @@ export function WorkflowWorkspace({
       setRequests(values);
       setTypes(typeData.permissionTypes);
       setMessage(values.length ? "" : "Belum ada pengajuan.");
+      return values as RequestRecord[];
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Gagal memuat pengajuan.",
       );
+      return [] as RequestRecord[];
     }
   }, [kind]);
 
@@ -192,6 +219,8 @@ export function WorkflowWorkspace({
   }, [reviewAction, acting]);
 
   async function open(item: RequestRecord) {
+    setCreating(false);
+    setEditing(false);
     setSelected(item);
     setDetail(null);
     try {
@@ -210,18 +239,35 @@ export function WorkflowWorkspace({
     }
   }
 
+  async function refreshSelected(requestId: string) {
+    const [{ request }, values] = await Promise.all([
+      api(`/api/workflow/${kind}/${requestId}`),
+      load(),
+    ]);
+    const latest =
+      values.find((item) => item.id === requestId) ?? (request as RequestRecord);
+    await open(latest);
+  }
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
+    const editingId = selected?.id;
     try {
-      await api(`/api/workflow/${kind}${selected ? `/${selected.id}` : ""}`, {
-        method: selected ? "PATCH" : "POST",
-        body: JSON.stringify(values),
-      });
-      setSelected(null);
-      setDetail(null);
-      setMessage("Pengajuan tersimpan.");
-      await load();
+      const result = await api(
+        `/api/workflow/${kind}${editingId ? `/${editingId}` : ""}`,
+        {
+          method: editingId ? "PATCH" : "POST",
+          body: JSON.stringify(values),
+        },
+      );
+      setCreating(false);
+      setEditing(false);
+      const requestId = (result.request as RequestRecord).id;
+      await refreshSelected(requestId);
+      setMessage(
+        editingId ? "Perubahan draf tersimpan." : "Draf pengajuan tersimpan.",
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Gagal menyimpan.");
     }
@@ -232,18 +278,28 @@ export function WorkflowWorkspace({
     payload?: { reason?: string; evidenceReference?: string },
   ) {
     if (!selected) return;
+    const requestId = selected.id;
     setActing(true);
     try {
-      await api(`/api/workflow/${kind}/${selected.id}/actions`, {
+      await api(`/api/workflow/${kind}/${requestId}/actions`, {
         method: "POST",
         body: JSON.stringify({ action, ...payload }),
       });
-      setSelected(null);
-      setDetail(null);
       setReviewAction(null);
       setReviewValue("");
-      setMessage("Status pengajuan diperbarui.");
-      await load();
+      setEditing(false);
+      await refreshSelected(requestId);
+      setMessage(
+        action === "SUBMIT"
+          ? "Pengajuan berhasil dikirim."
+          : action === "APPROVE"
+            ? "Pengajuan berhasil disetujui."
+            : action === "RETURN"
+              ? "Pengajuan dikembalikan untuk diperbaiki."
+              : action === "REJECT"
+                ? "Pengajuan ditolak."
+                : "Pengajuan dibatalkan.",
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Tindakan gagal.");
     } finally {
@@ -276,20 +332,30 @@ export function WorkflowWorkspace({
       );
     }
     return (
-      types.find(
-        (type) => type.id === item.currentRevision.permissionTypeId,
-      )?.name ?? "Izin"
+      types.find((type) => type.id === item.currentRevision.permissionTypeId)
+        ?.name ?? "Izin"
     );
   }
 
-  const editable =
+  const showForm =
     role === "PEGAWAI" &&
-    (!selected ||
-      ["DRAFT", "RETURNED_FOR_CORRECTION"].includes(selected.status));
+    (creating ||
+      (Boolean(selected) &&
+        editing &&
+        ["DRAFT", "RETURNED_FOR_CORRECTION"].includes(selected!.status)));
 
   const submittedCount = requests.filter(
     (item) => item.status === "SUBMITTED",
   ).length;
+
+  function switchKind(next: Kind) {
+    setKind(next);
+    setSelected(null);
+    setDetail(null);
+    setCreating(false);
+    setEditing(false);
+    setMessage("Memuat pengajuan…");
+  }
 
   return (
     <section className="workflow-surface" id="pengajuan">
@@ -299,7 +365,7 @@ export function WorkflowWorkspace({
           <h2>Cuti dan Izin</h2>
           <p className="workflow-heading-copy">
             {role === "ADMIN_KEPEGAWAIAN"
-              ? "Tinjau pengajuan, periksa riwayat, dan catat keputusan administrasi."
+              ? "Tinjau pengajuan berdasarkan pegawai, periksa riwayat, dan catat keputusan administrasi."
               : "Buat pengajuan, pantau status, dan lihat riwayat proses Anda."}
           </p>
         </div>
@@ -310,11 +376,7 @@ export function WorkflowWorkspace({
             role="tab"
             aria-selected={kind === "leave"}
             className={kind === "leave" ? "active" : ""}
-            onClick={() => {
-              setKind("leave");
-              setSelected(null);
-              setDetail(null);
-            }}
+            onClick={() => switchKind("leave")}
           >
             Cuti
           </button>
@@ -323,11 +385,7 @@ export function WorkflowWorkspace({
             role="tab"
             aria-selected={kind === "permission"}
             className={kind === "permission" ? "active" : ""}
-            onClick={() => {
-              setKind("permission");
-              setSelected(null);
-              setDetail(null);
-            }}
+            onClick={() => switchKind("permission")}
           >
             Izin
           </button>
@@ -365,6 +423,8 @@ export function WorkflowWorkspace({
                 className="primary-button"
                 type="button"
                 onClick={() => {
+                  setCreating(true);
+                  setEditing(false);
                   setSelected(null);
                   setDetail(null);
                 }}
@@ -388,13 +448,17 @@ export function WorkflowWorkspace({
               requests.map((item) => (
                 <button
                   type="button"
-                  className={`request-card ${
-                    selected?.id === item.id ? "selected" : ""
-                  }`}
+                  className={`request-card ${selected?.id === item.id ? "selected" : ""}`}
                   key={item.id}
                   onClick={() => void open(item)}
                   aria-pressed={selected?.id === item.id}
                 >
+                  {role === "ADMIN_KEPEGAWAIAN" && (
+                    <div className="request-card-employee">
+                      <strong>{item.employee.fullName}</strong>
+                      <span>{item.employee.nip} · {item.employee.workUnit}</span>
+                    </div>
+                  )}
                   <div className="request-card-topline">
                     <strong>{requestName(item)}</strong>
                     <span
@@ -417,20 +481,23 @@ export function WorkflowWorkspace({
         </aside>
 
         <div className="request-detail">
-          {editable && (
+          {showForm && (
             <form className="workflow-form" onSubmit={save}>
               <div className="workflow-form-heading">
                 <p className="eyebrow">
-                  {selected ? "PERBAIKI PENGAJUAN" : "PENGAJUAN BARU"}
+                  {editing ? "PERBAIKI PENGAJUAN" : "PENGAJUAN BARU"}
                 </p>
                 <h3>
-                  {selected
-                    ? "Edit revisi aktif"
+                  {editing
+                    ? selected?.status === "RETURNED_FOR_CORRECTION"
+                      ? "Perbaiki sesuai catatan admin"
+                      : "Edit draf pengajuan"
                     : `Ajukan ${kind === "leave" ? "cuti" : "izin"}`}
                 </h3>
                 <p>
-                  Lengkapi data pengajuan. Anda masih dapat mengubahnya sebelum
-                  pengajuan dikirim.
+                  {editing
+                    ? "Simpan perubahan terlebih dahulu. Setelah itu pengajuan dapat dikirim atau diajukan kembali."
+                    : "Lengkapi data pengajuan. Data akan disimpan sebagai draf sebelum dikirim."}
                 </p>
               </div>
 
@@ -491,27 +558,36 @@ export function WorkflowWorkspace({
               </label>
 
               <div className="workflow-form-actions">
+                {editing && (
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => setEditing(false)}
+                  >
+                    Batal Edit
+                  </button>
+                )}
                 <button className="primary-button" type="submit">
-                  Simpan Draf
+                  {editing ? "Simpan Perubahan" : "Simpan Draf"}
                 </button>
               </div>
             </form>
           )}
 
-          {!editable && !selected && (
+          {!showForm && !selected && (
             <div className="workflow-detail-placeholder">
               <span className="workflow-placeholder-icon" aria-hidden="true">
                 ✓
               </span>
               <strong>Pilih pengajuan untuk melihat detail</strong>
               <p>
-                Detail status, alasan, riwayat revisi, dan tindakan administrasi
-                akan tampil di sini.
+                Detail pegawai, status, alasan, riwayat revisi, dan tindakan
+                administrasi akan tampil di sini.
               </p>
             </div>
           )}
 
-          {selected && (
+          {!showForm && selected && (
             <section className="workflow-detail-content">
               <header className="workflow-detail-header">
                 <div>
@@ -524,6 +600,32 @@ export function WorkflowWorkspace({
                   </span>
                 </div>
               </header>
+
+              <div className={`workflow-status-guidance status-${selected.status.toLowerCase()}`}>
+                <strong>{labels[selected.status]}</strong>
+                <span>{statusGuidance(selected.status, role)}</span>
+              </div>
+
+              <section className="workflow-employee-context">
+                <div className="workflow-section-title">
+                  <p className="eyebrow">DATA PEGAWAI</p>
+                  <h3>{selected.employee.fullName}</h3>
+                </div>
+                <dl className="workflow-employee-grid">
+                  <div>
+                    <dt>NIP</dt>
+                    <dd>{selected.employee.nip}</dd>
+                  </div>
+                  <div>
+                    <dt>Jabatan</dt>
+                    <dd>{selected.employee.positionTitle}</dd>
+                  </div>
+                  <div>
+                    <dt>Unit Kerja</dt>
+                    <dd>{selected.employee.workUnit}</dd>
+                  </div>
+                </dl>
+              </section>
 
               <dl className="workflow-detail-grid">
                 <div>
@@ -554,16 +656,26 @@ export function WorkflowWorkspace({
 
               <div className="workflow-actions">
                 {role === "PEGAWAI" &&
-                  ["DRAFT", "RETURNED_FOR_CORRECTION"].includes(
-                    selected.status,
-                  ) && (
+                  ["DRAFT", "RETURNED_FOR_CORRECTION"].includes(selected.status) && (
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      disabled={acting}
+                      onClick={() => setEditing(true)}
+                    >
+                      {selected.status === "DRAFT" ? "Edit Draf" : "Perbaiki Pengajuan"}
+                    </button>
+                  )}
+
+                {role === "PEGAWAI" &&
+                  ["DRAFT", "RETURNED_FOR_CORRECTION"].includes(selected.status) && (
                     <button
                       className="primary-button"
                       type="button"
                       disabled={acting}
                       onClick={() => void performAction("SUBMIT")}
                     >
-                      Ajukan Sekarang
+                      {selected.status === "DRAFT" ? "Ajukan Sekarang" : "Ajukan Kembali"}
                     </button>
                   )}
 
@@ -587,6 +699,7 @@ export function WorkflowWorkspace({
                       <button
                         className="secondary-button"
                         type="button"
+                        disabled={acting}
                         onClick={() => openReview("RETURN")}
                       >
                         Kembalikan
@@ -594,6 +707,7 @@ export function WorkflowWorkspace({
                       <button
                         className="danger-button"
                         type="button"
+                        disabled={acting}
                         onClick={() => openReview("REJECT")}
                       >
                         Tolak
@@ -601,9 +715,10 @@ export function WorkflowWorkspace({
                       <button
                         className="primary-button"
                         type="button"
+                        disabled={acting}
                         onClick={() => openReview("APPROVE")}
                       >
-                        Catat Disetujui
+                        Setujui Pengajuan
                       </button>
                     </>
                   )}
@@ -643,7 +758,7 @@ export function WorkflowWorkspace({
                           )}
                           {item.evidenceReference && (
                             <p>
-                              <b>Referensi bukti:</b> {item.evidenceReference}
+                              <b>Referensi administrasi:</b> {item.evidenceReference}
                             </p>
                           )}
                         </div>
@@ -723,11 +838,12 @@ export function WorkflowWorkspace({
             </header>
 
             <div className="workflow-review-request">
-              <span>{requestName(selected)}</span>
-              <strong>
+              <span>{selected.employee.fullName} · {selected.employee.nip}</span>
+              <strong>{requestName(selected)}</strong>
+              <small>
                 {formatDate(selected.currentRevision.startDate)} →{" "}
                 {formatDate(selected.currentRevision.endDate)}
-              </strong>
+              </small>
             </div>
 
             <p className="workflow-review-description">
@@ -769,9 +885,7 @@ export function WorkflowWorkspace({
                 type="submit"
                 disabled={acting || !reviewValue.trim()}
               >
-                {acting
-                  ? "Memproses…"
-                  : reviewCopy[reviewAction].confirmLabel}
+                {acting ? "Memproses…" : reviewCopy[reviewAction].confirmLabel}
               </button>
             </div>
           </form>

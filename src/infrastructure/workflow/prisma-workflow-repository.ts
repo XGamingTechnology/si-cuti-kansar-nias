@@ -21,10 +21,10 @@ const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 const businessDate = (value: Date) => value.toISOString().slice(0, 10);
 
 type LeaveWithRevision = Prisma.LeaveRequestGetPayload<{
-  include: { revisions: true };
+  include: { employee: true; revisions: true };
 }>;
 type PermissionWithRevision = Prisma.PermissionRequestGetPayload<{
-  include: { revisions: { include: { permissionType: true } } };
+  include: { employee: true; revisions: { include: { permissionType: true } } };
 }>;
 
 function leaveRevision(
@@ -51,6 +51,13 @@ function leaveRequest(value: LeaveWithRevision): LeaveRequestRecord {
   return {
     id: value.id,
     employeeId: value.employeeId,
+    employee: {
+      id: value.employee.id,
+      nip: value.employee.nip,
+      fullName: value.employee.fullName,
+      positionTitle: value.employee.positionTitle,
+      workUnit: value.employee.workUnit,
+    },
     status: value.status,
     currentRevisionNumber: value.currentRevisionNumber,
     currentRevision: leaveRevision(current),
@@ -82,6 +89,13 @@ function permissionRequest(
   return {
     id: value.id,
     employeeId: value.employeeId,
+    employee: {
+      id: value.employee.id,
+      nip: value.employee.nip,
+      fullName: value.employee.fullName,
+      positionTitle: value.employee.positionTitle,
+      workUnit: value.employee.workUnit,
+    },
     status: value.status,
     currentRevisionNumber: value.currentRevisionNumber,
     currentRevision: permissionRevision(current),
@@ -114,8 +128,9 @@ function transition(value: {
   };
 }
 
-const leaveInclude = { revisions: true } as const;
+const leaveInclude = { employee: true, revisions: true } as const;
 const permissionInclude = {
+  employee: true,
   revisions: { include: { permissionType: true } },
 } as const;
 

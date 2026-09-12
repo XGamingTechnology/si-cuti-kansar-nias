@@ -32,6 +32,13 @@ const admin: Principal = {
 const leave: LeaveRequestRecord = {
   id: "leave-1",
   employeeId: owner.employeeId,
+  employee: {
+    id: owner.employeeId,
+    nip: "UAT-EMP-001",
+    fullName: "Pegawai Uji",
+    positionTitle: "Staf",
+    workUnit: "Unit Uji",
+  },
   status: "DRAFT",
   currentRevisionNumber: 1,
   currentRevision: {
@@ -49,6 +56,13 @@ const leave: LeaveRequestRecord = {
 const permission: PermissionRequestRecord = {
   id: "permission-1",
   employeeId: owner.employeeId,
+  employee: {
+    id: owner.employeeId,
+    nip: "UAT-EMP-001",
+    fullName: "Pegawai Uji",
+    positionTitle: "Staf",
+    workUnit: "Unit Uji",
+  },
   status: "DRAFT",
   currentRevisionNumber: 1,
   currentRevision: {
@@ -78,6 +92,17 @@ describe("workflow application policy", () => {
       code: "FORBIDDEN",
     });
     await expect(service.get(admin, leave.id)).resolves.toEqual(leave);
+  });
+
+  it("filters Pegawai list by their employeeId while Admin may list all", async () => {
+    const listLeaves = vi.fn(async () => [leave]);
+    const service = new LeaveWorkflowService(repository({ listLeaves }));
+
+    await expect(service.list(owner)).resolves.toEqual([leave]);
+    expect(listLeaves).toHaveBeenNthCalledWith(1, owner.employeeId);
+
+    await expect(service.list(admin)).resolves.toEqual([leave]);
+    expect(listLeaves).toHaveBeenNthCalledWith(2, undefined);
   });
 
   it("requires a reason for return and rejection", () => {

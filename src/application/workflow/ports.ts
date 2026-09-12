@@ -21,9 +21,18 @@ export type PermissionRevision = PermissionRevisionContent &
     submittedAt: Date | null;
     permissionTypeActive?: boolean;
   }>;
+export type WorkflowEmployeeSummary = Readonly<{
+  id: string;
+  nip: string;
+  fullName: string;
+  positionTitle: string;
+  workUnit: string;
+}>;
+
 export type LeaveRequestRecord = Readonly<{
   id: string;
   employeeId: string;
+  employee: WorkflowEmployeeSummary;
   status: WorkflowStatus;
   currentRevisionNumber: number;
   currentRevision: LeaveRevision;
@@ -31,6 +40,7 @@ export type LeaveRequestRecord = Readonly<{
 export type PermissionRequestRecord = Readonly<{
   id: string;
   employeeId: string;
+  employee: WorkflowEmployeeSummary;
   status: WorkflowStatus;
   currentRevisionNumber: number;
   currentRevision: PermissionRevision;
