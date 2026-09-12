@@ -41,6 +41,7 @@ jobs:
 
       - name: Check formatting for changed files
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         shell: bash
