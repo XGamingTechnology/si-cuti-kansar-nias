@@ -92,6 +92,17 @@ describe("workflow HTTP delivery", () => {
     expect(get).toHaveBeenCalledWith(pegawai, "request-1");
   });
 
+  it("meneruskan principal Pegawai ke list service agar daftar tetap terisolasi", async () => {
+    const list = vi.fn().mockResolvedValue([]);
+    const mock = runtime(pegawai, { list });
+    const response = await createCollectionHandlers(
+      "leave",
+      () => mock.value,
+    ).GET(request());
+    expect(response.status).toBe(200);
+    expect(list).toHaveBeenCalledWith(pegawai);
+  });
+
   it("memberi Admin akses baca melalui boundary service", async () => {
     const get = vi.fn().mockResolvedValue({ id: "request-1" });
     const mock = runtime(admin, { get });
