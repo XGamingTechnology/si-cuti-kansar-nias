@@ -14,7 +14,11 @@ assert_route() {
   file=$1
   route=$2
   awk -v route="$route" -v upstream="$UPSTREAM" '
-    $0 ~ "^[[:space:]]*location " route "[[:space:]]*\\{" { inside=1; next }
+    {
+      line=$0
+      sub(/^[[:space:]]*/, "", line)
+    }
+    line == "location " route " {" { inside=1; next }
     inside && /}/ { exit found ? 0 : 1 }
     inside && index($0, "proxy_pass " upstream ";") { found=1 }
     END { if (!inside || !found) exit 1 }
@@ -23,7 +27,19 @@ assert_route() {
 safe_env_value() {
   awk -v wanted="$1" '
     /^[[:space:]]*#/ { next }
-    $0 ~ "^[[:space:]]*" wanted "[[:space:]]*=" { sub("^[[:space:]]*" wanted "[[:space:]]*=[[:space:]]*", ""); gsub(/^['\''\"]|['\''\"]$/, ""); print; found=1; exit }
+    $0 ~ "^[[:space:]]*" wanted "[[:space:]]*=" {
+      sub("^[[:space:]]*" wanted "[[:space:]]*=[[:space:]]*", "")
+      value=$0
+      first=substr(value, 1, 1)
+      last=substr(value, length(value), 1)
+      if ((first == "\"" && last == "\"") ||
+          (first == "\047" && last == "\047")) {
+        value=substr(value, 2, length(value) - 2)
+      }
+      print value
+      found=1
+      exit
+    }
     END { if (!found) exit 1 }
   ' "$2"
 }
@@ -39,9 +55,9 @@ network=$(safe_env_value STAGING_FRONTEND_NETWORK "$ENV_FILE") || fail 'STAGING_
 printf 'Staging edge hostname: %s\nStaging frontend network: %s\n' "$hostname" "$network"
 # Never print rendered Compose config because certificate paths are operational details.
 $COMPOSE config -q
-assert_route "$TEMPLATE" '\^~ /api/'
+assert_route "$TEMPLATE" '^~ /api/'
 assert_route "$TEMPLATE" '= /admin'
-assert_route "$TEMPLATE" '\^~ /admin/'
+assert_route "$TEMPLATE" '^~ /admin/'
 assert_route "$TEMPLATE" '/'
 printf '%s\n' 'Source staging template memiliki /api/, exact /admin, /admin/ subtree, dan catch-all ke staging app.'
 
@@ -59,9 +75,9 @@ $COMPOSE exec -T edge nginx -t
 effective=$(mktemp)
 trap 'rm -f "$effective"' EXIT INT TERM
 $COMPOSE exec -T edge nginx -T >"$effective" 2>/dev/null
-assert_route "$effective" '\^~ /api/'
+assert_route "$effective" '^~ /api/'
 assert_route "$effective" '= /admin'
-assert_route "$effective" '\^~ /admin/'
+assert_route "$effective" '^~ /admin/'
 assert_route "$effective" '/'
 
 attached=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$edge_id")
