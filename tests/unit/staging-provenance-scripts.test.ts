@@ -43,8 +43,9 @@ describe("staging provenance helpers", () => {
     expect(edge).toContain("$COMPOSE up -d --no-deps --force-recreate edge");
     expect(edge).toContain("nginx -t");
     expect(edge).toContain("nginx -T");
-    expect(edge).toContain("'\\^~ /api/'");
-    expect(edge).toContain("'\\^~ /admin/'");
+    expect(edge).toContain("'^~ /api/'");
+    expect(edge).toContain("'= /admin'");
+    expect(edge).toContain("'^~ /admin/'");
     expect(edge).toContain("UPSTREAM=http://si-cuti-staging-app:3000");
     expect(edge).toContain("si-cuti-staging-frontend");
     expect(edge).toContain("staging-only helper menolak menyentuhnya");
