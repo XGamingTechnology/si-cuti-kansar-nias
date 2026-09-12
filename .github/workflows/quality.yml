@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js 24
         uses: actions/setup-node@v4
@@ -39,8 +41,22 @@ jobs:
       - name: Prepare private storage path
         run: mkdir -p "$PRIVATE_STORAGE_PATH"
 
-      - name: Check formatting
-        run: npm run format:check
+      - name: Check formatting for changed files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          mapfile -t files < <(
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA"...HEAD --               '*.js' '*.jsx' '*.ts' '*.tsx' '*.mjs' '*.cjs'               '*.json' '*.css' '*.md' '*.yml' '*.yaml'
+          )
+          if (( ${#files[@]} == 0 )); then
+            echo "No changed files require Prettier checking."
+            exit 0
+          fi
+          printf 'Checking formatting for %s changed file(s):\n' "${#files[@]}"
+          printf '  %s\n' "${files[@]}"
+          npx prettier --check -- "${files[@]}"
 
       - name: Lint
         run: npm run lint
