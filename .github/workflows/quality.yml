@@ -1,0 +1,52 @@
+name: Quality Gate
+
+on:
+  push:
+    branches:
+      - ui/qa-integration
+  pull_request:
+    branches:
+      - staging
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: format, lint, typecheck, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://si_cuti_ci:si_cuti_ci@127.0.0.1:5432/si_cuti_ci
+      PRIVATE_STORAGE_PATH: /tmp/si-cuti-ci-private
+      LOG_LEVEL: silent
+      SESSION_TTL_SECONDS: 28800
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare private storage path
+        run: mkdir -p "$PRIVATE_STORAGE_PATH"
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit and HTTP tests
+        run: npm test
