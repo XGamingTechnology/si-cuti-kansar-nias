@@ -263,9 +263,11 @@ export function WorkflowWorkspace({
       );
       setCreating(false);
       setEditing(false);
-      setMessage(editingId ? "Perubahan draf tersimpan." : "Draf pengajuan tersimpan.");
       const requestId = (result.request as RequestRecord).id;
       await refreshSelected(requestId);
+      setMessage(
+        editingId ? "Perubahan draf tersimpan." : "Draf pengajuan tersimpan.",
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Gagal menyimpan.");
     }
@@ -286,6 +288,7 @@ export function WorkflowWorkspace({
       setReviewAction(null);
       setReviewValue("");
       setEditing(false);
+      await refreshSelected(requestId);
       setMessage(
         action === "SUBMIT"
           ? "Pengajuan berhasil dikirim."
@@ -297,7 +300,6 @@ export function WorkflowWorkspace({
                 ? "Pengajuan ditolak."
                 : "Pengajuan dibatalkan.",
       );
-      await refreshSelected(requestId);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Tindakan gagal.");
     } finally {
