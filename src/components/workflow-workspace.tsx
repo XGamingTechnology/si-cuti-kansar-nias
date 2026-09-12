@@ -167,6 +167,8 @@ export function WorkflowWorkspace({
   }, [kind]);
 
   useEffect(() => {
+    // Fetching is the external synchronization performed by this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
