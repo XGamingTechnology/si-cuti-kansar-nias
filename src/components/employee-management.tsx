@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import type { AccountStatus } from "@/application/accounts/service";
 import type { Employee } from "@/application/employees/service";
 import type { EmployeeImportPreview } from "@/application/employees/import-service";
@@ -14,6 +14,17 @@ const empty = {
   directSupervisorId: "",
 };
 type FormMode = "create" | "edit" | null;
+type EmployeeStatusFilter = "all" | "active" | "inactive";
+
+function employeeInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
 
 function StatusBadge({
   active,
@@ -96,11 +107,36 @@ export function EmployeeManagement() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<EmployeeImportPreview | null>(null);
   const [importBusy, setImportBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState<EmployeeStatusFilter>("all");
   const [accountRefreshVersions, setAccountRefreshVersions] = useState<
     Record<string, number>
   >({});
   const selected =
     employees.find((employee) => employee.id === selectedId) ?? null;
+
+  const visibleEmployees = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
+    return employees.filter((employee) => {
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && employee.isActive) ||
+        (statusFilter === "inactive" && !employee.isActive);
+      if (!matchesStatus) return false;
+      if (!normalizedQuery) return true;
+      return [
+        employee.fullName,
+        employee.nip,
+        employee.positionTitle,
+        employee.workUnit,
+      ].some((value) =>
+        value.toLocaleLowerCase("id-ID").includes(normalizedQuery),
+      );
+    });
+  }, [employees, query, statusFilter]);
+
+  const panelOpen = importOpen || Boolean(mode || selected);
 
   const handleAccountChanged = useCallback((employeeId: string) => {
     setAccountRefreshVersions((versions) => ({
@@ -132,6 +168,27 @@ export function EmployeeManagement() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (importOpen) {
+        setImportOpen(false);
+        return;
+      }
+      closePanel();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [panelOpen, importOpen]);
 
   function openCreate() {
     setMode("create");
@@ -263,10 +320,39 @@ export function EmployeeManagement() {
             <p>
               {loading
                 ? "Memuat data…"
-                : `${employees.length} pegawai terdaftar`}
+                : query || statusFilter !== "all"
+                  ? `${visibleEmployees.length} dari ${employees.length} pegawai ditampilkan`
+                  : `${employees.length} pegawai terdaftar`}
             </p>
           </div>
         </div>
+        {!loading && employees.length > 0 && (
+          <div className="employee-toolbar" aria-label="Pencarian dan filter pegawai">
+            <label className="employee-search">
+              <span className="sr-only">Cari pegawai</span>
+              <span className="search-icon" aria-hidden="true">⌕</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Cari nama, NIP, jabatan, atau unit kerja"
+              />
+            </label>
+            <label className="employee-filter">
+              <span>Status pegawai</span>
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as EmployeeStatusFilter)
+                }
+              >
+                <option value="all">Semua status</option>
+                <option value="active">Aktif</option>
+                <option value="inactive">Tidak aktif</option>
+              </select>
+            </label>
+          </div>
+        )}
         {loading ? (
           <div className="empty-state" aria-live="polite">
             Memuat data pegawai…
@@ -277,6 +363,21 @@ export function EmployeeManagement() {
             <span>
               Gunakan tombol Tambah Pegawai untuk membuat data pertama.
             </span>
+          </div>
+        ) : visibleEmployees.length === 0 ? (
+          <div className="empty-state">
+            <strong>Pegawai tidak ditemukan</strong>
+            <span>Ubah kata kunci atau filter untuk melihat data lainnya.</span>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setStatusFilter("all");
+              }}
+            >
+              Reset pencarian
+            </button>
           </div>
         ) : (
           <>
@@ -296,7 +397,7 @@ export function EmployeeManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {employees.map((employee) => (
+                  {visibleEmployees.map((employee) => (
                     <tr key={employee.id}>
                       <td>
                         <strong>{employee.fullName}</strong>
@@ -330,11 +431,16 @@ export function EmployeeManagement() {
               </table>
             </div>
             <div className="employee-mobile-list">
-              {employees.map((employee) => (
+              {visibleEmployees.map((employee) => (
                 <article key={employee.id}>
-                  <div className="mobile-employee-title">
-                    <strong>{employee.fullName}</strong>
-                    <span>{employee.nip}</span>
+                  <div className="mobile-employee-heading">
+                    <span className="employee-card-avatar" aria-hidden="true">
+                      {employeeInitials(employee.fullName)}
+                    </span>
+                    <div className="mobile-employee-title">
+                      <strong>{employee.fullName}</strong>
+                      <span>{employee.nip}</span>
+                    </div>
                   </div>
                   <dl>
                     <div>
@@ -381,12 +487,14 @@ export function EmployeeManagement() {
           />
           <aside
             className="management-panel import-panel"
-            aria-label="Import Excel pegawai"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="employee-import-title"
           >
             <header>
               <div>
                 <p className="eyebrow">IMPORT PEGAWAI</p>
-                <h2>Import Excel</h2>
+                <h2 id="employee-import-title">Import Excel</h2>
               </div>
               <button
                 className="panel-close"
@@ -496,18 +604,16 @@ export function EmployeeManagement() {
           />
           <aside
             className="management-panel"
-            aria-label={
-              mode === "create"
-                ? "Tambah Pegawai"
-                : (selected?.fullName ?? "Detail Pegawai")
-            }
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="employee-panel-title"
           >
             <header>
               <div>
                 <p className="eyebrow">
                   {mode === "create" ? "DATA BARU" : "MASTER PEGAWAI"}
                 </p>
-                <h2>
+                <h2 id="employee-panel-title">
                   {mode === "create"
                     ? "Tambah Pegawai"
                     : mode === "edit"
