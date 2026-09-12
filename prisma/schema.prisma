@@ -56,6 +56,11 @@ enum LeaveType {
   CLTN
 }
 
+enum LeaveDocumentType {
+  SUBMISSION_PROOF
+  APPROVED_FORM
+}
+
 model Employee {
   id                 String     @id @default(uuid()) @db.Uuid
   nip                String     @unique @db.VarChar(32)
@@ -64,6 +69,7 @@ model Employee {
   workUnit           String     @db.VarChar(200)
   isActive           Boolean    @default(true)
   directSupervisorId String?    @db.Uuid
+  employmentStartDate DateTime? @db.Date
   createdAt          DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime   @updatedAt @db.Timestamptz(3)
 
@@ -215,6 +221,7 @@ model LeaveRequest {
   employee    Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   revisions   LeaveRequestRevision[]
   transitions LeaveRequestTransition[]
+  documents   LeaveDocument[]
 
   @@index([employeeId, status])
   @@index([employeeId, createdAt])
@@ -228,6 +235,8 @@ model LeaveRequestRevision {
   startDate             DateTime  @db.Date
   endDate               DateTime  @db.Date
   reason                String    @db.Text
+  leaveAddress          String?   @db.Text
+  leavePhone            String?   @db.VarChar(32)
   calculatedWorkingDays Int?
   submittedAt           DateTime? @db.Timestamptz(3)
   createdAt             DateTime  @default(now()) @db.Timestamptz(3)
@@ -235,9 +244,29 @@ model LeaveRequestRevision {
 
   leaveRequest LeaveRequest             @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   transitions LeaveRequestTransition[]
+  documents   LeaveDocument[]
 
   @@unique([leaveRequestId, revisionNumber])
   @@unique([id, leaveRequestId])
+}
+
+model LeaveDocument {
+  id             String            @id @default(uuid()) @db.Uuid
+  leaveRequestId String            @db.Uuid
+  revisionId     String            @db.Uuid
+  documentType   LeaveDocumentType
+  storageKey     String            @unique @db.VarChar(191)
+  checksumSha256 String            @db.Char(64)
+  sizeBytes      Int
+  mimeType       String            @default("application/pdf") @db.VarChar(100)
+  snapshot       Json
+  generatedAt    DateTime          @default(now()) @db.Timestamptz(3)
+
+  leaveRequest LeaveRequest         @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision     LeaveRequestRevision @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([revisionId, documentType])
+  @@index([leaveRequestId, generatedAt])
 }
 
 model LeaveRequestTransition {
