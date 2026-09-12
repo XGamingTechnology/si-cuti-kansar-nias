@@ -724,6 +724,58 @@ export function WorkflowWorkspace({
                   )}
               </div>
 
+              {kind === "leave" && (
+                <section className="workflow-document-panel">
+                  <div>
+                    <p className="eyebrow">DOKUMEN</p>
+                    <h3>
+                      {selected.status === "APPROVED"
+                        ? "Formulir cuti siap dilihat"
+                        : "Bukti pengajuan cuti"}
+                    </h3>
+                    <p>
+                      {selected.status === "APPROVED"
+                        ? "Buka formulir persetujuan atau simpan salinan PDF untuk arsip administrasi."
+                        : "Gunakan bukti pengajuan untuk memeriksa data sebelum proses persetujuan selesai."}
+                    </p>
+                  </div>
+                  <div className="workflow-document-actions">
+                    <a
+                      className="secondary-button"
+                      href={`/api/workflow/leave/${selected.id}/document?variant=proof`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Lihat Bukti
+                    </a>
+                    <a
+                      className="secondary-button"
+                      href={`/api/workflow/leave/${selected.id}/document?variant=proof&download=1`}
+                    >
+                      Unduh Bukti
+                    </a>
+                    {selected.status === "APPROVED" && (
+                      <>
+                        <a
+                          className="primary-button"
+                          href={`/api/workflow/leave/${selected.id}/document?variant=approved`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Lihat Formulir Disetujui
+                        </a>
+                        <a
+                          className="primary-button"
+                          href={`/api/workflow/leave/${selected.id}/document?variant=approved&download=1`}
+                        >
+                          Unduh PDF
+                        </a>
+                      </>
+                    )}
+                  </div>
+                </section>
+              )}
+
               <section className="workflow-history-section">
                 <div className="workflow-section-title">
                   <p className="eyebrow">RIWAYAT</p>
