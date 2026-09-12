@@ -21,6 +21,11 @@ server {
   # Keep application routes, including the Admin App Router subtree, on the
   # Next.js upstream. This explicit block also prevents a future generic
   # static-file location from shadowing /admin/.
+  location = /admin {
+    proxy_pass http://si-cuti-staging-app:3000;
+    include /etc/nginx/proxy_params;
+  }
+
   location ^~ /admin/ {
     proxy_pass http://si-cuti-staging-app:3000;
     include /etc/nginx/proxy_params;

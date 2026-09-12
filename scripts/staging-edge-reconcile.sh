@@ -40,9 +40,10 @@ printf 'Staging edge hostname: %s\nStaging frontend network: %s\n' "$hostname" "
 # Never print rendered Compose config because certificate paths are operational details.
 $COMPOSE config -q
 assert_route "$TEMPLATE" '\^~ /api/'
+assert_route "$TEMPLATE" '= /admin'
 assert_route "$TEMPLATE" '\^~ /admin/'
 assert_route "$TEMPLATE" '/'
-printf '%s\n' 'Source staging template memiliki /api/, /admin/, dan catch-all ke staging app.'
+printf '%s\n' 'Source staging template memiliki /api/, exact /admin, /admin/ subtree, dan catch-all ke staging app.'
 
 # Recreate only the edge service in compose.edge.staging.yaml. No production compose is referenced.
 existing_edge_id=$($COMPOSE ps -q edge 2>/dev/null || true)
@@ -59,11 +60,12 @@ effective=$(mktemp)
 trap 'rm -f "$effective"' EXIT INT TERM
 $COMPOSE exec -T edge nginx -T >"$effective" 2>/dev/null
 assert_route "$effective" '\^~ /api/'
+assert_route "$effective" '= /admin'
 assert_route "$effective" '\^~ /admin/'
 assert_route "$effective" '/'
 
 attached=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$edge_id")
-printf 'Effective routes: /api/, /admin/, / -> %s\nAttached networks:\n%s\n' "$UPSTREAM" "$attached"
+printf 'Effective routes: /api/, exact /admin, /admin/ subtree, / -> %s\nAttached networks:\n%s\n' "$UPSTREAM" "$attached"
 printf '%s\n' "$attached" | grep -Fx "$network" >/dev/null || fail "edge tidak attached ke $network"
 unexpected=$(printf '%s\n' "$attached" | grep -E '(^|[-_])prod(uction)?([-_]|$)' || true)
 [ -z "$unexpected" ] || fail "edge staging attached ke network production: $unexpected"

@@ -13,6 +13,10 @@ server {
     proxy_pass http://si-cuti-production-app:3000;
     include /etc/nginx/proxy_params;
   }
+  location = /admin {
+    proxy_pass http://si-cuti-production-app:3000;
+    include /etc/nginx/proxy_params;
+  }
   location ^~ /admin/ {
     proxy_pass http://si-cuti-production-app:3000;
     include /etc/nginx/proxy_params;
@@ -26,6 +30,10 @@ server {
   ssl_certificate /etc/nginx/tls/fullchain.pem;
   ssl_certificate_key /etc/nginx/tls/privkey.pem;
   location ^~ /api/ {
+    proxy_pass http://si-cuti-staging-app:3000;
+    include /etc/nginx/proxy_params;
+  }
+  location = /admin {
     proxy_pass http://si-cuti-staging-app:3000;
     include /etc/nginx/proxy_params;
   }
