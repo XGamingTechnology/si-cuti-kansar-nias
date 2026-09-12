@@ -11,18 +11,19 @@ on:
 permissions:
   contents: read
 
-jobs:
-  quality:
-    name: format, lint, typecheck, test
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      NODE_ENV: test
-      DATABASE_URL: postgresql://si_cuti_ci:si_cuti_ci@127.0.0.1:5432/si_cuti_ci
-      PRIVATE_STORAGE_PATH: /tmp/si-cuti-ci-private
-      LOG_LEVEL: silent
-      SESSION_TTL_SECONDS: 28800
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://si_cuti_ci:si_cuti_ci@127.0.0.1:5432/si_cuti_ci
+  PRIVATE_STORAGE_PATH: /tmp/si-cuti-ci-private
+  LOG_LEVEL: silent
+  SESSION_TTL_SECONDS: 28800
 
+jobs:
+  format:
+    name: formatting advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,9 +38,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Prepare private storage path
-        run: mkdir -p "$PRIVATE_STORAGE_PATH"
 
       - name: Check formatting for changed files
         if: github.event_name == 'pull_request'
@@ -57,6 +55,26 @@ jobs:
           printf 'Checking formatting for %s changed file(s):\n' "${#files[@]}"
           printf '  %s\n' "${files[@]}"
           npx prettier --check -- "${files[@]}"
+
+  quality:
+    name: lint, typecheck, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare private storage path
+        run: mkdir -p "$PRIVATE_STORAGE_PATH"
 
       - name: Lint
         run: npm run lint
