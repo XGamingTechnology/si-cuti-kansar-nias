@@ -37,12 +37,23 @@ export function AuthenticatedShell({
     window.location.assign("/");
   }
 
+  const employeeActive = !isAdmin || adminSurface === "pegawai";
+  const balanceActive = isAdmin && adminSurface === "saldo";
+  const workflowActive = isAdmin && adminSurface === "pengajuan";
+
   return (
     <div className="authenticated-shell">
-      <aside className={`authenticated-sidebar ${menuOpen ? "open" : ""}`}>
+      <a className="skip-link" href="#main-content">
+        Lewati ke konten utama
+      </a>
+
+      <aside
+        className={`authenticated-sidebar ${menuOpen ? "open" : ""}`}
+        aria-label="Navigasi aplikasi"
+      >
         <div className="shell-brand">
           <BrandMark />
-          <div>
+          <div title="Kantor Pencarian dan Pertolongan Kelas B Nias">
             <strong>SI CUTI</strong>
             <span>Kantor SAR Nias</span>
           </div>
@@ -55,49 +66,62 @@ export function AuthenticatedShell({
             ×
           </button>
         </div>
+
         <p className="nav-label">NAVIGASI</p>
         <nav aria-label="Navigasi utama">
           <a
-            className={!isAdmin || adminSurface === "pegawai" ? "active" : ""}
+            className={employeeActive ? "active" : ""}
+            aria-current={employeeActive ? "page" : undefined}
             href={isAdmin ? "/#pegawai" : "#profil"}
             onClick={() => {
               if (isAdmin) setAdminSurface("pegawai");
               setMenuOpen(false);
             }}
           >
-            <Icon name="people" /> {isAdmin ? "Pegawai" : "Profil Saya"}
+            <Icon name="people" />
+            <span>{isAdmin ? "Pegawai" : "Profil Saya"}</span>
           </a>
+
           {isAdmin && (
             <a
-              className={adminSurface === "saldo" ? "active" : ""}
+              className={balanceActive ? "active" : ""}
+              aria-current={balanceActive ? "page" : undefined}
               href="/admin/saldo-cuti"
               onClick={() => {
                 setAdminSurface("saldo");
                 setMenuOpen(false);
               }}
             >
-              <Icon name="file" /> Saldo Cuti
+              <Icon name="file" />
+              <span>Saldo Cuti</span>
             </a>
           )}
+
           <a
-            className={isAdmin && adminSurface === "pengajuan" ? "active" : ""}
+            className={workflowActive ? "active" : ""}
+            aria-current={workflowActive ? "page" : undefined}
             href={isAdmin ? "/#pengajuan" : "#pengajuan"}
             onClick={() => {
               if (isAdmin) setAdminSurface("pengajuan");
               setMenuOpen(false);
             }}
           >
-            <Icon name="calendar" /> Pengajuan
+            <Icon name="calendar" />
+            <span>Pengajuan</span>
           </a>
         </nav>
+
         <div className="sidebar-user">
-          <span className="avatar">{initials(principal.fullName)}</span>
+          <span className="avatar" aria-hidden="true">
+            {initials(principal.fullName)}
+          </span>
           <div>
             <strong>{principal.fullName}</strong>
             <span>{role}</span>
           </div>
         </div>
       </aside>
+
       {menuOpen && (
         <button
           className="shell-scrim"
@@ -106,6 +130,7 @@ export function AuthenticatedShell({
           onClick={() => setMenuOpen(false)}
         />
       )}
+
       <div className="authenticated-workspace">
         <header className="authenticated-topbar">
           <div className="topbar-title">
@@ -114,16 +139,23 @@ export function AuthenticatedShell({
               className="shell-menu-button"
               onClick={() => setMenuOpen(true)}
               aria-label="Buka menu"
+              aria-expanded={menuOpen}
             >
-              ☰
+              <span aria-hidden="true">☰</span>
             </button>
             <span className="mobile-app-name">SI CUTI</span>
             <span className="desktop-context">
               {isAdmin ? "Administrasi Kepegawaian" : "Layanan Pegawai"}
             </span>
           </div>
-          <div className="current-user">
-            <span className="top-avatar">{initials(principal.fullName)}</span>
+
+          <div
+            className="current-user"
+            aria-label={`Pengguna aktif: ${principal.fullName}, ${role}`}
+          >
+            <span className="top-avatar" aria-hidden="true">
+              {initials(principal.fullName)}
+            </span>
             <div>
               <strong>{principal.fullName}</strong>
               <span>{role}</span>
@@ -133,7 +165,8 @@ export function AuthenticatedShell({
             </button>
           </div>
         </header>
-        <main className="authenticated-content">
+
+        <main id="main-content" className="authenticated-content" tabIndex={-1}>
           {isAdmin && adminSurface === "pegawai" && <EmployeeManagement />}
           {isAdmin && adminSurface === "saldo" && <AnnualBalanceManagement />}
           {!isAdmin && (
