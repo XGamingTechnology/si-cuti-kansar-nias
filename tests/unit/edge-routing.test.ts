@@ -28,6 +28,24 @@ const applicationConfigurations = [
 ] as const;
 
 describe("edge routing", () => {
+  it.each(applicationConfigurations)(
+    "forwards exact /admin to the expected Next.js service in $file",
+    ({ file, upstream }) => {
+      const configuration = readFileSync(file, "utf8");
+      const adminLocations = [
+        ...configuration.matchAll(
+          /location = \/admin\s*\{(?<body>[\s\S]*?)\}/g,
+        ),
+      ];
+
+      expect(
+        adminLocations.some(({ groups }) =>
+          groups?.body.includes(`proxy_pass http://${upstream};`),
+        ),
+      ).toBe(true);
+    },
+  );
+
   it.each(stagingConfigurations)(
     "forwards /admin/ to the staging Next.js service in $file",
     ({ file, upstream }) => {
@@ -79,4 +97,15 @@ describe("edge routing", () => {
       ).toBe(true);
     },
   );
+
+  it.each([
+    "docker/edge/staging-templates/default.conf.template",
+    "docker/edge/templates/default.conf.template",
+  ])("does not redirect /admin to /admin/ in $file", (file) => {
+    const configuration = readFileSync(file, "utf8");
+
+    expect(configuration).not.toMatch(
+      /location = \/admin\s*\{[\s\S]*?return\s+30[18]\s+\/admin\/;/,
+    );
+  });
 });
