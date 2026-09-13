@@ -27,6 +27,12 @@ export type WorkflowEmployeeSummary = Readonly<{
   fullName: string;
   positionTitle: string;
   workUnit: string;
+  employmentStartDate?: string | null;
+  directSupervisor?: Readonly<{
+    nip: string;
+    fullName: string;
+    positionTitle: string;
+  }> | null;
 }>;
 
 export type LeaveRequestRecord = Readonly<{

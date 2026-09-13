@@ -58,6 +58,7 @@ run("leave document persistence foundation", () => {
     expect(employee.employmentStartDate).toBeNull();
     expect(revision.leaveAddress).toBeNull();
     expect(revision.leavePhone).toBeNull();
+    expect(revision.formPlace).toBeNull();
   });
 
   it("persists leave address and phone on a new immutable revision", async () => {
@@ -72,12 +73,14 @@ run("leave document persistence foundation", () => {
         reason: "Keperluan pengujian revisi",
         leaveAddress: "Alamat selama cuti untuk pengujian",
         leavePhone: "+6281234567890",
+        formPlace: "Medan",
       },
     });
 
     expect(revision).toMatchObject({
       leaveAddress: "Alamat selama cuti untuk pengujian",
       leavePhone: "+6281234567890",
+      formPlace: "Medan",
     });
   });
 

@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import type { AccountStatus } from "@/application/accounts/service";
 import type { Employee } from "@/application/employees/service";
 import type { EmployeeImportPreview } from "@/application/employees/import-service";
@@ -12,6 +18,7 @@ const empty = {
   positionTitle: "",
   workUnit: "",
   directSupervisorId: "",
+  employmentStartDate: "",
 };
 type FormMode = "create" | "edit" | null;
 type EmployeeStatusFilter = "all" | "active" | "inactive";
@@ -108,8 +115,7 @@ export function EmployeeManagement() {
   const [preview, setPreview] = useState<EmployeeImportPreview | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState<EmployeeStatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<EmployeeStatusFilter>("all");
   const [accountRefreshVersions, setAccountRefreshVersions] = useState<
     Record<string, number>
   >({});
@@ -211,6 +217,9 @@ export function EmployeeManagement() {
       positionTitle: employee.positionTitle,
       workUnit: employee.workUnit,
       directSupervisorId: employee.directSupervisorId ?? "",
+      employmentStartDate: employee.employmentStartDate
+        ? String(employee.employmentStartDate).slice(0, 10)
+        : "",
     });
   }
   function closePanel() {
@@ -327,10 +336,15 @@ export function EmployeeManagement() {
           </div>
         </div>
         {!loading && employees.length > 0 && (
-          <div className="employee-toolbar" aria-label="Pencarian dan filter pegawai">
+          <div
+            className="employee-toolbar"
+            aria-label="Pencarian dan filter pegawai"
+          >
             <label className="employee-search">
               <span className="sr-only">Cari pegawai</span>
-              <span className="search-icon" aria-hidden="true">⌕</span>
+              <span className="search-icon" aria-hidden="true">
+                ⌕
+              </span>
               <input
                 type="search"
                 value={query}
@@ -708,6 +722,16 @@ function EmployeeForm({
           </label>
         ))}
       </div>
+      <label>
+        Tanggal mulai bekerja <span className="optional">(opsional)</span>
+        <input
+          type="date"
+          value={form.employmentStartDate}
+          onChange={(event) =>
+            setForm({ ...form, employmentStartDate: event.target.value })
+          }
+        />
+      </label>
       <label>
         Atasan langsung <span className="optional">(opsional)</span>
         <select

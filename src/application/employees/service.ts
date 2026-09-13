@@ -6,6 +6,7 @@ export type Employee = Readonly<{
   workUnit: string;
   isActive: boolean;
   directSupervisorId: string | null;
+  employmentStartDate: string | Date | null;
 }>;
 
 export type EmployeeWrite = Readonly<{
@@ -14,6 +15,7 @@ export type EmployeeWrite = Readonly<{
   positionTitle: string;
   workUnit: string;
   directSupervisorId?: string | null;
+  employmentStartDate?: string | Date | null;
 }>;
 
 export interface EmployeeRepository {
@@ -57,6 +59,10 @@ function normalize(input: EmployeeWrite): EmployeeWrite {
     positionTitle: input.positionTitle?.trim(),
     workUnit: input.workUnit?.trim(),
     directSupervisorId: input.directSupervisorId?.trim() || null,
+    employmentStartDate:
+      typeof input.employmentStartDate === "string"
+        ? input.employmentStartDate.trim() || null
+        : (input.employmentStartDate ?? null),
   };
   for (const field of [
     "nip",

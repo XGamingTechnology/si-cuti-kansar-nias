@@ -235,6 +235,7 @@ model LeaveRequestRevision {
   startDate             DateTime  @db.Date
   endDate               DateTime  @db.Date
   reason                String    @db.Text
+  formPlace             String?   @db.VarChar(100)
   leaveAddress          String?   @db.Text
   leavePhone            String?   @db.VarChar(32)
   calculatedWorkingDays Int?

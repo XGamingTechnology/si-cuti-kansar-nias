@@ -16,6 +16,12 @@ type RequestRecord = {
     fullName: string;
     positionTitle: string;
     workUnit: string;
+    employmentStartDate: string | null;
+    directSupervisor: {
+      nip: string;
+      fullName: string;
+      positionTitle: string;
+    } | null;
   };
   status: WorkflowStatus;
   currentRevisionNumber: number;
@@ -26,6 +32,10 @@ type RequestRecord = {
     endDate: string;
     reason: string;
     calculatedWorkingDays?: number | null;
+    submittedAt?: string | null;
+    formPlace?: string | null;
+    leaveAddress?: string | null;
+    leavePhone?: string | null;
   };
 };
 
@@ -37,7 +47,9 @@ type PermissionType = {
 };
 
 type Detail = {
-  revisions: Array<RequestRecord["currentRevision"] & { revisionNumber: number }>;
+  revisions: Array<
+    RequestRecord["currentRevision"] & { revisionNumber: number }
+  >;
   history: Array<{
     id: string;
     fromStatus: WorkflowStatus;
@@ -84,7 +96,8 @@ const reviewCopy: Record<
     description:
       "Tuliskan alasan yang jelas agar pegawai mengetahui bagian yang perlu diperbaiki.",
     fieldLabel: "Alasan pengembalian",
-    placeholder: "Contoh: Mohon perbaiki periode cuti dan lengkapi keterangannya.",
+    placeholder:
+      "Contoh: Mohon perbaiki periode cuti dan lengkapi keterangannya.",
     confirmLabel: "Kembalikan untuk Perbaikan",
     tone: "neutral",
   },
@@ -104,7 +117,8 @@ const reviewCopy: Record<
     description:
       "Pastikan data pegawai, periode, saldo, dan dasar administrasi telah diperiksa.",
     fieldLabel: "Referensi administrasi",
-    placeholder: "Contoh: Persetujuan Kepala Kantor / arsip administrasi terkait",
+    placeholder:
+      "Contoh: Persetujuan Kepala Kantor / arsip administrasi terkait",
     confirmLabel: "Setujui Pengajuan",
     tone: "success",
   },
@@ -140,21 +154,32 @@ function formatDateTime(value: string) {
   });
 }
 
-function statusGuidance(status: WorkflowStatus, role: "ADMIN_KEPEGAWAIAN" | "PEGAWAI") {
+function statusGuidance(
+  status: WorkflowStatus,
+  role: "ADMIN_KEPEGAWAIAN" | "PEGAWAI",
+) {
   if (role === "ADMIN_KEPEGAWAIAN") {
-    if (status === "SUBMITTED") return "Pengajuan menunggu keputusan administrasi.";
-    if (status === "RETURNED_FOR_CORRECTION") return "Pengajuan sedang diperbaiki oleh pegawai.";
-    if (status === "APPROVED") return "Pengajuan telah disetujui dan selesai diproses.";
+    if (status === "SUBMITTED")
+      return "Pengajuan menunggu keputusan administrasi.";
+    if (status === "RETURNED_FOR_CORRECTION")
+      return "Pengajuan sedang diperbaiki oleh pegawai.";
+    if (status === "APPROVED")
+      return "Pengajuan telah disetujui dan selesai diproses.";
     if (status === "REJECTED") return "Pengajuan telah ditolak.";
-    if (status === "CANCELLED") return "Pengajuan telah dibatalkan oleh pegawai.";
+    if (status === "CANCELLED")
+      return "Pengajuan telah dibatalkan oleh pegawai.";
     return "Draf masih berada pada pegawai dan belum diajukan.";
   }
 
-  if (status === "DRAFT") return "Draf belum dikirim. Periksa kembali sebelum diajukan.";
-  if (status === "SUBMITTED") return "Pengajuan sudah dikirim dan sedang menunggu tinjauan Admin Kepegawaian.";
-  if (status === "RETURNED_FOR_CORRECTION") return "Admin meminta perbaikan. Buka edit, perbaiki data, lalu ajukan kembali.";
+  if (status === "DRAFT")
+    return "Draf belum dikirim. Periksa kembali sebelum diajukan.";
+  if (status === "SUBMITTED")
+    return "Pengajuan sudah dikirim dan sedang menunggu tinjauan Admin Kepegawaian.";
+  if (status === "RETURNED_FOR_CORRECTION")
+    return "Admin meminta perbaikan. Buka edit, perbaiki data, lalu ajukan kembali.";
   if (status === "APPROVED") return "Pengajuan telah disetujui.";
-  if (status === "REJECTED") return "Pengajuan telah ditolak. Lihat riwayat untuk alasan keputusan.";
+  if (status === "REJECTED")
+    return "Pengajuan telah ditolak. Lihat riwayat untuk alasan keputusan.";
   return "Pengajuan telah dibatalkan.";
 }
 
@@ -245,7 +270,8 @@ export function WorkflowWorkspace({
       load(),
     ]);
     const latest =
-      values.find((item) => item.id === requestId) ?? (request as RequestRecord);
+      values.find((item) => item.id === requestId) ??
+      (request as RequestRecord);
     await open(latest);
   }
 
@@ -370,7 +396,11 @@ export function WorkflowWorkspace({
           </p>
         </div>
 
-        <div className="workflow-tabs" role="tablist" aria-label="Jenis pengajuan">
+        <div
+          className="workflow-tabs"
+          role="tablist"
+          aria-label="Jenis pengajuan"
+        >
           <button
             type="button"
             role="tab"
@@ -456,7 +486,9 @@ export function WorkflowWorkspace({
                   {role === "ADMIN_KEPEGAWAIAN" && (
                     <div className="request-card-employee">
                       <strong>{item.employee.fullName}</strong>
-                      <span>{item.employee.nip} · {item.employee.workUnit}</span>
+                      <span>
+                        {item.employee.nip} · {item.employee.workUnit}
+                      </span>
                     </div>
                   )}
                   <div className="request-card-topline">
@@ -525,6 +557,44 @@ export function WorkflowWorkspace({
                       ))}
                 </select>
               </label>
+
+              {kind === "leave" && (
+                <>
+                  <label className="workflow-field-full">
+                    <span>Tempat pembuatan formulir</span>
+                    <input
+                      name="formPlace"
+                      maxLength={100}
+                      defaultValue={selected?.currentRevision.formPlace ?? ""}
+                      placeholder="Contoh: Gunungsitoli"
+                    />
+                  </label>
+                  <label className="workflow-field-full">
+                    <span>Alamat selama menjalankan cuti</span>
+                    <textarea
+                      name="leaveAddress"
+                      defaultValue={
+                        selected?.currentRevision.leaveAddress ?? ""
+                      }
+                      placeholder="Alamat yang dapat dihubungi selama cuti"
+                    />
+                  </label>
+                  <label className="workflow-field-full">
+                    <span>Nomor telepon selama menjalankan cuti</span>
+                    <input
+                      type="tel"
+                      name="leavePhone"
+                      maxLength={32}
+                      defaultValue={selected?.currentRevision.leavePhone ?? ""}
+                      placeholder="Contoh: +628123456789"
+                    />
+                  </label>
+                  <p className="panel-description">
+                    Ketiga data formulir boleh dilengkapi kemudian, tetapi wajib
+                    sebelum pengajuan dikirim.
+                  </p>
+                </>
+              )}
 
               <div className="workflow-date-grid">
                 <label>
@@ -601,7 +671,9 @@ export function WorkflowWorkspace({
                 </div>
               </header>
 
-              <div className={`workflow-status-guidance status-${selected.status.toLowerCase()}`}>
+              <div
+                className={`workflow-status-guidance status-${selected.status.toLowerCase()}`}
+              >
                 <strong>{labels[selected.status]}</strong>
                 <span>{statusGuidance(selected.status, role)}</span>
               </div>
@@ -652,30 +724,68 @@ export function WorkflowWorkspace({
                   <dt>Alasan pengajuan</dt>
                   <dd>{selected.currentRevision.reason}</dd>
                 </div>
+                {kind === "leave" && (
+                  <>
+                    <div>
+                      <dt>Tempat pembuatan formulir</dt>
+                      <dd>
+                        {selected.currentRevision.formPlace || "Belum diisi"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Nomor telepon</dt>
+                      <dd>
+                        {selected.currentRevision.leavePhone || "Belum diisi"}
+                      </dd>
+                    </div>
+                    <div className="workflow-detail-reason">
+                      <dt>Alamat selama cuti</dt>
+                      <dd>
+                        {selected.currentRevision.leaveAddress || "Belum diisi"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Atasan langsung</dt>
+                      <dd>
+                        {selected.employee.directSupervisor
+                          ? `${selected.employee.directSupervisor.fullName} — ${selected.employee.directSupervisor.nip}`
+                          : "Belum ditetapkan"}
+                      </dd>
+                    </div>
+                  </>
+                )}
               </dl>
 
               <div className="workflow-actions">
                 {role === "PEGAWAI" &&
-                  ["DRAFT", "RETURNED_FOR_CORRECTION"].includes(selected.status) && (
+                  ["DRAFT", "RETURNED_FOR_CORRECTION"].includes(
+                    selected.status,
+                  ) && (
                     <button
                       className="secondary-button"
                       type="button"
                       disabled={acting}
                       onClick={() => setEditing(true)}
                     >
-                      {selected.status === "DRAFT" ? "Edit Draf" : "Perbaiki Pengajuan"}
+                      {selected.status === "DRAFT"
+                        ? "Edit Draf"
+                        : "Perbaiki Pengajuan"}
                     </button>
                   )}
 
                 {role === "PEGAWAI" &&
-                  ["DRAFT", "RETURNED_FOR_CORRECTION"].includes(selected.status) && (
+                  ["DRAFT", "RETURNED_FOR_CORRECTION"].includes(
+                    selected.status,
+                  ) && (
                     <button
                       className="primary-button"
                       type="button"
                       disabled={acting}
                       onClick={() => void performAction("SUBMIT")}
                     >
-                      {selected.status === "DRAFT" ? "Ajukan Sekarang" : "Ajukan Kembali"}
+                      {selected.status === "DRAFT"
+                        ? "Ajukan Sekarang"
+                        : "Ajukan Kembali"}
                     </button>
                   )}
 
@@ -724,54 +834,28 @@ export function WorkflowWorkspace({
                   )}
               </div>
 
-              {kind === "leave" && (
+              {kind === "leave" && selected.currentRevision.submittedAt && (
                 <section className="workflow-document-panel">
                   <div>
                     <p className="eyebrow">DOKUMEN</p>
-                    <h3>
-                      {selected.status === "APPROVED"
-                        ? "Formulir cuti siap dilihat"
-                        : "Bukti pengajuan cuti"}
-                    </h3>
-                    <p>
-                      {selected.status === "APPROVED"
-                        ? "Buka formulir persetujuan atau simpan salinan PDF untuk arsip administrasi."
-                        : "Gunakan bukti pengajuan untuk memeriksa data sebelum proses persetujuan selesai."}
-                    </p>
+                    <h3>FORMULIR PENGAJUAN CUTI</h3>
+                    <p>Unduh formulir ini untuk proses tanda tangan manual.</p>
                   </div>
                   <div className="workflow-document-actions">
                     <a
                       className="secondary-button"
-                      href={`/api/workflow/leave/${selected.id}/document?variant=proof`}
+                      href={`/api/workflow/leave/${selected.id}/document`}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Lihat Bukti
+                      Lihat Formulir
                     </a>
                     <a
                       className="secondary-button"
-                      href={`/api/workflow/leave/${selected.id}/document?variant=proof&download=1`}
+                      href={`/api/workflow/leave/${selected.id}/document?download=1`}
                     >
-                      Unduh Bukti
+                      Unduh PDF
                     </a>
-                    {selected.status === "APPROVED" && (
-                      <>
-                        <a
-                          className="primary-button"
-                          href={`/api/workflow/leave/${selected.id}/document?variant=approved`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Lihat Formulir Disetujui
-                        </a>
-                        <a
-                          className="primary-button"
-                          href={`/api/workflow/leave/${selected.id}/document?variant=approved&download=1`}
-                        >
-                          Unduh PDF
-                        </a>
-                      </>
-                    )}
                   </div>
                 </section>
               )}
@@ -810,7 +894,8 @@ export function WorkflowWorkspace({
                           )}
                           {item.evidenceReference && (
                             <p>
-                              <b>Referensi administrasi:</b> {item.evidenceReference}
+                              <b>Referensi administrasi:</b>{" "}
+                              {item.evidenceReference}
                             </p>
                           )}
                         </div>
@@ -890,7 +975,9 @@ export function WorkflowWorkspace({
             </header>
 
             <div className="workflow-review-request">
-              <span>{selected.employee.fullName} · {selected.employee.nip}</span>
+              <span>
+                {selected.employee.fullName} · {selected.employee.nip}
+              </span>
               <strong>{requestName(selected)}</strong>
               <small>
                 {formatDate(selected.currentRevision.startDate)} →{" "}

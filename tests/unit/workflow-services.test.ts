@@ -49,6 +49,9 @@ const leave: LeaveRequestRecord = {
     startDate: "2026-09-08",
     endDate: "2026-09-08",
     reason: "Pengujian",
+    formPlace: "Gunungsitoli",
+    leaveAddress: "Alamat pengujian",
+    leavePhone: "+628123456789",
     calculatedWorkingDays: null,
     submittedAt: null,
   },
@@ -86,6 +89,53 @@ function repository(overrides: Partial<WorkflowRepository> = {}) {
 }
 
 describe("workflow application policy", () => {
+  it("allows incomplete form contact data in a draft and trims supplied values", async () => {
+    const createLeaveDraft = vi.fn(async (_employeeId, content) => ({
+      ...leave,
+      currentRevision: { ...leave.currentRevision, ...content },
+    }));
+    const service = new LeaveWorkflowService(repository({ createLeaveDraft }));
+    await service.createDraft(owner, {
+      leaveType: "SICK",
+      startDate: "2026-09-08",
+      endDate: "2026-09-08",
+      reason: " Pengujian ",
+      formPlace: " Medan ",
+      leaveAddress: null,
+      leavePhone: null,
+    });
+    expect(createLeaveDraft).toHaveBeenCalledWith(
+      owner.employeeId,
+      expect.objectContaining({
+        reason: "Pengujian",
+        formPlace: "Medan",
+        leaveAddress: null,
+        leavePhone: null,
+      }),
+    );
+  });
+
+  it.each([
+    ["formPlace", "Tempat pembuatan formulir"],
+    ["leaveAddress", "Alamat selama menjalankan cuti"],
+    ["leavePhone", "Nomor telepon selama menjalankan cuti"],
+  ] as const)("rejects submission when %s is blank", async (field, message) => {
+    const invalid = {
+      ...leave,
+      currentRevision: { ...leave.currentRevision, [field]: " " },
+    };
+    const transaction = {
+      lockLeaveRequest: vi.fn(async () => invalid),
+      findLeaveTransitionByKey: vi.fn(async () => null),
+    } as unknown as WorkflowTransaction;
+    const service = new LeaveWorkflowService(
+      repository({ transaction: (work) => work(transaction) }),
+    );
+    await expect(
+      service.submit(owner, leave.id, `missing-${field}`),
+    ).rejects.toThrow(message);
+  });
+
   it("enforces Pegawai owner isolation while allowing Admin reads", async () => {
     const service = new LeaveWorkflowService(repository());
     await expect(service.get(other, leave.id)).rejects.toMatchObject({

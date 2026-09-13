@@ -24,7 +24,19 @@ const select = {
   workUnit: true,
   isActive: true,
   directSupervisorId: true,
+  employmentStartDate: true,
 } as const;
+
+function employeeData(input: EmployeeWrite) {
+  return {
+    ...input,
+    employmentStartDate: input.employmentStartDate
+      ? input.employmentStartDate instanceof Date
+        ? input.employmentStartDate
+        : new Date(`${input.employmentStartDate}T00:00:00.000Z`)
+      : null,
+  };
+}
 
 export class PrismaEmployeeRepository
   implements EmployeeRepository, EmployeeImportRepository
@@ -78,7 +90,10 @@ export class PrismaEmployeeRepository
   }
   async create(input: EmployeeWrite) {
     try {
-      return await this.database.employee.create({ data: input, select });
+      return await this.database.employee.create({
+        data: employeeData(input),
+        select,
+      });
     } catch (error) {
       throw this.safeError(error);
     }
@@ -88,7 +103,7 @@ export class PrismaEmployeeRepository
       return await this.database.$transaction(async (transaction) => {
         const employee = await transaction.employee.update({
           where: { id: employeeId },
-          data: input,
+          data: employeeData(input),
           select,
         });
         await transaction.authenticationIdentity.updateMany({

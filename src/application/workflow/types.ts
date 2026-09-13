@@ -27,7 +27,12 @@ export type RevisionContent = Readonly<{
   reason: string;
 }>;
 export type LeaveRevisionContent = RevisionContent &
-  Readonly<{ leaveType: LeaveType }>;
+  Readonly<{
+    leaveType: LeaveType;
+    formPlace?: string | null;
+    leaveAddress?: string | null;
+    leavePhone?: string | null;
+  }>;
 export type PermissionRevisionContent = RevisionContent &
   Readonly<{ permissionTypeId: string }>;
 

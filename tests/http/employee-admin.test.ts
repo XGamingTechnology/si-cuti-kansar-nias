@@ -97,6 +97,7 @@ describe("Admin employee HTTP authorization", () => {
       positionTitle: "Jabatan",
       workUnit: "Unit",
       directSupervisorId: null,
+      employmentStartDate: null,
     });
   });
   it("denies Pegawai update and status changes", async () => {

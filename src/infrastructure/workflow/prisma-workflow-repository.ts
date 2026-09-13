@@ -21,7 +21,10 @@ const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 const businessDate = (value: Date) => value.toISOString().slice(0, 10);
 
 type LeaveWithRevision = Prisma.LeaveRequestGetPayload<{
-  include: { employee: true; revisions: true };
+  include: {
+    employee: { include: { directSupervisor: true } };
+    revisions: true;
+  };
 }>;
 type PermissionWithRevision = Prisma.PermissionRequestGetPayload<{
   include: { employee: true; revisions: { include: { permissionType: true } } };
@@ -38,6 +41,9 @@ function leaveRevision(
     startDate: businessDate(value.startDate),
     endDate: businessDate(value.endDate),
     reason: value.reason,
+    formPlace: value.formPlace,
+    leaveAddress: value.leaveAddress,
+    leavePhone: value.leavePhone,
     calculatedWorkingDays: value.calculatedWorkingDays,
     submittedAt: value.submittedAt,
   };
@@ -57,6 +63,16 @@ function leaveRequest(value: LeaveWithRevision): LeaveRequestRecord {
       fullName: value.employee.fullName,
       positionTitle: value.employee.positionTitle,
       workUnit: value.employee.workUnit,
+      employmentStartDate: value.employee.employmentStartDate
+        ? businessDate(value.employee.employmentStartDate)
+        : null,
+      directSupervisor: value.employee.directSupervisor
+        ? {
+            nip: value.employee.directSupervisor.nip,
+            fullName: value.employee.directSupervisor.fullName,
+            positionTitle: value.employee.directSupervisor.positionTitle,
+          }
+        : null,
     },
     status: value.status,
     currentRevisionNumber: value.currentRevisionNumber,
@@ -95,6 +111,10 @@ function permissionRequest(
       fullName: value.employee.fullName,
       positionTitle: value.employee.positionTitle,
       workUnit: value.employee.workUnit,
+      employmentStartDate: value.employee.employmentStartDate
+        ? businessDate(value.employee.employmentStartDate)
+        : null,
+      directSupervisor: null,
     },
     status: value.status,
     currentRevisionNumber: value.currentRevisionNumber,
@@ -128,7 +148,10 @@ function transition(value: {
   };
 }
 
-const leaveInclude = { employee: true, revisions: true } as const;
+const leaveInclude = {
+  employee: { include: { directSupervisor: true } },
+  revisions: true,
+} as const;
 const permissionInclude = {
   employee: true,
   revisions: { include: { permissionType: true } },
@@ -203,6 +226,9 @@ class PrismaWorkflowTransaction implements WorkflowTransaction {
         startDate: date(source.startDate),
         endDate: date(source.endDate),
         reason: source.reason,
+        formPlace: source.formPlace,
+        leaveAddress: source.leaveAddress,
+        leavePhone: source.leavePhone,
       },
     });
     await this.db.leaveRequest.update({
@@ -295,6 +321,9 @@ export class PrismaWorkflowRepository implements WorkflowRepository {
             startDate: date(content.startDate),
             endDate: date(content.endDate),
             reason: content.reason,
+            formPlace: content.formPlace,
+            leaveAddress: content.leaveAddress,
+            leavePhone: content.leavePhone,
           },
         },
       },
@@ -349,6 +378,9 @@ export class PrismaWorkflowRepository implements WorkflowRepository {
           startDate: date(content.startDate),
           endDate: date(content.endDate),
           reason: content.reason,
+          formPlace: content.formPlace,
+          leaveAddress: content.leaveAddress,
+          leavePhone: content.leavePhone,
         },
       });
       return leaveRequest(
