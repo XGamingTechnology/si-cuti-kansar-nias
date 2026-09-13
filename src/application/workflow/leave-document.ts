@@ -264,25 +264,26 @@ export function generateLeaveDocument(
       ["CLTN", "6. Cuti di Luar Tanggungan Negara"],
     ],
   ] as const;
+  const leaveTypeRowHeight = 18;
   leaveTypes.forEach((row, rowIndex) =>
     row.forEach(([id, label], columnIndex) =>
       addCell(
         boxes,
         texts,
         left + columnIndex * 265.5,
-        598 - rowIndex * 16,
+        604 - rowIndex * leaveTypeRowHeight,
         265.5,
-        16,
+        leaveTypeRowHeight,
         `${revision.leaveType === id ? "[X]" : "[ ]"} ${label}`,
       ),
     ),
   );
 
-  header("III. ALASAN CUTI", 566);
-  addCell(boxes, texts, left, 522, width, 44);
-  wrap(texts, revision.reason, left + 4, 553, width - 8, 4);
+  header("III. ALASAN CUTI", 552);
+  addCell(boxes, texts, left, 508, width, 44);
+  wrap(texts, revision.reason, left + 4, 539, width - 8, 4);
 
-  header("IV. LAMANYA CUTI", 506);
+  header("IV. LAMANYA CUTI", 492);
   const duration = [
     [52, "Selama"],
     [44, String(revision.calculatedWorkingDays ?? "-")],
@@ -298,7 +299,7 @@ export function generateLeaveDocument(
       boxes,
       texts,
       durationX,
-      484,
+      470,
       cellWidth,
       22,
       value,
@@ -307,19 +308,19 @@ export function generateLeaveDocument(
     durationX += cellWidth;
   });
 
-  header("V. CATATAN CUTI", 468);
+  header("V. CATATAN CUTI", 454);
   const half = width / 2;
-  addCell(boxes, texts, left, 452, half, 16, "CUTI TAHUNAN", true);
+  addCell(boxes, texts, left, 438, half, 16, "CUTI TAHUNAN", true);
   [
     [48, "Tahun"],
     [50, "Sisa"],
     [half - 98, "Keterangan"],
   ].reduce((x, [w, value]) => {
-    addCell(boxes, texts, x, 436, w as number, 16, value as string, true);
+    addCell(boxes, texts, x, 422, w as number, 16, value as string, true);
     return x + (w as number);
   }, left);
   (["N", "N1", "N2"] as const).forEach((bucket, index) => {
-    const y = 420 - index * 16;
+    const y = 406 - index * 16;
     const balance = options.annualBalances?.find(
       (item) => item.bucket === bucket,
     );
@@ -343,7 +344,7 @@ export function generateLeaveDocument(
       16,
       balance?.allocatedDays === undefined
         ? ""
-        : `Alokasi Cuti ${label}: ${balance.allocatedDays} hari`,
+        : `Cuti ${label} (${balance.allocatedDays} hari)`,
     );
   });
   [
@@ -357,7 +358,7 @@ export function generateLeaveDocument(
       boxes,
       texts,
       left + half,
-      436 - index * 16,
+      422 - index * 16,
       half,
       16,
       value,
@@ -366,15 +367,15 @@ export function generateLeaveDocument(
     ),
   );
 
-  header("VI. ALAMAT SELAMA MENJALANKAN CUTI", 356);
+  header("VI. ALAMAT SELAMA MENJALANKAN CUTI", 342);
   const addressWidth = 372;
-  addCell(boxes, texts, left, 264, addressWidth, 92);
-  addText(texts, "Alamat:", left + 4, 344, true);
+  addCell(boxes, texts, left, 250, addressWidth, 92);
+  addText(texts, "Alamat:", left + 4, 330, true);
   wrap(
     texts,
     revision.leaveAddress ?? "Belum tersedia",
     left + 4,
-    331,
+    317,
     addressWidth - 8,
     6,
   );
@@ -382,7 +383,7 @@ export function generateLeaveDocument(
     boxes,
     texts,
     left + addressWidth,
-    338,
+    324,
     width - addressWidth,
     18,
     "TELP.",
@@ -392,12 +393,12 @@ export function generateLeaveDocument(
     texts,
     revision.leavePhone ?? "Belum tersedia",
     left + addressWidth + 39,
-    344,
+    330,
   );
-  addCell(boxes, texts, left + addressWidth, 264, width - addressWidth, 74);
-  addText(texts, "Hormat saya,", left + addressWidth + 48, 324);
-  addText(texts, request.employee.fullName, left + addressWidth + 8, 280, true);
-  addText(texts, `NIP. ${request.employee.nip}`, left + addressWidth + 8, 269);
+  addCell(boxes, texts, left + addressWidth, 250, width - addressWidth, 74);
+  addText(texts, "Hormat saya,", left + addressWidth + 48, 310);
+  addText(texts, request.employee.fullName, left + addressWidth + 8, 266, true);
+  addText(texts, `NIP. ${request.employee.nip}`, left + addressWidth + 8, 255);
 
   const decision = (
     title: string,
@@ -436,7 +437,7 @@ export function generateLeaveDocument(
   const supervisor = request.employee.directSupervisor;
   decision(
     "VII. PERTIMBANGAN ATASAN LANGSUNG",
-    158,
+    144,
     90,
     supervisor
       ? [
@@ -447,7 +448,7 @@ export function generateLeaveDocument(
       : ["Atasan langsung belum ditetapkan", "Nama: -", "NIP. -"],
   );
   const official = options.authorizedOfficial;
-  decision("VIII. KEPUTUSAN PEJABAT YANG BERWENANG MEMBERIKAN CUTI", 42, 108, [
+  decision("VIII. KEPUTUSAN PEJABAT YANG BERWENANG MEMBERIKAN CUTI", 28, 108, [
     "Kepala Kantor Pencarian dan Pertolongan Kelas B Nias",
     official?.fullName ?? "Nama pejabat belum dikonfigurasi",
     official ? `NIP. ${official.nip}` : "NIP. -",
