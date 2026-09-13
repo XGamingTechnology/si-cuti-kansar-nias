@@ -44,5 +44,9 @@ export async function employeeInput(request: Request) {
     positionTitle: body.positionTitle as string,
     workUnit: body.workUnit as string,
     directSupervisorId: body.directSupervisorId as string | null | undefined,
+    employmentStartDate:
+      typeof body.employmentStartDate === "string"
+        ? body.employmentStartDate
+        : null,
   };
 }

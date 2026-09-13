@@ -19,6 +19,32 @@ function validateDates(content: LeaveRevisionContent) {
   requireNonEmpty(content.reason, "Alasan", 10_000);
 }
 
+function normalizedContent(
+  content: LeaveRevisionContent,
+): LeaveRevisionContent {
+  return {
+    ...content,
+    reason: content.reason.trim(),
+    formPlace: content.formPlace?.trim() || null,
+    leaveAddress: content.leaveAddress?.trim() || null,
+    leavePhone: content.leavePhone?.trim() || null,
+  };
+}
+
+function validateSubmission(content: LeaveRevisionContent) {
+  requireNonEmpty(content.formPlace ?? "", "Tempat pembuatan formulir", 100);
+  requireNonEmpty(
+    content.leaveAddress ?? "",
+    "Alamat selama menjalankan cuti",
+    10_000,
+  );
+  requireNonEmpty(
+    content.leavePhone ?? "",
+    "Nomor telepon selama menjalankan cuti",
+    32,
+  );
+}
+
 function sameTransition(
   existing: TransitionRecord,
   expected: Pick<
@@ -42,10 +68,10 @@ export class LeaveWorkflowService {
     if (actor.role !== "PEGAWAI")
       throw new WorkflowError("FORBIDDEN", "Forbidden");
     validateDates(content);
-    return this.repository.createLeaveDraft(actor.employeeId, {
-      ...content,
-      reason: content.reason.trim(),
-    });
+    return this.repository.createLeaveDraft(
+      actor.employeeId,
+      normalizedContent(content),
+    );
   }
 
   async updateDraft(
@@ -72,10 +98,7 @@ export class LeaveWorkflowService {
     return this.repository.updateLeaveRevision(
       requestId,
       request.currentRevision.id,
-      {
-        ...content,
-        reason: content.reason.trim(),
-      },
+      normalizedContent(content),
     );
   }
 
@@ -248,6 +271,7 @@ export class LeaveWorkflowService {
             "ILLEGAL_TRANSITION",
             "Pengajuan tidak dapat diajukan dari status saat ini.",
           );
+        validateSubmission(request.currentRevision);
       } else if (target === "CANCELLED") {
         requireOwner(actor, request.employeeId);
         if (

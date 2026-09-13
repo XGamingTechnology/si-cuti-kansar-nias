@@ -117,6 +117,9 @@ export async function leaveInput(
     startDate: text(body.startDate),
     endDate: text(body.endDate),
     reason: text(body.reason),
+    formPlace: text(body.formPlace) || null,
+    leaveAddress: text(body.leaveAddress) || null,
+    leavePhone: text(body.leavePhone) || null,
   };
 }
 
