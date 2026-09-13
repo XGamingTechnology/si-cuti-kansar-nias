@@ -1,7 +1,6 @@
 import type { LeaveRequestRecord, TransitionRecord } from "./ports";
 
-/** `approved` remains accepted for route compatibility; both variants intentionally
- * render the same submitted, pre-signature form semantics. */
+/** Both variants are the same submitted, pre-signature form. */
 export type LeaveDocumentVariant = "proof" | "approved";
 export type AnnualLeaveFormBalance = Readonly<{
   bucket: "N" | "N1" | "N2";
@@ -13,14 +12,6 @@ export type LeaveFormOptions = Readonly<{
   authorizedOfficial?: Readonly<{ fullName: string; nip: string }> | null;
 }>;
 
-const leaveTypes = [
-  ["ANNUAL", "1. Cuti Tahunan"],
-  ["LARGE", "2. Cuti Besar"],
-  ["SICK", "3. Cuti Sakit"],
-  ["MATERNITY", "4. Cuti Melahirkan"],
-  ["IMPORTANT_REASON", "5. Cuti Karena Alasan Penting"],
-  ["CLTN", "6. Cuti di Luar Tanggungan Negara"],
-] as const;
 const months = [
   "Januari",
   "Februari",
@@ -35,6 +26,7 @@ const months = [
   "November",
   "Desember",
 ];
+
 function date(value: string | Date) {
   const iso =
     value instanceof Date
@@ -43,6 +35,7 @@ function date(value: string | Date) {
   const [year, month, day] = iso.split("-");
   return `${day} ${months[Number(month) - 1] ?? month} ${year}`;
 }
+
 export function calculateIndonesianTenure(
   start: string | null,
   submittedAt: Date,
@@ -70,6 +63,7 @@ export function calculateIndonesianTenure(
       .join(" ") || "0 Bulan"
   );
 }
+
 function escape(value: string) {
   return value
     .replaceAll("\\", "\\\\")
@@ -85,19 +79,21 @@ type Text = {
   bold?: boolean;
 };
 type Box = { x: number; y: number; w: number; h: number };
+
 function pdf(texts: Text[], boxes: Box[]) {
   const commands = [
     "q",
-    "0.5 w",
-    ...boxes.map((b) => `${b.x} ${b.y} ${b.w} ${b.h} re S`),
+    "0 G",
+    "0.45 w",
+    ...boxes.map((box) => `${box.x} ${box.y} ${box.w} ${box.h} re S`),
     "Q",
   ];
-  for (const t of texts)
+  for (const item of texts)
     commands.push(
       "BT",
-      `/${t.bold ? "F2" : "F1"} ${t.size ?? 7.5} Tf`,
-      `1 0 0 1 ${t.x} ${t.y} Tm`,
-      `(${escape(t.text)}) Tj`,
+      `/${item.bold ? "F2" : "F1"} ${item.size ?? 7} Tf`,
+      `1 0 0 1 ${item.x} ${item.y} Tm`,
+      `(${escape(item.text)}) Tj`,
       "ET",
     );
   const stream = commands.join("\n");
@@ -111,49 +107,72 @@ function pdf(texts: Text[], boxes: Box[]) {
   ];
   let body = "%PDF-1.4\n";
   const offsets = [0];
-  objects.forEach((object, i) => {
+  objects.forEach((object, index) => {
     offsets.push(Buffer.byteLength(body, "latin1"));
-    body += `${i + 1} 0 obj\n${object}\nendobj\n`;
+    body += `${index + 1} 0 obj\n${object}\nendobj\n`;
   });
   const xref = Buffer.byteLength(body, "latin1");
-  body += `xref\n0 7\n0000000000 65535 f \n`;
-  for (let i = 1; i <= 6; i++)
-    body += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+  body += "xref\n0 7\n0000000000 65535 f \n";
+  for (let index = 1; index <= 6; index++)
+    body += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
   body += `trailer << /Size 7 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   return new Uint8Array(Buffer.from(body, "latin1"));
 }
-function cell(
-  texts: Text[],
-  text: string,
-  x: number,
-  y: number,
-  bold = false,
-  size = 7.5,
-) {
-  texts.push({ text, x: x + 4, y: y + 8, bold, size });
-}
-function wrapped(
+
+function addText(
   texts: Text[],
   value: string,
   x: number,
   y: number,
-  max = 85,
-  lines = 3,
+  bold = false,
+  size = 7,
 ) {
-  const words = value.split(/\s+/);
-  let line = "",
-    row = 0;
-  for (const word of words) {
-    const next = line ? `${line} ${word}` : word;
-    if (next.length > max && line) {
-      texts.push({ text: line, x, y: y - row * 10 });
-      row++;
-      line = word;
-    } else line = next;
-    if (row >= lines) break;
-  }
-  if (line && row < lines) texts.push({ text: line, x, y: y - row * 10 });
+  texts.push({ text: value, x, y, bold, size });
 }
+function addCell(
+  boxes: Box[],
+  texts: Text[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  value?: string,
+  bold = false,
+  size = 7,
+) {
+  boxes.push({ x, y, w, h });
+  if (value) addText(texts, value, x + 3, y + h - size - 3, bold, size);
+}
+function wrap(
+  texts: Text[],
+  value: string,
+  x: number,
+  top: number,
+  width: number,
+  maxLines: number,
+  size = 7,
+  bold = false,
+) {
+  const maxChars = Math.max(5, Math.floor(width / (size * 0.52)));
+  const words = value.trim().split(/\s+/);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    if (!line) line = word;
+    else if (`${line} ${word}`.length <= maxChars) line += ` ${word}`;
+    else {
+      lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+  lines
+    .slice(0, maxLines)
+    .forEach((item, index) =>
+      addText(texts, item, x, top - index * (size + 2), bold, size),
+    );
+}
+
 export function generateLeaveDocument(
   request: LeaveRequestRecord,
   _history: readonly TransitionRecord[],
@@ -161,91 +180,170 @@ export function generateLeaveDocument(
   _generatedAt = new Date(),
   options: LeaveFormOptions = {},
 ) {
-  // Kept in the signature for temporary compatibility with existing callers.
+  void _history;
   void _variant;
   void _generatedAt;
-  const r = request.currentRevision;
-  if (!r.submittedAt)
+  const revision = request.currentRevision;
+  if (!revision.submittedAt)
     throw new Error(
       "Formulir hanya tersedia untuk revisi yang telah diajukan.",
     );
-  const t: Text[] = [];
-  const b: Box[] = [];
-  const L = 32,
-    W = 531;
-  t.push(
-    {
-      text: `${r.formPlace ?? "Tempat belum tersedia"}, ${date(r.submittedAt)}`,
-      x: 360,
-      y: 812,
-      size: 8,
-    },
-    { text: "Kepada", x: 360, y: 798 },
-    { text: "Yth.", x: 360, y: 787 },
-    {
-      text: "Kepala Kantor Pencarian dan Pertolongan Kelas B Nias",
-      x: 380,
-      y: 776,
-      size: 7,
-    },
-    { text: "Di", x: 360, y: 765 },
-    { text: "Gunungsitoli", x: 380, y: 754, bold: true },
-    {
-      text: "FORMULIR PERMINTAAN DAN PEMBERIAN CUTI",
-      x: 160,
-      y: 731,
-      size: 11,
-      bold: true,
-    },
+  const texts: Text[] = [];
+  const boxes: Box[] = [];
+  const left = 32,
+    width = 531;
+
+  addText(
+    texts,
+    `${revision.formPlace ?? "Tempat belum tersedia"}, ${date(revision.submittedAt)}`,
+    360,
+    814,
+    false,
+    8,
   );
-  const section = (name: string, y: number, h: number) => {
-    b.push({ x: L, y, w: W, h });
-    t.push({ text: name, x: L + 4, y: y + h - 11, bold: true });
-  };
-  section("I. DATA PEGAWAI", 654, 62);
-  cell(t, `Nama: ${request.employee.fullName}`, L, 681);
-  cell(t, `NIP: ${request.employee.nip}`, 300, 681);
-  cell(t, `Jabatan: ${request.employee.positionTitle}`, L, 665);
-  cell(
-    t,
-    `Masa Kerja: ${calculateIndonesianTenure(request.employee.employmentStartDate ?? null, r.submittedAt)}`,
-    300,
-    665,
+  addText(texts, "Kepada", 360, 800);
+  addText(texts, "Yth.", 360, 790);
+  addText(
+    texts,
+    "Kepala Kantor Pencarian dan Pertolongan Kelas B Nias",
+    378,
+    780,
+    false,
+    6.5,
   );
-  cell(t, `Unit Kerja: ${request.employee.workUnit}`, L, 650);
-  section("II. JENIS CUTI YANG DIAMBIL", 584, 58);
-  leaveTypes.forEach(([id, label], i) =>
-    cell(
-      t,
-      `${r.leaveType === id ? "[X]" : "[ ]"} ${label}`,
-      L + (i % 2) * 265,
-      616 - Math.floor(i / 2) * 14,
+  addText(texts, "Di", 360, 770);
+  addText(texts, "Gunungsitoli", 378, 760, true);
+  addText(
+    texts,
+    "FORMULIR PERMINTAAN DAN PEMBERIAN CUTI",
+    166,
+    738,
+    true,
+    10.5,
+  );
+
+  const header = (label: string, y: number) =>
+    addCell(boxes, texts, left, y, width, 16, label, true, 7);
+
+  header("I. DATA PEGAWAI", 710);
+  const rows = [
+    ["Nama", request.employee.fullName, "NIP", request.employee.nip],
+    [
+      "Jabatan",
+      request.employee.positionTitle,
+      "Masa Kerja",
+      calculateIndonesianTenure(
+        request.employee.employmentStartDate ?? null,
+        revision.submittedAt,
+      ),
+    ],
+  ];
+  rows.forEach((row, index) => {
+    const y = 686 - index * 24;
+    addCell(boxes, texts, left, y, 55, 24, row[0], true);
+    addCell(boxes, texts, left + 55, y, 210, 24, row[1]);
+    addCell(boxes, texts, left + 265, y, 65, 24, row[2], true);
+    addCell(boxes, texts, left + 330, y, 201, 24, row[3]);
+  });
+  addCell(boxes, texts, left, 638, 55, 24, "Unit Kerja", true);
+  addCell(boxes, texts, left + 55, 638, 476, 24);
+  wrap(texts, request.employee.workUnit, left + 58, 651, 468, 2);
+
+  header("II. JENIS CUTI YANG DIAMBIL", 622);
+  const leaveTypes = [
+    [
+      ["ANNUAL", "1. Cuti Tahunan"],
+      ["LARGE", "2. Cuti Besar"],
+    ],
+    [
+      ["SICK", "3. Cuti Sakit"],
+      ["MATERNITY", "4. Cuti Melahirkan"],
+    ],
+    [
+      ["IMPORTANT_REASON", "5. Cuti Karena Alasan Penting"],
+      ["CLTN", "6. Cuti di Luar Tanggungan Negara"],
+    ],
+  ] as const;
+  leaveTypes.forEach((row, rowIndex) =>
+    row.forEach(([id, label], columnIndex) =>
+      addCell(
+        boxes,
+        texts,
+        left + columnIndex * 265.5,
+        598 - rowIndex * 16,
+        265.5,
+        16,
+        `${revision.leaveType === id ? "[X]" : "[ ]"} ${label}`,
+      ),
     ),
   );
-  section("III. ALASAN CUTI", 526, 46);
-  wrapped(t, r.reason, L + 5, 548, 100, 3);
-  section("IV. LAMANYA CUTI", 488, 26);
-  cell(
-    t,
-    `Selama | ${r.calculatedWorkingDays ?? "-"} | Hari | Mulai Tanggal | ${date(r.startDate)} | s/d | ${date(r.endDate)}`,
-    L,
-    490,
-  );
-  section("V. CATATAN CUTI", 397, 79);
-  b.push(
-    { x: L, y: 397, w: 266, h: 65 },
-    { x: L + 266, y: 397, w: 265, h: 65 },
-  );
-  cell(t, "CUTI TAHUNAN", L, 445, true);
-  cell(t, "Tahun     Sisa     Keterangan", L, 432, true);
-  (["N", "N1", "N2"] as const).forEach((bucket, i) => {
-    const found = options.annualBalances?.find((v) => v.bucket === bucket);
+
+  header("III. ALASAN CUTI", 566);
+  addCell(boxes, texts, left, 522, width, 44);
+  wrap(texts, revision.reason, left + 4, 553, width - 8, 4);
+
+  header("IV. LAMANYA CUTI", 506);
+  const duration = [
+    [52, "Selama"],
+    [44, String(revision.calculatedWorkingDays ?? "-")],
+    [38, "Hari"],
+    [90, "Mulai Tanggal"],
+    [112, date(revision.startDate)],
+    [30, "s/d"],
+    [165, date(revision.endDate)],
+  ] as const;
+  let durationX = left;
+  duration.forEach(([cellWidth, value]) => {
+    addCell(
+      boxes,
+      texts,
+      durationX,
+      484,
+      cellWidth,
+      22,
+      value,
+      value === "Selama" || value === "Mulai Tanggal",
+    );
+    durationX += cellWidth;
+  });
+
+  header("V. CATATAN CUTI", 468);
+  const half = width / 2;
+  addCell(boxes, texts, left, 452, half, 16, "CUTI TAHUNAN", true);
+  [
+    [48, "Tahun"],
+    [50, "Sisa"],
+    [half - 98, "Keterangan"],
+  ].reduce((x, [w, value]) => {
+    addCell(boxes, texts, x, 436, w as number, 16, value as string, true);
+    return x + (w as number);
+  }, left);
+  (["N", "N1", "N2"] as const).forEach((bucket, index) => {
+    const y = 420 - index * 16;
+    const balance = options.annualBalances?.find(
+      (item) => item.bucket === bucket,
+    );
     const label = bucket === "N1" ? "N-1" : bucket === "N2" ? "N-2" : "N";
-    cell(
-      t,
-      `${label}          ${found?.remainingDays ?? "-"}       ${found?.allocatedDays ? `Cuti ${label} (${found.allocatedDays} hari)` : ""}`,
-      L,
-      418 - i * 12,
+    addCell(boxes, texts, left, y, 48, 16, label);
+    addCell(
+      boxes,
+      texts,
+      left + 48,
+      y,
+      50,
+      16,
+      String(balance?.remainingDays ?? "-"),
+    );
+    addCell(
+      boxes,
+      texts,
+      left + 98,
+      y,
+      half - 98,
+      16,
+      balance?.allocatedDays === undefined
+        ? ""
+        : `Alokasi Cuti ${label}: ${balance.allocatedDays} hari`,
     );
   });
   [
@@ -254,45 +352,105 @@ export function generateLeaveDocument(
     "3. CUTI MELAHIRKAN",
     "4. CUTI KARENA ALASAN PENTING",
     "5. CUTI DI LUAR TANGGUNGAN NEGARA",
-  ].forEach((v, i) => cell(t, v, L + 270, 445 - i * 12));
-  section("VI. ALAMAT SELAMA MENJALANKAN CUTI", 300, 85);
-  b.push(
-    { x: L, y: 300, w: 315, h: 71 },
-    { x: L + 315, y: 300, w: 216, h: 71 },
+  ].forEach((value, index) =>
+    addCell(
+      boxes,
+      texts,
+      left + half,
+      436 - index * 16,
+      half,
+      16,
+      value,
+      false,
+      6.5,
+    ),
   );
-  cell(t, "Alamat:", L, 351, true);
-  wrapped(t, r.leaveAddress ?? "Belum tersedia", L + 5, 339, 48, 3);
-  cell(t, `TELP.: ${r.leavePhone ?? "Belum tersedia"}`, L + 315, 351, true);
-  cell(t, "Hormat saya,", L + 380, 335);
-  cell(t, request.employee.fullName, L + 335, 307, true);
-  cell(t, `NIP. ${request.employee.nip}`, L + 335, 297);
-  const decisions = (title: string, y: number, identity: string[]) => {
-    section(title, y, 84);
-    const labels = [
-      "DISETUJUI",
-      "PERUBAHAN",
-      "DITANGGUHKAN",
-      "TIDAK DISETUJUI",
-    ];
-    labels.forEach((v, i) => {
-      b.push({ x: L + i * 132.75, y: y + 57, w: 132.75, h: 14 });
-      cell(t, v, L + i * 132.75, y + 59, true, 6.5);
-    });
-    identity.forEach((v, i) => cell(t, v, L + 315, y + 8 + i * 11, i === 0));
+
+  header("VI. ALAMAT SELAMA MENJALANKAN CUTI", 356);
+  const addressWidth = 372;
+  addCell(boxes, texts, left, 264, addressWidth, 92);
+  addText(texts, "Alamat:", left + 4, 344, true);
+  wrap(
+    texts,
+    revision.leaveAddress ?? "Belum tersedia",
+    left + 4,
+    331,
+    addressWidth - 8,
+    6,
+  );
+  addCell(
+    boxes,
+    texts,
+    left + addressWidth,
+    338,
+    width - addressWidth,
+    18,
+    "TELP.",
+    true,
+  );
+  addText(
+    texts,
+    revision.leavePhone ?? "Belum tersedia",
+    left + addressWidth + 39,
+    344,
+  );
+  addCell(boxes, texts, left + addressWidth, 264, width - addressWidth, 74);
+  addText(texts, "Hormat saya,", left + addressWidth + 48, 324);
+  addText(texts, request.employee.fullName, left + addressWidth + 8, 280, true);
+  addText(texts, `NIP. ${request.employee.nip}`, left + addressWidth + 8, 269);
+
+  const decision = (
+    title: string,
+    bottom: number,
+    height: number,
+    identity: string[],
+  ) => {
+    header(title, bottom + height - 16);
+    const rowY = bottom + height - 34;
+    ["DISETUJUI", "PERUBAHAN", "DITANGGUHKAN", "TIDAK DISETUJUI"].forEach(
+      (label, index) =>
+        addCell(
+          boxes,
+          texts,
+          left + index * (width / 4),
+          rowY,
+          width / 4,
+          18,
+          label,
+          true,
+          6.2,
+        ),
+    );
+    addCell(boxes, texts, left, bottom, width, height - 34);
+    identity.forEach((value, index) =>
+      addText(
+        texts,
+        value,
+        left + 310,
+        bottom + 7 + (identity.length - 1 - index) * 10,
+        index === 0,
+        6.5,
+      ),
+    );
   };
-  const s = request.employee.directSupervisor;
-  decisions(
+  const supervisor = request.employee.directSupervisor;
+  decision(
     "VII. PERTIMBANGAN ATASAN LANGSUNG",
-    204,
-    s
-      ? [` ${s.positionTitle}`, s.fullName, `NIP. ${s.nip}`]
-      : ["Atasan langsung belum ditetapkan"],
+    158,
+    90,
+    supervisor
+      ? [
+          supervisor.positionTitle,
+          supervisor.fullName,
+          `NIP. ${supervisor.nip}`,
+        ]
+      : ["Atasan langsung belum ditetapkan", "Nama: -", "NIP. -"],
   );
   const official = options.authorizedOfficial;
-  decisions("VIII. KEPUTUSAN PEJABAT YANG BERWENANG MEMBERIKAN CUTI", 108, [
+  decision("VIII. KEPUTUSAN PEJABAT YANG BERWENANG MEMBERIKAN CUTI", 42, 108, [
     "Kepala Kantor Pencarian dan Pertolongan Kelas B Nias",
     official?.fullName ?? "Nama pejabat belum dikonfigurasi",
     official ? `NIP. ${official.nip}` : "NIP. -",
   ]);
-  return pdf(t, b);
+  return pdf(texts, boxes);
 }
