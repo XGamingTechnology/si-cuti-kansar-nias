@@ -131,6 +131,7 @@ describe("official pre-signature leave form", () => {
         authorizedOfficial: {
           fullName: "Pejabat Konfigurasi",
           nip: "197001012000011001",
+          capacity: "DEFINITIVE",
         },
       }),
     ).toString("latin1");
@@ -146,6 +147,34 @@ describe("official pre-signature leave form", () => {
     expect(output.indexOf("Pejabat Konfigurasi")).toBeLessThan(
       output.indexOf("NIP. 197001012000011001"),
     );
+  });
+
+  it("mencetak tanggal pengajuan dengan tanggal bisnis Asia/Jakarta", () => {
+    const request = {
+      ...base,
+      currentRevision: {
+        ...base.currentRevision,
+        submittedAt: new Date("2026-09-30T17:30:00.000Z"),
+      },
+    };
+    expect(raw(request)).toContain("Medan, 01 Oktober 2026");
+  });
+
+  it.each([
+    ["DEFINITIVE" as const, "Kepala Kantor Pencarian"],
+    ["PLT" as const, "Plt. Kepala Kantor Pencarian"],
+    ["PLH" as const, "Plh. Kepala Kantor Pencarian"],
+  ])("mencetak judul kapasitas %s", (capacity, title) => {
+    const output = Buffer.from(
+      generateLeaveDocument(base, [], "proof", undefined, {
+        authorizedOfficial: {
+          fullName: "Pejabat Uji Kapasitas",
+          nip: "197001012000011001",
+          capacity,
+        },
+      }),
+    ).toString("latin1");
+    expect(output).toContain(title);
   });
 
   it("uses only the identified request's current submitted revision", () => {
