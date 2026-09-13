@@ -79,11 +79,20 @@ describe("official pre-signature leave form", () => {
       "+6281234567890",
       "Atasan Uji",
       "Kepala Seksi",
-      String.raw`Alokasi Cuti N: 3 hari`,
+      String.raw`Cuti N (3 hari)`,
     ])
       expect(output).toContain(value);
     expect(output).not.toContain("2030");
     expect(output).not.toContain("Status: DISETUJUI");
+  });
+  it("keeps all Section II rows above Section III without shared drawing areas", () => {
+    const output = raw();
+    expect(output).toContain("32 568 265.5 18 re S");
+    expect(output).toContain("32 552 531 16 re S");
+    expect(output).toContain("1 0 0 1 35 576 Tm");
+    expect(output).toContain("([ ] 5. Cuti Karena Alasan Penting) Tj");
+    expect(output).toContain("1 0 0 1 35 558 Tm");
+    expect(output).toContain("(III. ALASAN CUTI) Tj");
   });
   it("marks only the requested leave type and leaves all decision cells unmarked", () => {
     const output = raw();
