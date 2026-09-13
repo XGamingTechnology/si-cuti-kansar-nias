@@ -50,6 +50,15 @@ const raw = (request = base, generatedAt = new Date("2030-01-01")) =>
   ).toString("latin1");
 
 describe("official pre-signature leave form", () => {
+  it("creates a valid, one-page A4 portrait PDF", () => {
+    const document = generateLeaveDocument(base, []);
+    const output = Buffer.from(document).toString("latin1");
+    expect(output.startsWith("%PDF-1.4")).toBe(true);
+    expect(output).toContain("/MediaBox [0 0 595 842]");
+    expect(output).toContain("/Count 1");
+    expect(output.endsWith("%%EOF")).toBe(true);
+  });
+
   it("renders deterministic submission data, fixed recipient, employee, supervisor and ledger input", () => {
     const output = raw();
     for (const value of [
@@ -62,12 +71,15 @@ describe("official pre-signature leave form", () => {
       "Unit Operasi",
       "3 Tahun 6 Bulan",
       "Keperluan keluarga",
-      "3 | Hari",
+      "3",
+      "Hari",
+      "21 September 2026",
+      "23 September 2026",
       "Jalan Pengujian Nomor 1",
       "+6281234567890",
       "Atasan Uji",
       "Kepala Seksi",
-      String.raw`Cuti N \(3 hari\)`,
+      String.raw`Alokasi Cuti N: 3 hari`,
     ])
       expect(output).toContain(value);
     expect(output).not.toContain("2030");
@@ -79,6 +91,64 @@ describe("official pre-signature leave form", () => {
     expect(output).toContain("[ ] 2. Cuti Besar");
     expect(output.match(/\[X\]/g)).toHaveLength(1);
     expect(output).not.toMatch(/signature|stamp|tanda tangan|stempel/i);
+    expect(output).not.toMatch(/\[X\].*(DISETUJUI|PERUBAHAN|DITANGGUHKAN)/);
+  });
+
+  it("keeps supervisor and configured office-head identities in visible order", () => {
+    const output = Buffer.from(
+      generateLeaveDocument(base, [], "proof", undefined, {
+        authorizedOfficial: {
+          fullName: "Pejabat Konfigurasi",
+          nip: "197001012000011001",
+        },
+      }),
+    ).toString("latin1");
+    expect(output.indexOf("Kepala Seksi")).toBeLessThan(
+      output.indexOf("Atasan Uji"),
+    );
+    expect(output.indexOf("Atasan Uji")).toBeLessThan(
+      output.indexOf("NIP. 198001012000011001"),
+    );
+    expect(output.indexOf("Kepala Kantor Pencarian")).toBeLessThan(
+      output.indexOf("Pejabat Konfigurasi"),
+    );
+    expect(output.indexOf("Pejabat Konfigurasi")).toBeLessThan(
+      output.indexOf("NIP. 197001012000011001"),
+    );
+  });
+
+  it("uses only the identified request's current submitted revision", () => {
+    const requestB = {
+      ...base,
+      id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      currentRevision: {
+        ...base.currentRevision,
+        id: "revision-b",
+        requestId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        startDate: "2027-01-11",
+        endDate: "2027-01-14",
+        reason: "PENANDA-ALASAN-B",
+        formPlace: "PENANDA-TEMPAT-B",
+        leaveAddress: "PENANDA-ALAMAT-B",
+      },
+    } satisfies LeaveRequestRecord;
+    const output = raw(base);
+    for (const value of [
+      "Medan",
+      "Keperluan keluarga",
+      "Jalan Pengujian Nomor 1",
+      "21 September 2026",
+      "23 September 2026",
+    ])
+      expect(output).toContain(value);
+    for (const value of [
+      requestB.currentRevision.reason,
+      requestB.currentRevision.formPlace,
+      requestB.currentRevision.leaveAddress,
+      "11 Januari 2027",
+      "14 Januari 2027",
+    ])
+      expect(output).not.toContain(value);
   });
   it("does not fabricate missing master or balance data", () => {
     const request = {

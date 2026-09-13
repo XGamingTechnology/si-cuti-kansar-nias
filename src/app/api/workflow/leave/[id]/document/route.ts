@@ -26,8 +26,9 @@ export async function GET(
       );
 
     const variant = rawVariant as LeaveDocumentVariant;
+    // This single aggregate is the source for every request/revision field in the
+    // form. Do not load a revision separately: it could race with a resubmission.
     const leave = await runtime.leave.get(actor, id);
-    const history = await runtime.leave.history(actor, id);
 
     if (!leave.currentRevision.submittedAt)
       return Response.json(
@@ -74,9 +75,14 @@ export async function GET(
             }),
           ).then((values) => values.filter((value) => value !== null))
         : undefined;
-    const pdf = generateLeaveDocument(leave, history, variant, undefined, {
+    const configuredName = process.env.OFFICE_HEAD_NAME?.trim();
+    const configuredNip = process.env.OFFICE_HEAD_NIP?.trim();
+    const pdf = generateLeaveDocument(leave, [], variant, undefined, {
       annualBalances,
-      authorizedOfficial: null,
+      authorizedOfficial:
+        configuredName && configuredNip
+          ? { fullName: configuredName, nip: configuredNip }
+          : null,
     });
     const filename = `formulir-pengajuan-cuti-${leave.employee.nip}-${id.slice(0, 8)}.pdf`;
     const disposition =
