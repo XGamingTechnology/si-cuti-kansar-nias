@@ -343,7 +343,7 @@ export function generateLeaveDocument(
       16,
       balance?.allocatedDays === undefined
         ? ""
-        : `Alokasi Cuti ${label}: ${balance.allocatedDays} hari`,
+        : `Cuti ${label} (${balance.allocatedDays} hari)`,
     );
   });
   [
