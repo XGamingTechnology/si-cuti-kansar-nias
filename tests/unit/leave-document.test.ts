@@ -59,6 +59,37 @@ describe("official pre-signature leave form", () => {
     expect(output.endsWith("%%EOF")).toBe(true);
   });
 
+  it("keeps the third leave-type row separate and starts Section III below it", () => {
+    const output = raw();
+    const boxes = [
+      ...output.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) re S/g),
+    ].map((match) => ({
+      x: Number(match[1]),
+      y: Number(match[2]),
+      width: Number(match[3]),
+      height: Number(match[4]),
+    }));
+    const thirdLeaveTypeRow = boxes.find(
+      (box) =>
+        box.x === 32 &&
+        box.y === 558 &&
+        box.width === 265.5 &&
+        box.height === 20,
+    );
+    const sectionThreeHeader = boxes.find(
+      (box) =>
+        box.x === 32 && box.y === 540 && box.width === 531 && box.height === 16,
+    );
+
+    expect(thirdLeaveTypeRow).toBeDefined();
+    expect(sectionThreeHeader).toBeDefined();
+    expect(output).toContain("5. Cuti Karena Alasan Penting");
+    expect(sectionThreeHeader!.y + sectionThreeHeader!.height).toBeLessThan(
+      thirdLeaveTypeRow!.y,
+    );
+    expect(sectionThreeHeader!.y).not.toBe(thirdLeaveTypeRow!.y);
+  });
+
   it("renders deterministic submission data, fixed recipient, employee, supervisor and ledger input", () => {
     const output = raw();
     for (const value of [
