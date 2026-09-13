@@ -5,6 +5,8 @@ import {
   type LeaveDocumentVariant,
 } from "@/application/workflow/leave-document";
 import { createWorkflowRuntime } from "@/infrastructure/workflow/runtime";
+import { LeaveAuthorizedOfficialService } from "@/application/leave-authorized-official/service";
+import { PrismaLeaveAuthorizedOfficialRepository } from "@/infrastructure/leave-authorized-official/prisma-repository";
 
 export async function GET(
   request: Request,
@@ -75,14 +77,12 @@ export async function GET(
             }),
           ).then((values) => values.filter((value) => value !== null))
         : undefined;
-    const configuredName = process.env.OFFICE_HEAD_NAME?.trim();
-    const configuredNip = process.env.OFFICE_HEAD_NIP?.trim();
+    const authorizedOfficial = await new LeaveAuthorizedOfficialService(
+      new PrismaLeaveAuthorizedOfficialRepository(runtime.database),
+    ).resolveAt(leave.currentRevision.submittedAt);
     const pdf = generateLeaveDocument(leave, [], variant, undefined, {
       annualBalances,
-      authorizedOfficial:
-        configuredName && configuredNip
-          ? { fullName: configuredName, nip: configuredNip }
-          : null,
+      authorizedOfficial,
     });
     const filename = `formulir-pengajuan-cuti-${leave.employee.nip}-${id.slice(0, 8)}.pdf`;
     const disposition =

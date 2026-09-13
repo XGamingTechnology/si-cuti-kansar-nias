@@ -1,4 +1,9 @@
 import type { LeaveRequestRecord, TransitionRecord } from "./ports";
+import {
+  authorizedOfficialTitle,
+  type LeaveAuthorizedOfficialCapacity,
+} from "@/application/leave-authorized-official/service";
+import { toBusinessDate } from "@/domain/business-date";
 
 /** Both variants are the same submitted, pre-signature form. */
 export type LeaveDocumentVariant = "proof" | "approved";
@@ -9,7 +14,11 @@ export type AnnualLeaveFormBalance = Readonly<{
 }>;
 export type LeaveFormOptions = Readonly<{
   annualBalances?: readonly AnnualLeaveFormBalance[];
-  authorizedOfficial?: Readonly<{ fullName: string; nip: string }> | null;
+  authorizedOfficial?: Readonly<{
+    fullName: string;
+    nip: string;
+    capacity: LeaveAuthorizedOfficialCapacity;
+  }> | null;
 }>;
 
 const months = [
@@ -30,7 +39,7 @@ const months = [
 function date(value: string | Date) {
   const iso =
     value instanceof Date
-      ? value.toISOString().slice(0, 10)
+      ? toBusinessDate(value)
       : value.slice(0, 10);
   const [year, month, day] = iso.split("-");
   return `${day} ${months[Number(month) - 1] ?? month} ${year}`;
@@ -42,13 +51,7 @@ export function calculateIndonesianTenure(
 ) {
   if (!start) return "Belum tersedia";
   const from = new Date(`${start}T00:00:00.000Z`);
-  const to = new Date(
-    Date.UTC(
-      submittedAt.getUTCFullYear(),
-      submittedAt.getUTCMonth(),
-      submittedAt.getUTCDate(),
-    ),
-  );
+  const to = new Date(`${toBusinessDate(submittedAt)}T00:00:00.000Z`);
   if (from > to) return "Belum tersedia";
   let years = to.getUTCFullYear() - from.getUTCFullYear();
   let monthsCount = to.getUTCMonth() - from.getUTCMonth();
@@ -184,6 +187,7 @@ export function generateLeaveDocument(
   void _variant;
   void _generatedAt;
   const revision = request.currentRevision;
+  const official = options.authorizedOfficial;
   if (!revision.submittedAt)
     throw new Error(
       "Formulir hanya tersedia untuk revisi yang telah diajukan.",
@@ -205,7 +209,9 @@ export function generateLeaveDocument(
   addText(texts, "Yth.", 360, 790);
   addText(
     texts,
-    "Kepala Kantor Pencarian dan Pertolongan Kelas B Nias",
+    official
+      ? authorizedOfficialTitle(official.capacity)
+      : "Pejabat yang berwenang memberikan cuti",
     378,
     780,
     false,
@@ -448,9 +454,10 @@ export function generateLeaveDocument(
         ]
       : ["Atasan langsung belum ditetapkan", "Nama: -", "NIP. -"],
   );
-  const official = options.authorizedOfficial;
   decision("VIII. KEPUTUSAN PEJABAT YANG BERWENANG MEMBERIKAN CUTI", 24, 108, [
-    "Kepala Kantor Pencarian dan Pertolongan Kelas B Nias",
+    official
+      ? authorizedOfficialTitle(official.capacity)
+      : "Pejabat yang berwenang memberikan cuti",
     official?.fullName ?? "Nama pejabat belum dikonfigurasi",
     official ? `NIP. ${official.nip}` : "NIP. -",
   ]);
