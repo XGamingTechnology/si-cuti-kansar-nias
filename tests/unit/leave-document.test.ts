@@ -131,6 +131,7 @@ describe("official pre-signature leave form", () => {
         authorizedOfficial: {
           fullName: "Pejabat Konfigurasi",
           nip: "197001012000011001",
+          capacity: "DEFINITIVE",
         },
       }),
     ).toString("latin1");
@@ -146,6 +147,25 @@ describe("official pre-signature leave form", () => {
     expect(output.indexOf("Pejabat Konfigurasi")).toBeLessThan(
       output.indexOf("NIP. 197001012000011001"),
     );
+  });
+
+  it.each([
+    ["DEFINITIVE", "Kepala Kantor Pencarian dan Pertolongan Kelas B Nias"],
+    ["PLT", "Plt. Kepala Kantor Pencarian dan Pertolongan Kelas B Nias"],
+    ["PLH", "Plh. Kepala Kantor Pencarian dan Pertolongan Kelas B Nias"],
+  ] as const)("renders the %s capacity title", (capacity, title) => {
+    const output = Buffer.from(
+      generateLeaveDocument(base, [], "proof", undefined, {
+        authorizedOfficial: {
+          fullName: "Pejabat Fiktif",
+          nip: "000000000000000001",
+          capacity,
+        },
+      }),
+    ).toString("latin1");
+    expect(output).toContain(title);
+    expect(output).toContain("Pejabat Fiktif");
+    expect(output).not.toMatch(/signature|stamp|tanda tangan|stempel/i);
   });
 
   it("uses only the identified request's current submitted revision", () => {

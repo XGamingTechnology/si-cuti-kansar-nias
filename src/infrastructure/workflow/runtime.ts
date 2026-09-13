@@ -7,6 +7,8 @@ import { PrismaWorkflowRepository } from "./prisma-workflow-repository";
 import { AuthenticationService } from "@/modules/auth/service";
 import { PrismaAuthRepository } from "@/infrastructure/auth/prisma-auth-repository";
 import { parseServerEnvironment } from "@/config/env";
+import { LeaveAuthorizedOfficialService } from "@/application/leave-authorized-official/service";
+import { PrismaLeaveAuthorizedOfficialRepository } from "@/infrastructure/leave-authorized-official/prisma-repository";
 
 export function createWorkflowServices(
   connectionString = process.env.DATABASE_URL,
@@ -18,6 +20,9 @@ export function createWorkflowServices(
     repository,
     leave: new LeaveWorkflowService(repository),
     permission: new PermissionWorkflowService(repository),
+    officials: new LeaveAuthorizedOfficialService(
+      new PrismaLeaveAuthorizedOfficialRepository(database),
+    ),
   };
 }
 

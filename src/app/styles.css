@@ -10,6 +10,108 @@
   --bg: #f5f7fa;
 }
 
+/* Master pejabat yang berwenang memberikan cuti */
+.official-warning {
+  padding: 1rem;
+  border: 1px solid #fed7aa;
+  border-radius: 0.75rem;
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 700;
+}
+.official-grid {
+  display: grid;
+  grid-template-columns: minmax(17rem, 0.75fr) minmax(0, 1.4fr);
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+.official-form textarea {
+  width: 100%;
+  min-height: 6rem;
+  margin-top: 0.4rem;
+  padding: 0.7rem;
+  border: 1px solid #d9e0e7;
+  border-radius: 0.45rem;
+  resize: vertical;
+  font: inherit;
+}
+.official-title-preview {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: #eef6fc;
+  color: #0e3a64;
+  font-size: 0.85rem;
+}
+.official-list {
+  min-width: 0;
+}
+.official-list article {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: white;
+}
+.official-card-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.official-card-heading > div {
+  display: grid;
+  gap: 0.25rem;
+}
+.official-card-heading span,
+.official-list dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.official-list dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.official-list dl div {
+  min-width: 0;
+}
+.official-list dt,
+.official-list dd {
+  margin: 0 0 0.2rem;
+  overflow-wrap: anywhere;
+}
+.status-badge {
+  align-self: flex-start;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem !important;
+  font-weight: 700;
+}
+.status-badge.aktif {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-badge.akan_datang {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.status-badge.berakhir {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+@media (max-width: 850px) {
+  .official-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .official-list dl {
+    grid-template-columns: 1fr;
+  }
+  .official-card-heading {
+    flex-direction: column;
+  }
+}
+
 /* Admin annual balance management */
 .year-selector {
   display: grid;
@@ -2371,7 +2473,6 @@ select:focus-visible {
   }
 }
 
-
 /* ==========================================================================
    SI CUTI UI FOUNDATION V1
    Professional, responsive application shell. Presentation only: no business
@@ -2506,8 +2607,7 @@ button:active:not(:disabled) {
 }
 
 .authenticated-shell {
-  background:
-    linear-gradient(180deg, #f8fafc 0, var(--background) 220px);
+  background: linear-gradient(180deg, #f8fafc 0, var(--background) 220px);
   min-height: 100dvh;
 }
 
@@ -2531,8 +2631,7 @@ button:active:not(:disabled) {
 }
 
 .authenticated-sidebar {
-  background:
-    linear-gradient(180deg, #062b4a 0%, var(--brand-950) 100%);
+  background: linear-gradient(180deg, #062b4a 0%, var(--brand-950) 100%);
   border-right: 1px solid rgb(255 255 255 / 0.06);
   box-shadow: 8px 0 24px rgb(2 17 31 / 0.05);
   height: 100dvh;
@@ -2936,7 +3035,6 @@ button:active:not(:disabled) {
   }
 }
 
-
 /* ==========================================================================
    UI-03 Employee Management polish
    ========================================================================== */
@@ -3052,8 +3150,7 @@ button:active:not(:disabled) {
 }
 
 .management-panel {
-  background:
-    linear-gradient(180deg, #ffffff 0%, #ffffff 150px, #fbfcfd 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 150px, #fbfcfd 100%);
   box-shadow: var(--shadow-drawer);
 }
 
@@ -3220,7 +3317,6 @@ button:active:not(:disabled) {
     width: 100%;
   }
 }
-
 
 /* ==========================================================================
    UI-04 Annual Balance Management polish
@@ -3413,8 +3509,7 @@ button:active:not(:disabled) {
 }
 
 .balance-detail-panel {
-  background:
-    linear-gradient(180deg, #fff 0%, #fff 115px, #f8fafc 100%);
+  background: linear-gradient(180deg, #fff 0%, #fff 115px, #f8fafc 100%);
   display: flex;
   flex-direction: column;
   height: 100dvh;
@@ -3456,8 +3551,7 @@ button:active:not(:disabled) {
 }
 
 .balance-detail-summary {
-  background:
-    linear-gradient(135deg, #0b3d68 0%, #176fc1 100%);
+  background: linear-gradient(135deg, #0b3d68 0%, #176fc1 100%);
   border-radius: var(--radius-md);
   color: white;
   display: grid;
@@ -3787,7 +3881,6 @@ button:active:not(:disabled) {
     width: 100%;
   }
 }
-
 
 /* ==========================================================================
    UI-05 Workflow polish
@@ -4445,7 +4538,6 @@ button:active:not(:disabled) {
   }
 }
 
-
 /* Workflow ownership and correction flow */
 .request-card-employee {
   border-bottom: 1px solid var(--border);
@@ -4561,7 +4653,6 @@ button:active:not(:disabled) {
     width: 100%;
   }
 }
-
 
 /* Leave document actions */
 .workflow-document-panel {

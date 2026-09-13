@@ -1,4 +1,9 @@
 import type { LeaveRequestRecord, TransitionRecord } from "./ports";
+import {
+  AUTHORIZED_OFFICIAL_BASE_TITLE,
+  authorizedOfficialTitle,
+  type LeaveAuthorizedOfficialCapacity,
+} from "@/application/leave-authorized-official/service";
 
 /** Both variants are the same submitted, pre-signature form. */
 export type LeaveDocumentVariant = "proof" | "approved";
@@ -9,7 +14,11 @@ export type AnnualLeaveFormBalance = Readonly<{
 }>;
 export type LeaveFormOptions = Readonly<{
   annualBalances?: readonly AnnualLeaveFormBalance[];
-  authorizedOfficial?: Readonly<{ fullName: string; nip: string }> | null;
+  authorizedOfficial?: Readonly<{
+    fullName: string;
+    nip: string;
+    capacity: LeaveAuthorizedOfficialCapacity;
+  }> | null;
 }>;
 
 const months = [
@@ -203,14 +212,7 @@ export function generateLeaveDocument(
   );
   addText(texts, "Kepada", 360, 800);
   addText(texts, "Yth.", 360, 790);
-  addText(
-    texts,
-    "Kepala Kantor Pencarian dan Pertolongan Kelas B Nias",
-    378,
-    780,
-    false,
-    6.5,
-  );
+  addText(texts, AUTHORIZED_OFFICIAL_BASE_TITLE, 378, 780, false, 6.5);
   addText(texts, "Di", 360, 770);
   addText(texts, "Gunungsitoli", 378, 760, true);
   addText(
@@ -450,7 +452,9 @@ export function generateLeaveDocument(
   );
   const official = options.authorizedOfficial;
   decision("VIII. KEPUTUSAN PEJABAT YANG BERWENANG MEMBERIKAN CUTI", 24, 108, [
-    "Kepala Kantor Pencarian dan Pertolongan Kelas B Nias",
+    official
+      ? authorizedOfficialTitle(official.capacity)
+      : AUTHORIZED_OFFICIAL_BASE_TITLE,
     official?.fullName ?? "Nama pejabat belum dikonfigurasi",
     official ? `NIP. ${official.nip}` : "NIP. -",
   ]);
