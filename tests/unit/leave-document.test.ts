@@ -79,9 +79,9 @@ describe("official pre-signature leave form", () => {
       "+6281234567890",
       "Atasan Uji",
       "Kepala Seksi",
-      String.raw`Alokasi Cuti N: 3 hari`,
     ])
       expect(output).toContain(value);
+    expect(output).toContain("Cuti N \\(3 hari\\)");
     expect(output).not.toContain("2030");
     expect(output).not.toContain("Status: DISETUJUI");
   });
