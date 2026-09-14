@@ -95,7 +95,7 @@ ke `IMAGE_REF`, lalu pastikan tidak ada perubahan atau file untracked yang belum
 
 ```bash
 # Contoh gate terpisah; pilih tag immutable yang disetujui operator.
-docker build --target runner -t "si-cuti:app-$(git rev-parse --short=7 HEAD)" .
+docker build --target runtime -t "si-cuti:app-$(git rev-parse --short=7 HEAD)" .
 chmod 600 .env.staging .env.edge.staging
 
 # Memvalidasi source, guard staging, provenance DB read-only, lalu hanya recreate app.
@@ -119,6 +119,16 @@ terpasang pada `/var/lib/postgresql`. Nilai staging yang diharapkan adalah `post
 `si-cuti-staging_postgres_data`. Jika volume `staging_postgres_data` juga ada, catat sebagai bahan
 investigasi saja. **Jangan hapus volume mana pun.** Helper tidak menampilkan URL database utuh,
 password, rendered Compose config, atau secret lain.
+
+### 4.1.1 Checkpoint staging terverifikasi — 11 September 2026
+
+Checkpoint operasional terperinci untuk pemulihan runtime app dan edge staging tersedia di:
+
+`docs/checkpoints/staging-runtime-edge-2026-09-11.md`
+
+Checkpoint tersebut mencatat source commit, image ID runtime, identitas database staging, volume aktif,
+effective Nginx routes, network attachment, health check publik, dan follow-up bug helper deployment.
+Gunakan checkpoint tersebut sebagai baseline known-good sebelum deployment staging atau investigasi UAT berikutnya.
 
 ### 4.2 Rekonsiliasi edge staging
 
