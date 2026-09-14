@@ -81,6 +81,29 @@ describe("master pejabat cuti", () => {
     await expect(service.create(input({ effectiveFrom: "2026-06-30" }))).rejects.toBeInstanceOf(LeaveAuthorizedOfficialError);
   });
 
+  it("tetap menyelesaikan pejabat historis yang sama setelah penerus dibuat", async () => {
+    const repository = new MemoryRepository();
+    const service = new LeaveAuthorizedOfficialService(repository, clock);
+    const historical = await service.create(input({
+      fullName: "Pejabat Lama",
+      effectiveFrom: "2026-01-01",
+      effectiveTo: "2026-09-13",
+    }));
+
+    await service.create(input({
+      fullName: "Pejabat Penerus",
+      nip: "190000000000000002",
+      effectiveFrom: "2026-09-14",
+    }));
+
+    await expect(
+      service.resolveAt(new Date("2026-09-13T10:00:00.000Z")),
+    ).resolves.toEqual(historical);
+    await expect(
+      service.resolveAt(new Date("2026-09-13T17:00:00.000Z")),
+    ).resolves.toMatchObject({ fullName: "Pejabat Penerus" });
+  });
+
   it("menggunakan tanggal bisnis Asia/Jakarta dan status turunannya", async () => {
     expect(toBusinessDate(new Date("2026-09-30T17:30:00.000Z"))).toBe("2026-10-01");
     expect(toBusinessDate(new Date("2026-09-30T16:30:00.000Z"))).toBe("2026-09-30");
