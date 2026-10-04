@@ -23,7 +23,9 @@ function record(value: {
 }
 
 export class PrismaLeaveDocumentRepository implements LeaveDocumentRepository {
-  constructor(private readonly database: PrismaClient) {}
+  constructor(
+    private readonly database: PrismaClient | Prisma.TransactionClient,
+  ) {}
 
   async create(input: CreateLeaveDocumentInput) {
     return record(

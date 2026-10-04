@@ -16,6 +16,8 @@ import type {
 } from "@/application/workflow/types";
 import { WorkflowError } from "@/application/workflow/types";
 import { PrismaAnnualBalanceRepository } from "@/infrastructure/leave-balance/prisma-annual-balance-repository";
+import { PrismaLeaveDocumentRepository } from "@/infrastructure/leave-documents/prisma-leave-document-repository";
+import { PrismaLeaveAuthorizedOfficialRepository } from "@/infrastructure/leave-authorized-official/prisma-repository";
 
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 const businessDate = (value: Date) => value.toISOString().slice(0, 10);
@@ -159,9 +161,15 @@ const permissionInclude = {
 
 class PrismaWorkflowTransaction implements WorkflowTransaction {
   readonly annualBalanceRepository;
+  readonly leaveDocumentRepository;
+  readonly leaveAuthorizedOfficialRepository;
+
   constructor(private readonly db: Prisma.TransactionClient) {
     this.annualBalanceRepository =
       PrismaAnnualBalanceRepository.inTransaction(db);
+    this.leaveDocumentRepository = new PrismaLeaveDocumentRepository(db);
+    this.leaveAuthorizedOfficialRepository =
+      new PrismaLeaveAuthorizedOfficialRepository(db);
   }
   async lockLeaveRequest(id: string) {
     const rows = await this.db.$queryRaw<{ id: string }[]>(

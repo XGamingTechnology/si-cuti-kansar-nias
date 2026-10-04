@@ -1,4 +1,6 @@
 import type { AnnualBalanceMutationRepository } from "@/application/leave-balance/ports";
+import type { LeaveDocumentRepository } from "@/application/leave-documents/ports";
+import type { LeaveAuthorizedOfficialRepository } from "@/application/leave-authorized-official/service";
 import type {
   LeaveRevisionContent,
   PermissionRevisionContent,
@@ -74,6 +76,8 @@ export type PermissionTypeRecord = Readonly<{
 
 export interface WorkflowTransaction {
   readonly annualBalanceRepository: AnnualBalanceMutationRepository;
+  readonly leaveDocumentRepository: LeaveDocumentRepository;
+  readonly leaveAuthorizedOfficialRepository: LeaveAuthorizedOfficialRepository;
   lockLeaveRequest(id: string): Promise<LeaveRequestRecord | null>;
   lockPermissionRequest(id: string): Promise<PermissionRequestRecord | null>;
   findLeaveTransitionByKey(key: string): Promise<TransitionRecord | null>;

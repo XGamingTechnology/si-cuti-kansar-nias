@@ -1,6 +1,14 @@
 import { AnnualBalanceMutationService } from "@/application/leave-balance/service";
+import { LeaveAuthorizedOfficialService } from "@/application/leave-authorized-official/service";
+import { LeaveSubmissionProofService } from "@/application/leave-documents/submission-proof-service";
+import type { DocumentStorage } from "@/application/ports/document-storage";
+import type { AnnualLeaveFormBalance } from "@/application/workflow/leave-document";
 import { countWorkingDays } from "@/domain/leave-balance";
-import type { WorkflowRepository, TransitionRecord } from "./ports";
+import type {
+  LeaveRequestRecord,
+  WorkflowRepository,
+  TransitionRecord,
+} from "./ports";
 import {
   assertReadable,
   requireNonEmpty,
@@ -62,7 +70,10 @@ function sameTransition(
 }
 
 export class LeaveWorkflowService {
-  constructor(private readonly repository: WorkflowRepository) {}
+  constructor(
+    private readonly repository: WorkflowRepository,
+    private readonly documentStorage?: DocumentStorage,
+  ) {}
 
   async createDraft(actor: WorkflowActor, content: LeaveRevisionContent) {
     if (actor.role !== "PEGAWAI")
@@ -210,7 +221,7 @@ export class LeaveWorkflowService {
     );
   }
 
-  private transition(
+  private async transition(
     actor: WorkflowActor,
     requestId: string,
     target: WorkflowStatus,
@@ -221,134 +232,222 @@ export class LeaveWorkflowService {
   ) {
     // M3 appends a bucket suffix, so keep the base within its established limit.
     const idempotencyKey = requireNonEmpty(rawKey, "Idempotency key", 140);
-    return this.repository.transaction(async (tx) => {
-      // Parent is deliberately the first locked business row. It serializes all
-      // competing decisions before account locks are acquired in M3 order.
-      const request = await tx.lockLeaveRequest(requestId);
-      if (!request)
-        throw new WorkflowError("NOT_FOUND", "Pengajuan cuti tidak ditemukan.");
-      const command = {
-        requestId,
-        toStatus: target,
-        actorUserId: actor.userId,
-        reason,
-        evidenceReference,
-      } as const;
-      const retry = await tx.findLeaveTransitionByKey(idempotencyKey);
-      if (retry) {
-        if (
-          !sameTransition(retry, command) ||
-          (target === "SUBMITTED" &&
-            retry.revisionId !== request.currentRevision.id) ||
-          (target === "RETURNED_FOR_CORRECTION" &&
-            request.status === "SUBMITTED")
-        )
-          throw new WorkflowError(
-            "CONFLICT",
-            "Idempotency key telah digunakan untuk operasi berbeda.",
-          );
-        return retry;
-      }
+    let createdProofStorageKey: string | null = null;
 
-      // This value comes from the parent row while its FOR UPDATE lock is
-      // held. Capture it only after an idempotent retry has been recognized:
-      // a retry observes the post-transition state, not the original state.
-      const fromStatus = request.status;
-      const expected = {
-        ...command,
-        revisionId: request.currentRevision.id,
-        fromStatus,
-        idempotencyKey,
-      } as const;
-
-      if (target === "SUBMITTED") {
-        requireOwner(actor, request.employeeId);
-        if (
-          request.status !== "DRAFT" &&
-          request.status !== "RETURNED_FOR_CORRECTION"
-        )
+    try {
+      return await this.repository.transaction(async (tx) => {
+        // Parent is deliberately the first locked business row. It serializes all
+        // competing decisions before account locks are acquired in M3 order.
+        const request = await tx.lockLeaveRequest(requestId);
+        if (!request)
           throw new WorkflowError(
-            "ILLEGAL_TRANSITION",
-            "Pengajuan tidak dapat diajukan dari status saat ini.",
+            "NOT_FOUND",
+            "Pengajuan cuti tidak ditemukan.",
           );
-        validateSubmission(request.currentRevision);
-      } else if (target === "CANCELLED") {
-        requireOwner(actor, request.employeeId);
-        if (
-          !["DRAFT", "SUBMITTED", "RETURNED_FOR_CORRECTION"].includes(
-            request.status,
+        const command = {
+          requestId,
+          toStatus: target,
+          actorUserId: actor.userId,
+          reason,
+          evidenceReference,
+        } as const;
+        const retry = await tx.findLeaveTransitionByKey(idempotencyKey);
+        if (retry) {
+          if (
+            !sameTransition(retry, command) ||
+            (target === "SUBMITTED" &&
+              retry.revisionId !== request.currentRevision.id) ||
+            (target === "RETURNED_FOR_CORRECTION" &&
+              request.status === "SUBMITTED")
           )
+            throw new WorkflowError(
+              "CONFLICT",
+              "Idempotency key telah digunakan untuk operasi berbeda.",
+            );
+          return retry;
+        }
+
+        // This value comes from the parent row while its FOR UPDATE lock is
+        // held. Capture it only after an idempotent retry has been recognized:
+        // a retry observes the post-transition state, not the original state.
+        const fromStatus = request.status;
+        const expected = {
+          ...command,
+          revisionId: request.currentRevision.id,
+          fromStatus,
+          idempotencyKey,
+        } as const;
+
+        if (target === "SUBMITTED") {
+          requireOwner(actor, request.employeeId);
+          if (
+            request.status !== "DRAFT" &&
+            request.status !== "RETURNED_FOR_CORRECTION"
+          )
+            throw new WorkflowError(
+              "ILLEGAL_TRANSITION",
+              "Pengajuan tidak dapat diajukan dari status saat ini.",
+            );
+          validateSubmission(request.currentRevision);
+          if (!this.documentStorage)
+            throw new Error("Penyimpanan dokumen cuti belum dikonfigurasi.");
+        } else if (target === "CANCELLED") {
+          requireOwner(actor, request.employeeId);
+          if (
+            !["DRAFT", "SUBMITTED", "RETURNED_FOR_CORRECTION"].includes(
+              request.status,
+            )
+          )
+            throw new WorkflowError(
+              "ILLEGAL_TRANSITION",
+              "Pengajuan final tidak dapat dibatalkan.",
+            );
+        } else {
+          requireWorkflowAdmin(actor);
+          if (request.status !== "SUBMITTED")
+            throw new WorkflowError(
+              "ILLEGAL_TRANSITION",
+              "Admin hanya dapat memutus pengajuan SUBMITTED.",
+            );
+        }
+
+        const revision = request.currentRevision;
+        const annual = revision.leaveType === "ANNUAL";
+        const balance = new AnnualBalanceMutationService(
+          tx.annualBalanceRepository,
+        );
+        if (
+          annual &&
+          target === "SUBMITTED" &&
+          revision.startDate.slice(0, 4) !== revision.endDate.slice(0, 4)
         )
           throw new WorkflowError(
-            "ILLEGAL_TRANSITION",
-            "Pengajuan final tidak dapat dibatalkan.",
+            "UNSUPPORTED_POLICY",
+            "Cuti Tahunan lintas tahun kalender belum didukung.",
           );
-      } else {
-        requireWorkflowAdmin(actor);
-        if (request.status !== "SUBMITTED")
-          throw new WorkflowError(
-            "ILLEGAL_TRANSITION",
-            "Admin hanya dapat memutus pengajuan SUBMITTED.",
+        const mutation = {
+          employeeId: request.employeeId,
+          entitlementYear: Number(revision.startDate.slice(0, 4)),
+          reference: {
+            referenceType: REFERENCE_TYPE,
+            referenceId: revision.id,
+          },
+          idempotencyKey,
+          occurredAt: now,
+        };
+
+        let workingDays: number | null = revision.calculatedWorkingDays;
+        let annualBalances: AnnualLeaveFormBalance[] | undefined;
+
+        if (target === "SUBMITTED" && annual) {
+          const overrides = await tx.listCalendarOverrides(
+            revision.startDate,
+            revision.endDate,
           );
-      }
+          workingDays = countWorkingDays({
+            startDate: revision.startDate,
+            endDate: revision.endDate,
+            calendarOverrides: overrides,
+          });
+          if (workingDays <= 0)
+            throw new WorkflowError(
+              "VALIDATION",
+              "Cuti Tahunan harus memiliki sedikitnya satu hari kerja.",
+            );
+          const reservation = await balance.reserveAnnualLeave({
+            ...mutation,
+            requestedDays: workingDays,
+          });
 
-      const revision = request.currentRevision;
-      const annual = revision.leaveType === "ANNUAL";
-      const balance = new AnnualBalanceMutationService(
-        tx.annualBalanceRepository,
-      );
-      if (
-        annual &&
-        target === "SUBMITTED" &&
-        revision.startDate.slice(0, 4) !== revision.endDate.slice(0, 4)
-      )
-        throw new WorkflowError(
-          "UNSUPPORTED_POLICY",
-          "Cuti Tahunan lintas tahun kalender belum didukung.",
-        );
-      const mutation = {
-        employeeId: request.employeeId,
-        entitlementYear: Number(revision.startDate.slice(0, 4)),
-        reference: { referenceType: REFERENCE_TYPE, referenceId: revision.id },
-        idempotencyKey,
-        occurredAt: now,
-      };
+          annualBalances = (["N", "N1", "N2"] as const).flatMap((bucket) => {
+            const account = reservation.accounts.find(
+              (value) => value.bucket === bucket,
+            );
+            if (!account) return [];
 
-      let workingDays: number | null = revision.calculatedWorkingDays;
-      if (target === "SUBMITTED" && annual) {
-        const overrides = await tx.listCalendarOverrides(
-          revision.startDate,
-          revision.endDate,
-        );
-        workingDays = countWorkingDays({
-          startDate: revision.startDate,
-          endDate: revision.endDate,
-          calendarOverrides: overrides,
+            const allocatedDays = reservation.operations
+              .filter(
+                (operation) =>
+                  operation.operationType === "RESERVE" &&
+                  operation.bucket === bucket,
+              )
+              .reduce((total, operation) => total + operation.days, 0);
+
+            return [
+              {
+                bucket,
+                remainingDays: account.availableDays - allocatedDays,
+                allocatedDays: allocatedDays || undefined,
+              },
+            ];
+          });
+        } else if (annual && request.status === "SUBMITTED") {
+          if (target === "APPROVED") await balance.commitAnnualLeave(mutation);
+          else await balance.releaseAnnualLeaveReservation(mutation);
+        }
+
+        if (target === "SUBMITTED")
+          await tx.submitLeaveRevision(revision.id, now, workingDays);
+        await tx.setLeaveStatus(requestId, target);
+        const transition = await tx.appendLeaveTransition({
+          ...expected,
+          occurredAt: now,
         });
-        if (workingDays <= 0)
-          throw new WorkflowError(
-            "VALIDATION",
-            "Cuti Tahunan harus memiliki sedikitnya satu hari kerja.",
-          );
-        await balance.reserveAnnualLeave({
-          ...mutation,
-          requestedDays: workingDays,
-        });
-      } else if (annual && request.status === "SUBMITTED") {
-        if (target === "APPROVED") await balance.commitAnnualLeave(mutation);
-        else await balance.releaseAnnualLeaveReservation(mutation);
-      }
 
-      if (target === "SUBMITTED")
-        await tx.submitLeaveRevision(revision.id, now, workingDays);
-      await tx.setLeaveStatus(requestId, target);
-      const transition = await tx.appendLeaveTransition({
-        ...expected,
-        occurredAt: now,
+        if (target === "SUBMITTED") {
+          const existingProof =
+            await tx.leaveDocumentRepository.findByRevisionAndType(
+              revision.id,
+              "SUBMISSION_PROOF",
+            );
+
+          if (!existingProof) {
+            const authorizedOfficial = await new LeaveAuthorizedOfficialService(
+              tx.leaveAuthorizedOfficialRepository,
+            ).resolveAt(now);
+
+            const frozenRequest: LeaveRequestRecord = {
+              ...request,
+              status: "SUBMITTED",
+              currentRevision: {
+                ...revision,
+                calculatedWorkingDays: workingDays,
+                submittedAt: now,
+              },
+            };
+
+            const proof = await new LeaveSubmissionProofService(
+              tx.leaveDocumentRepository,
+              this.documentStorage!,
+            ).ensure({
+              request: frozenRequest,
+              annualBalances,
+              authorizedOfficial: authorizedOfficial
+                ? {
+                    fullName: authorizedOfficial.fullName,
+                    nip: authorizedOfficial.nip,
+                    capacity: authorizedOfficial.capacity,
+                  }
+                : null,
+              generatedAt: now,
+            });
+
+            createdProofStorageKey = proof.storageKey;
+          }
+        }
+
+        if (target === "RETURNED_FOR_CORRECTION")
+          await tx.createLeaveCorrection(request);
+
+        return transition;
       });
-      if (target === "RETURNED_FOR_CORRECTION")
-        await tx.createLeaveCorrection(request);
-      return transition;
-    });
+    } catch (error) {
+      if (createdProofStorageKey && this.documentStorage)
+        await this.documentStorage
+          .delete(createdProofStorageKey)
+          .catch(() => undefined);
+
+      throw error;
+    }
   }
 }

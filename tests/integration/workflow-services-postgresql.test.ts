@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import {
   LeaveWorkflowService,
@@ -6,6 +6,7 @@ import {
   type WorkflowRepository,
   type WorkflowTransaction,
 } from "@/application/workflow";
+import type { DocumentStorage } from "@/application/ports/document-storage";
 import type { Principal } from "@/modules/auth/service";
 import { createDatabaseClient } from "@/infrastructure/database/client";
 import { PrismaWorkflowRepository } from "@/infrastructure/workflow/prisma-workflow-repository";
@@ -13,10 +14,36 @@ import { PrismaWorkflowRepository } from "@/infrastructure/workflow/prisma-workf
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 const key = (label: string) => `${label}-${randomUUID()}`;
 
+const documentFiles = new Map<string, Uint8Array>();
+
+const documentStorage: DocumentStorage = {
+  async put(content) {
+    const storageKey = randomUUID().replaceAll("-", "");
+    const stored = new Uint8Array(content);
+    documentFiles.set(storageKey, stored);
+
+    return {
+      key: storageKey,
+      size: stored.byteLength,
+      checksum: createHash("sha256").update(stored).digest("hex"),
+    };
+  },
+
+  async read(storageKey) {
+    const content = documentFiles.get(storageKey);
+    if (!content) throw new Error("Dokumen pengujian tidak ditemukan.");
+    return new Uint8Array(content);
+  },
+
+  async delete(storageKey) {
+    documentFiles.delete(storageKey);
+  },
+};
+
 run("M4 workflow services on PostgreSQL", () => {
   const database = createDatabaseClient();
   const repository = new PrismaWorkflowRepository(database);
-  const leave = new LeaveWorkflowService(repository);
+  const leave = new LeaveWorkflowService(repository, documentStorage);
   const permission = new PermissionWorkflowService(repository);
   const employees: string[] = [];
   const permissionTypes: string[] = [];
@@ -86,6 +113,9 @@ run("M4 workflow services on PostgreSQL", () => {
     startDate: "2099-01-12",
     endDate: "2099-01-13",
     reason: "Keperluan integrasi workflow",
+    formPlace: "Gunungsitoli",
+    leaveAddress: "Alamat pengujian integrasi",
+    leavePhone: "+628123456789",
   };
   const annualContent = { ...leaveContent, leaveType: "ANNUAL" as const };
   const permissionContent = (permissionTypeId: string) => ({
@@ -96,6 +126,9 @@ run("M4 workflow services on PostgreSQL", () => {
   });
 
   afterEach(async () => {
+    await database.leaveDocument.deleteMany({
+      where: { leaveRequest: { employeeId: { in: employees } } },
+    });
     await database.annualBalanceOperation.deleteMany({
       where: { employeeId: { in: employees } },
     });
@@ -129,6 +162,7 @@ run("M4 workflow services on PostgreSQL", () => {
     });
     employees.length = 0;
     permissionTypes.length = 0;
+    documentFiles.clear();
   });
   afterAll(() => database.$disconnect());
 
@@ -362,6 +396,105 @@ run("M4 workflow services on PostgreSQL", () => {
     ).toBe(0);
   });
 
+  it("persists exactly one immutable submission proof with the post-reservation annual balance snapshot", async () => {
+    const owner = await actor();
+    await balances(owner.employeeId);
+
+    const request = await leave.createDraft(owner, annualContent);
+    const revisionId = request.currentRevision.id;
+    const originalFullName = owner.fullName;
+    const idempotencyKey = key("proof-submit");
+
+    await leave.submit(owner, request.id, idempotencyKey);
+
+    const proofs = await database.leaveDocument.findMany({
+      where: {
+        leaveRequestId: request.id,
+        documentType: "SUBMISSION_PROOF",
+      },
+    });
+
+    expect(proofs).toHaveLength(1);
+
+    const proof = proofs[0];
+    expect(proof).toBeDefined();
+    expect(proof?.revisionId).toBe(revisionId);
+    expect(proof?.mimeType).toBe("application/pdf");
+
+    expect(proof?.snapshot).toMatchObject({
+      schemaVersion: 1,
+      documentType: "SUBMISSION_PROOF",
+      leaveRequest: {
+        status: "SUBMITTED",
+        employee: {
+          fullName: originalFullName,
+        },
+        revision: {
+          id: revisionId,
+          revisionNumber: 1,
+          calculatedWorkingDays: 2,
+          submittedAt: expect.any(String),
+        },
+      },
+      annualBalances: [
+        {
+          bucket: "N",
+          remainingDays: 10,
+          allocatedDays: 2,
+        },
+        {
+          bucket: "N1",
+          remainingDays: 0,
+          allocatedDays: null,
+        },
+        {
+          bucket: "N2",
+          remainingDays: 0,
+          allocatedDays: null,
+        },
+      ],
+    });
+
+    const stored = proof ? documentFiles.get(proof.storageKey) : undefined;
+
+    expect(stored).toBeDefined();
+    expect(stored?.byteLength).toBe(proof?.sizeBytes);
+    expect(
+      stored ? createHash("sha256").update(stored).digest("hex") : undefined,
+    ).toBe(proof?.checksumSha256);
+
+    await leave.submit(owner, request.id, idempotencyKey);
+
+    expect(
+      await database.leaveDocument.count({
+        where: {
+          leaveRequestId: request.id,
+          documentType: "SUBMISSION_PROOF",
+        },
+      }),
+    ).toBe(1);
+
+    await database.employee.update({
+      where: { id: owner.employeeId },
+      data: { fullName: "Nama Pegawai Setelah Submit" },
+    });
+
+    const persisted = await database.leaveDocument.findFirstOrThrow({
+      where: {
+        leaveRequestId: request.id,
+        documentType: "SUBMISSION_PROOF",
+      },
+    });
+
+    expect(persisted.snapshot).toMatchObject({
+      leaveRequest: {
+        employee: {
+          fullName: originalFullName,
+        },
+      },
+    });
+  });
+
   it("reserves, releases on return, reserves the new revision, and commits exact annual references", async () => {
     const owner = await actor();
     const admin = await actor("ADMIN_KEPEGAWAIAN");
@@ -472,7 +605,7 @@ run("M4 workflow services on PostgreSQL", () => {
         }) as WorkflowTransaction,
     );
     await expect(
-      new LeaveWorkflowService(failing).submit(
+      new LeaveWorkflowService(failing, documentStorage).submit(
         owner,
         request.id,
         key("submit"),
@@ -513,7 +646,7 @@ run("M4 workflow services on PostgreSQL", () => {
         }) as WorkflowTransaction,
     );
     await expect(
-      new LeaveWorkflowService(failing).submit(
+      new LeaveWorkflowService(failing, documentStorage).submit(
         owner,
         request.id,
         key("submit"),

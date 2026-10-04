@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import type {
   LeaveAuthorizedOfficialAssignment,
   LeaveAuthorizedOfficialInput,
@@ -30,10 +30,10 @@ function dbDate(value: string) {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
-export class PrismaLeaveAuthorizedOfficialRepository
-  implements LeaveAuthorizedOfficialRepository
-{
-  constructor(private readonly database: PrismaClient) {}
+export class PrismaLeaveAuthorizedOfficialRepository implements LeaveAuthorizedOfficialRepository {
+  constructor(
+    private readonly database: PrismaClient | Prisma.TransactionClient,
+  ) {}
 
   async list() {
     return (
