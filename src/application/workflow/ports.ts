@@ -19,8 +19,8 @@ export type LeaveRevision = LeaveRevisionContent &
     revisionNumber: number;
     calculatedWorkingDays: number | null;
     submittedAt: Date | null;
-    directSupervisorSnapshotCaptured: boolean;
-    directSupervisorSnapshot: DirectSupervisorSnapshot | null;
+    directSupervisorSnapshotCaptured?: boolean;
+    directSupervisorSnapshot?: DirectSupervisorSnapshot | null;
   }>;
 export type PermissionRevision = PermissionRevisionContent &
   Readonly<{
