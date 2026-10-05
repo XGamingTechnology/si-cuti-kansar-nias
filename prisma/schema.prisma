@@ -259,9 +259,14 @@ model LeaveRequestRevision {
   formPlace             String?   @db.VarChar(100)
   leaveAddress          String?   @db.Text
   leavePhone            String?   @db.VarChar(32)
-  calculatedWorkingDays Int?
-  submittedAt           DateTime? @db.Timestamptz(3)
-  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  calculatedWorkingDays              Int?
+  submittedAt                        DateTime? @db.Timestamptz(3)
+  directSupervisorSnapshotCaptured   Boolean   @default(false)
+  directSupervisorIdSnapshot         String?   @db.Uuid
+  directSupervisorNipSnapshot        String?   @db.VarChar(32)
+  directSupervisorNameSnapshot       String?   @db.VarChar(200)
+  directSupervisorTitleSnapshot      String?   @db.VarChar(200)
+  createdAt                          DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
 
   leaveRequest LeaveRequest             @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)

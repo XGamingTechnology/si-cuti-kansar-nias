@@ -16,6 +16,7 @@ const base: LeaveRequestRecord = {
     workUnit: "Unit Operasi",
     employmentStartDate: "2023-03-12",
     directSupervisor: {
+      id: "supervisor-current",
       fullName: "Atasan Uji",
       nip: "198001012000011001",
       positionTitle: "Kepala Seksi",
@@ -123,6 +124,51 @@ describe("official pre-signature leave form", () => {
     expect(output.match(/\[X\]/g)).toHaveLength(1);
     expect(output).not.toMatch(/signature|stamp|tanda tangan|stempel/i);
     expect(output).not.toMatch(/\[X\].*(DISETUJUI|PERUBAHAN|DITANGGUHKAN)/);
+  });
+
+  it("uses the submitted supervisor snapshot even when the employee's current supervisor changes", () => {
+    const request = {
+      ...base,
+      employee: {
+        ...base.employee,
+        directSupervisor: {
+          id: "supervisor-new",
+          fullName: "Atasan Baru",
+          nip: "198501012010011002",
+          positionTitle: "Kepala Seksi Baru",
+        },
+      },
+      currentRevision: {
+        ...base.currentRevision,
+        directSupervisorSnapshotCaptured: true,
+        directSupervisorSnapshot: {
+          id: "supervisor-old",
+          fullName: "Atasan Saat Submit",
+          nip: "197501012000011001",
+          positionTitle: "Kepala Seksi Lama",
+        },
+      },
+    } satisfies LeaveRequestRecord;
+    const output = raw(request);
+    expect(output).toContain("Atasan Saat Submit");
+    expect(output).toContain("Kepala Seksi Lama");
+    expect(output).toContain("NIP. 197501012000011001");
+    expect(output).not.toContain("Atasan Baru");
+    expect(output).not.toContain("Kepala Seksi Baru");
+  });
+
+  it("preserves a captured no-supervisor state instead of using a later assignment", () => {
+    const request = {
+      ...base,
+      currentRevision: {
+        ...base.currentRevision,
+        directSupervisorSnapshotCaptured: true,
+        directSupervisorSnapshot: null,
+      },
+    } satisfies LeaveRequestRecord;
+    const output = raw(request);
+    expect(output).toContain("Atasan langsung belum ditetapkan");
+    expect(output).not.toContain("Atasan Uji");
   });
 
   it("keeps supervisor and configured office-head identities in visible order", () => {

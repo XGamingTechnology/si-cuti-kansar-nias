@@ -46,6 +46,20 @@ function leaveRevision(
     leavePhone: value.leavePhone,
     calculatedWorkingDays: value.calculatedWorkingDays,
     submittedAt: value.submittedAt,
+    directSupervisorSnapshotCaptured: value.directSupervisorSnapshotCaptured,
+    directSupervisorSnapshot:
+      value.directSupervisorSnapshotCaptured &&
+      value.directSupervisorIdSnapshot &&
+      value.directSupervisorNipSnapshot &&
+      value.directSupervisorNameSnapshot &&
+      value.directSupervisorTitleSnapshot
+        ? {
+            id: value.directSupervisorIdSnapshot,
+            nip: value.directSupervisorNipSnapshot,
+            fullName: value.directSupervisorNameSnapshot,
+            positionTitle: value.directSupervisorTitleSnapshot,
+          }
+        : null,
   };
 }
 function leaveRequest(value: LeaveWithRevision): LeaveRequestRecord {
@@ -68,6 +82,7 @@ function leaveRequest(value: LeaveWithRevision): LeaveRequestRecord {
         : null,
       directSupervisor: value.employee.directSupervisor
         ? {
+            id: value.employee.directSupervisor.id,
             nip: value.employee.directSupervisor.nip,
             fullName: value.employee.directSupervisor.fullName,
             positionTitle: value.employee.directSupervisor.positionTitle,
@@ -203,10 +218,28 @@ class PrismaWorkflowTransaction implements WorkflowTransaction {
   async setPermissionStatus(id: string, status: WorkflowStatus) {
     await this.db.permissionRequest.update({ where: { id }, data: { status } });
   }
-  async submitLeaveRevision(id: string, at: Date, workingDays: number | null) {
+  async submitLeaveRevision(
+    id: string,
+    at: Date,
+    workingDays: number | null,
+    supervisor: {
+      id: string;
+      nip: string;
+      fullName: string;
+      positionTitle: string;
+    } | null,
+  ) {
     await this.db.leaveRequestRevision.update({
       where: { id },
-      data: { submittedAt: at, calculatedWorkingDays: workingDays },
+      data: {
+        submittedAt: at,
+        calculatedWorkingDays: workingDays,
+        directSupervisorSnapshotCaptured: true,
+        directSupervisorIdSnapshot: supervisor?.id ?? null,
+        directSupervisorNipSnapshot: supervisor?.nip ?? null,
+        directSupervisorNameSnapshot: supervisor?.fullName ?? null,
+        directSupervisorTitleSnapshot: supervisor?.positionTitle ?? null,
+      },
     });
   }
   async submitPermissionRevision(id: string, at: Date) {

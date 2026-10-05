@@ -441,7 +441,9 @@ export function generateLeaveDocument(
       ),
     );
   };
-  const supervisor = request.employee.directSupervisor;
+  const supervisor = revision.directSupervisorSnapshotCaptured
+    ? (revision.directSupervisorSnapshot ?? null)
+    : (request.employee.directSupervisor ?? null);
   decision(
     "VII. PERTIMBANGAN ATASAN LANGSUNG",
     140,

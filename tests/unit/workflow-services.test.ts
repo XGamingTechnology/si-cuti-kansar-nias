@@ -136,6 +136,46 @@ describe("workflow application policy", () => {
     ).rejects.toThrow(message);
   });
 
+  it("captures the employee's current direct supervisor when a leave revision is submitted", async () => {
+    const supervised = {
+      ...leave,
+      employee: {
+        ...leave.employee,
+        directSupervisor: {
+          id: "supervisor-1",
+          nip: "198001012000011001",
+          fullName: "Atasan Saat Submit",
+          positionTitle: "Kepala Seksi",
+        },
+      },
+    } satisfies LeaveRequestRecord;
+    const submitLeaveRevision = vi.fn(async () => undefined);
+    const appendLeaveTransition = vi.fn(async (input: TransitionWrite) => ({
+      id: "transition-supervisor",
+      ...input,
+    }));
+    const transaction = {
+      lockLeaveRequest: vi.fn(async () => supervised),
+      findLeaveTransitionByKey: vi.fn(async () => null),
+      submitLeaveRevision,
+      setLeaveStatus: vi.fn(async () => undefined),
+      appendLeaveTransition,
+      annualBalanceRepository: {},
+    } as unknown as WorkflowTransaction;
+    const service = new LeaveWorkflowService(
+      repository({ transaction: (work) => work(transaction) }),
+    );
+
+    await service.submit(owner, supervised.id, "submit-with-supervisor");
+
+    expect(submitLeaveRevision).toHaveBeenCalledWith(
+      supervised.currentRevision.id,
+      expect.any(Date),
+      null,
+      supervised.employee.directSupervisor,
+    );
+  });
+
   it("enforces Pegawai owner isolation while allowing Admin reads", async () => {
     const service = new LeaveWorkflowService(repository());
     await expect(service.get(other, leave.id)).rejects.toMatchObject({
