@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isAdminPrincipal } from "@/application/authorization/policy";
-import { LeaveAuthorizedOfficialManagement } from "@/components/leave-authorized-official-management";
+import { AuthenticatedShell } from "@/components/authenticated-shell";
 import { createRuntimeAuthentication } from "@/infrastructure/auth/runtime";
 import { SESSION_COOKIE_NAME } from "@/modules/auth/session";
 
@@ -14,7 +14,9 @@ export default async function LeaveAuthorizedOfficialPage() {
   try {
     const principal = await runtime.authentication.validate(token);
     if (!principal || !isAdminPrincipal(principal)) redirect("/");
-    return <LeaveAuthorizedOfficialManagement />;
+    return (
+      <AuthenticatedShell principal={principal} initialAdminSurface="pejabat" />
+    );
   } finally {
     await runtime.database.$disconnect();
   }
