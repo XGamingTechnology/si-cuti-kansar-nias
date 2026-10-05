@@ -7,6 +7,7 @@ import { BrandMark } from "@/components/login-preview";
 import { Icon } from "@/components/ui";
 import { WorkflowWorkspace } from "@/components/workflow-workspace";
 import { AnnualBalanceManagement } from "@/components/annual-balance-management";
+import { LeaveAuthorizedOfficialManagement } from "@/components/leave-authorized-official-management";
 import { isAdminPrincipal } from "@/application/authorization/policy";
 
 function initials(name: string) {
@@ -23,11 +24,11 @@ export function AuthenticatedShell({
   initialAdminSurface = "pegawai",
 }: {
   principal: Principal;
-  initialAdminSurface?: "pegawai" | "saldo" | "pengajuan";
+  initialAdminSurface?: "pegawai" | "saldo" | "pejabat" | "pengajuan";
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [adminSurface, setAdminSurface] = useState<
-    "pegawai" | "saldo" | "pengajuan"
+    "pegawai" | "saldo" | "pejabat" | "pengajuan"
   >(initialAdminSurface);
   const isAdmin = isAdminPrincipal(principal);
   const role = isAdmin ? "Admin Kepegawaian" : "Pegawai";
@@ -39,6 +40,7 @@ export function AuthenticatedShell({
 
   const employeeActive = !isAdmin || adminSurface === "pegawai";
   const balanceActive = isAdmin && adminSurface === "saldo";
+  const officialActive = isAdmin && adminSurface === "pejabat";
   const workflowActive = isAdmin && adminSurface === "pengajuan";
 
   return (
@@ -94,6 +96,21 @@ export function AuthenticatedShell({
             >
               <Icon name="file" />
               <span>Saldo Cuti</span>
+            </a>
+          )}
+
+          {isAdmin && (
+            <a
+              className={officialActive ? "active" : ""}
+              aria-current={officialActive ? "page" : undefined}
+              href="/admin/pejabat-cuti"
+              onClick={() => {
+                setAdminSurface("pejabat");
+                setMenuOpen(false);
+              }}
+            >
+              <Icon name="people" />
+              <span>Pejabat Cuti</span>
             </a>
           )}
 
@@ -169,6 +186,9 @@ export function AuthenticatedShell({
         <main id="main-content" className="authenticated-content" tabIndex={-1}>
           {isAdmin && adminSurface === "pegawai" && <EmployeeManagement />}
           {isAdmin && adminSurface === "saldo" && <AnnualBalanceManagement />}
+          {isAdmin && adminSurface === "pejabat" && (
+            <LeaveAuthorizedOfficialManagement />
+          )}
           {!isAdmin && (
             <section className="profile-surface" id="profil">
               <p className="eyebrow">PROFIL SAYA</p>
