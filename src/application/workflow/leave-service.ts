@@ -340,7 +340,12 @@ export class LeaveWorkflowService {
       }
 
       if (target === "SUBMITTED")
-        await tx.submitLeaveRevision(revision.id, now, workingDays);
+        await tx.submitLeaveRevision(
+          revision.id,
+          now,
+          workingDays,
+          request.employee.directSupervisor ?? null,
+        );
       await tx.setLeaveStatus(requestId, target);
       const transition = await tx.appendLeaveTransition({
         ...expected,
