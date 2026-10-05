@@ -5,6 +5,13 @@ import type {
   WorkflowStatus,
 } from "./types";
 
+export type DirectSupervisorSnapshot = Readonly<{
+  id: string;
+  nip: string;
+  fullName: string;
+  positionTitle: string;
+}>;
+
 export type LeaveRevision = LeaveRevisionContent &
   Readonly<{
     id: string;
@@ -12,6 +19,8 @@ export type LeaveRevision = LeaveRevisionContent &
     revisionNumber: number;
     calculatedWorkingDays: number | null;
     submittedAt: Date | null;
+    directSupervisorSnapshotCaptured: boolean;
+    directSupervisorSnapshot: DirectSupervisorSnapshot | null;
   }>;
 export type PermissionRevision = PermissionRevisionContent &
   Readonly<{
@@ -28,11 +37,7 @@ export type WorkflowEmployeeSummary = Readonly<{
   positionTitle: string;
   workUnit: string;
   employmentStartDate?: string | null;
-  directSupervisor?: Readonly<{
-    nip: string;
-    fullName: string;
-    positionTitle: string;
-  }> | null;
+  directSupervisor?: DirectSupervisorSnapshot | null;
 }>;
 
 export type LeaveRequestRecord = Readonly<{
@@ -84,6 +89,7 @@ export interface WorkflowTransaction {
     id: string,
     at: Date,
     workingDays: number | null,
+    supervisor: DirectSupervisorSnapshot | null,
   ): Promise<void>;
   submitPermissionRevision(id: string, at: Date): Promise<void>;
   createLeaveCorrection(request: LeaveRequestRecord): Promise<LeaveRevision>;
