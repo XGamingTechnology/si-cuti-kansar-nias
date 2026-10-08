@@ -12,10 +12,15 @@ function record(value: {
   leaveRequestId: string;
   revisionId: string;
   documentType: LeaveDocumentType;
+  version: number;
   storageKey: string;
   checksumSha256: string;
   sizeBytes: number;
   mimeType: string;
+  originalFileName: string | null;
+  uploadedByUserId: string | null;
+  uploadedAt: Date | null;
+  sourceIp: string | null;
   snapshot: Prisma.JsonValue;
   generatedAt: Date;
 }): LeaveDocumentRecord {
@@ -40,8 +45,9 @@ export class PrismaLeaveDocumentRepository implements LeaveDocumentRepository {
     revisionId: string,
     documentType: LeaveDocumentType,
   ) {
-    const value = await this.database.leaveDocument.findUnique({
-      where: { revisionId_documentType: { revisionId, documentType } },
+    const value = await this.database.leaveDocument.findFirst({
+      where: { revisionId, documentType },
+      orderBy: { version: "desc" },
     });
     return value ? record(value) : null;
   }
@@ -57,8 +63,24 @@ export class PrismaLeaveDocumentRepository implements LeaveDocumentRepository {
     return (
       await this.database.leaveDocument.findMany({
         where: { leaveRequestId },
-        orderBy: [{ generatedAt: "asc" }, { id: "asc" }],
+        orderBy: [
+          { documentType: "asc" },
+          { version: "desc" },
+          { generatedAt: "desc" },
+          { id: "asc" },
+        ],
       })
     ).map(record);
+  }
+
+  async nextVersion(
+    revisionId: string,
+    documentType: LeaveDocumentType,
+  ): Promise<number> {
+    const aggregate = await this.database.leaveDocument.aggregate({
+      where: { revisionId, documentType },
+      _max: { version: true },
+    });
+    return (aggregate._max.version ?? 0) + 1;
   }
 }
