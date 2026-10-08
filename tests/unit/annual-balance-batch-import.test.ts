@@ -1,3 +1,7 @@
+import {
+  entitlementCapCases,
+  withRegularEntitlement,
+} from "../support/annual-balance-batch";
 import { describe, expect, it } from "vitest";
 import {
   AnnualBalanceAdministrationService,
@@ -222,6 +226,44 @@ describe("Batch opening balance application", () => {
     });
     expect(JSON.stringify(repository)).toBe(before);
   });
+
+  it.each(entitlementCapCases)(
+    "preview and commit reject $label without repairing/overwriting",
+    async ({ granted, committed, reserved }) => {
+      const { repository, service } = build();
+      const bytes = workbook([row()]);
+      const validPreview = await service.preview(bytes, 2026);
+      await initialize(repository);
+      repository.accounts = withRegularEntitlement(
+        repository.accounts,
+        granted,
+        committed,
+        reserved,
+      );
+      const before = JSON.stringify(repository);
+      const preview = await service.preview(bytes, 2026);
+      expect(preview).toMatchObject({
+        validRows: 0,
+        skippedRows: 0,
+        errorRows: 1,
+      });
+      expect(preview.rows[0].status).toBe("ERROR");
+      expect(preview.rows[0].messages.join(" ")).toContain(
+        "pemeriksaan manual",
+      );
+      expect(
+        await service.commit({
+          bytes,
+          selectedYear: 2026,
+          batchId,
+          actorUserId,
+          previewDigest: validPreview.digest,
+          confirmedRows: [2],
+        }),
+      ).toMatchObject({ succeededRows: 0, skippedRows: 0, failedRows: 1 });
+      expect(JSON.stringify(repository)).toBe(before);
+    },
+  );
 
   it("does not double grant on the same batch retry or a different batch", async () => {
     const { repository, service } = build();

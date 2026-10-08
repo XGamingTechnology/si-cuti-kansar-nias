@@ -1,3 +1,4 @@
+import { entitlementCapCases } from "../support/annual-balance-batch";
 import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { AnnualBalanceAdministrationService } from "@/application/leave-balance/administration";
@@ -171,6 +172,102 @@ run("Batch opening balance PostgreSQL persistence", () => {
       ["N1", 1],
     ]);
   });
+  it.each(entitlementCapCases)(
+    "rejects persisted $label across preview, commit and single initialization",
+    async ({ granted, committed, reserved }) => {
+      const target = await employee();
+      const bytes = workbook([row(target.nip)]);
+      const batch = await input(bytes);
+      const opening = {
+        employeeId: target.id,
+        entitlementYear: year,
+        n1Days: 2,
+        n2Days: 3,
+        reason: "Fixture integritas entitlement",
+        idempotencyKey: randomUUID(),
+        actorUserId,
+      };
+      await single.initialize(opening);
+      for (const bucket of ["N", "N1", "N2"] as const) {
+        await database.annualBalanceAccount.update({
+          where: {
+            employeeId_entitlementYear_bucket: {
+              employeeId: target.id,
+              entitlementYear: year,
+              bucket,
+            },
+          },
+          data: {
+            grantedDays: granted[bucket],
+            committedDays: committed[bucket] ?? 0,
+            reservedDays: reserved[bucket] ?? 0,
+          },
+        });
+      }
+      const snapshot = async () => ({
+        accounts: await database.annualBalanceAccount.findMany({
+          where: { employeeId: target.id },
+          orderBy: { id: "asc" },
+        }),
+        ledger: await database.annualBalanceOperation.findMany({
+          where: { employeeId: target.id },
+          orderBy: { id: "asc" },
+        }),
+      });
+      const before = await snapshot();
+      expect((await single.get(target.id, year)).readiness).toBe("PARTIAL");
+      const preview = await service.preview(bytes, year);
+      expect(preview).toMatchObject({
+        validRows: 0,
+        skippedRows: 0,
+        errorRows: 1,
+      });
+      expect(preview.rows[0].status).toBe("ERROR");
+      expect(await service.commit(batch)).toMatchObject({
+        succeededRows: 0,
+        skippedRows: 0,
+        failedRows: 1,
+      });
+      await expect(
+        single.initialize({ ...opening, idempotencyKey: randomUUID() }),
+      ).rejects.toMatchObject({ code: "PARTIAL_BALANCE" });
+      expect(await snapshot()).toEqual(before);
+    },
+  );
+
+  it("preserves initialized status and skips legitimate reserved balances without overwriting", async () => {
+    const target = await employee();
+    const bytes = workbook([row(target.nip)]);
+    const batch = await input(bytes);
+    await single.initialize({
+      employeeId: target.id,
+      entitlementYear: year,
+      n1Days: 2,
+      n2Days: 3,
+      reason: "Fixture saldo valid",
+      idempotencyKey: randomUUID(),
+      actorUserId,
+    });
+    await new AnnualBalanceMutationService(
+      new PrismaAnnualBalanceRepository(database),
+    ).reserveAnnualLeave({
+      employeeId: target.id,
+      entitlementYear: year,
+      requestedDays: 4,
+      reference: { referenceType: "LEAVE_REQUEST", referenceId: randomUUID() },
+      idempotencyKey: randomUUID(),
+    });
+    const before = await repository.findAccounts(target.id, year);
+    expect((await single.get(target.id, year)).readiness).toBe("INITIALIZED");
+    expect((await service.preview(bytes, year)).rows[0].status).toBe("SKIP");
+    expect(await service.commit(batch)).toMatchObject({
+      succeededRows: 0,
+      skippedRows: 1,
+      failedRows: 0,
+    });
+    expect(await repository.findAccounts(target.id, year)).toEqual(before);
+  });
+
   it("serializes concurrent identical batch retries without duplicate grants", async () => {
     const a = await employee();
     const b = await employee();

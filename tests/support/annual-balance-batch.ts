@@ -108,3 +108,57 @@ export class BatchTestRepository
     }
   }
 }
+
+type RegularEntitlement = Readonly<Record<"N" | "N1" | "N2", number>>;
+export const entitlementCapCases: readonly {
+  label: string;
+  granted: RegularEntitlement;
+  committed: Partial<RegularEntitlement>;
+  reserved: Partial<RegularEntitlement>;
+}[] = [
+  {
+    label: "N1 granted 7 with committed 2 and available 5",
+    granted: { N: 12, N1: 7, N2: 3 },
+    committed: { N1: 2 },
+    reserved: {},
+  },
+  {
+    label: "N2 granted 7 with reserved 2 and available 5",
+    granted: { N: 12, N1: 2, N2: 7 },
+    committed: {},
+    reserved: { N2: 2 },
+  },
+  {
+    label: "N granted 13 with committed 1 and available 12",
+    granted: { N: 13, N1: 2, N2: 3 },
+    committed: { N: 1 },
+    reserved: {},
+  },
+  {
+    label: "regular granted 25 with committed 2 and available 23",
+    granted: { N: 13, N1: 6, N2: 6 },
+    committed: { N: 2 },
+    reserved: {},
+  },
+];
+
+export function withRegularEntitlement(
+  accounts: readonly AnnualBalanceAccountState[],
+  granted: RegularEntitlement,
+  committed: Partial<RegularEntitlement> = {},
+  reserved: Partial<RegularEntitlement> = {},
+): AnnualBalanceAccountState[] {
+  return accounts.map((account) => {
+    if (account.bucket === "JOINT_LEAVE_CLAIM") return account;
+    const grantedDays = granted[account.bucket];
+    const committedDays = committed[account.bucket] ?? 0;
+    const reservedDays = reserved[account.bucket] ?? 0;
+    return {
+      ...account,
+      grantedDays,
+      committedDays,
+      reservedDays,
+      availableDays: grantedDays - committedDays - reservedDays,
+    };
+  });
+}

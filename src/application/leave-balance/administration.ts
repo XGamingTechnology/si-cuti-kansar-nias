@@ -186,11 +186,11 @@ export function annualBalanceReadiness(
   );
   if (
     regular.some(
-      (account) => account.availableDays > (account.bucket === "N" ? 12 : 6),
+      (account) => account.grantedDays > (account.bucket === "N" ? 12 : 6),
     )
   )
     return "PARTIAL";
-  if (regular.reduce((sum, account) => sum + account.availableDays, 0) > 24)
+  if (regular.reduce((sum, account) => sum + account.grantedDays, 0) > 24)
     return "PARTIAL";
   return "INITIALIZED";
 }

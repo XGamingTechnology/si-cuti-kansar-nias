@@ -61,3 +61,38 @@ Concurrency and rollback tests use real PostgreSQL transactions. Concurrent retr
 - `tests/integration/workflow-services-postgresql.test.ts`
 - `tests/support/annual-balance-batch.ts`
 - `tests/unit/annual-balance-batch-import.test.ts`
+
+## PR #99 — Granted-entitlement review correction (2026-10-08)
+
+The initial implementation record above refers to commit `c8cd4b7ca58081adf6f868ee8da892aa44083b24`. This review correction changes only the two entitlement-cap checks in `annualBalanceReadiness()`: bucket limits and the regular 24-day sum now use `grantedDays`, not `availableDays`. N <=12, N1 <=6, N2 <=6, and regular granted entitlement <=24 remain the approved limits. JOINT_LEAVE_CLAIM remains excluded. Existing integer/nonnegative counter checks, reserved+committed <=granted, and available=granted-reserved-committed are unchanged.
+
+Regression cases cover N1 granted 7/committed 2/available 5, N2 granted 7/reserved 2/available 5, N granted 13/committed 1/available 12, and regular granted 25/committed 2/available 23. Every regular available bucket and available total remains within its cap in these fixtures. These previously passed readiness validation; they now produce PARTIAL. Legitimate used/reserved balances still produce INITIALIZED, and a legitimate regular entitlement of 24 plus a Claim entitlement of 10 remains INITIALIZED.
+
+Direct readiness/service tests also preserve empty, missing, duplicate/incomplete bucket, negative counter, overspent counter, inconsistent availability, and fractional counter detection. Batch tests prove invalid sets produce ERROR and stale-preview commit produces FAILED without account or ledger changes. PostgreSQL tests persist all four malformed sets and prove both batch commit and single initialization reject them without repair or overwrite. A valid reserved account set remains initialized and is skipped unchanged.
+
+Before the production fix, the new focused unit tests failed in 8 cases (4 direct readiness, 4 batch preview); the other 47 unit tests passed. All final gates below pass after the two-line fix:
+
+| Review gate                                                          | Result                                             |
+| -------------------------------------------------------------------- | -------------------------------------------------- |
+| Prettier on all six changed files                                    | PASS                                               |
+| `npm run typecheck`                                                  | PASS                                               |
+| `npm run lint`                                                       | PASS                                               |
+| Focused annual-balance unit + batch unit + annual-balance HTTP tests | PASS; 75 tests (26 + 29 + 12 + 8) across 4 files   |
+| `npm test`                                                           | PASS; 336 unit/HTTP tests across 32 files          |
+| `npm run test:integration -- --no-file-parallelism`                  | PASS; 84 tests across 14 files, no skipped tests   |
+| Batch PostgreSQL suite                                               | PASS; 10 tests, including 5 new review regressions |
+| `git diff --check`                                                   | PASS                                               |
+| Schema, migration and dependency diff from supplied PR head          | EMPTY                                              |
+
+Integration database: disposable PostgreSQL 18.1 (`si_cuti_review99`), non-superuser role `si_cuti_review99_app`. Only the existing nine migrations were applied to this disposable database. File-level serialization preserves test isolation while concurrency checks inside tests remain active.
+
+No schema, migration, dependency, lifecycle-rule changes, balance-editing path, or deployment were introduced. The earlier build/smoke record pertains to the original implementation; this correction is verified by the review gates above.
+
+Exact files changed by this review correction:
+
+- `src/application/leave-balance/administration.ts`
+- `tests/unit/annual-balance-administration.test.ts`
+- `tests/unit/annual-balance-batch-import.test.ts`
+- `tests/integration/annual-balance-batch-import.test.ts`
+- `tests/support/annual-balance-batch.ts`
+- `docs/issue-98-verification.md`
