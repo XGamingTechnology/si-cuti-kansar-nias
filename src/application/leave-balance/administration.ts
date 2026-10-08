@@ -112,7 +112,7 @@ function requireText(value: string, label: string, max: number): string {
   return trimmed;
 }
 
-function requireYear(value: number): number {
+export function requireAnnualBalanceYear(value: number): number {
   if (!Number.isSafeInteger(value) || value < 1900 || value > 9999) {
     throw new AnnualBalanceAdministrationError(
       "VALIDATION",
@@ -132,6 +132,69 @@ function requireOpeningDays(value: number, label: string): number {
   return value;
 }
 
+/** Shared by single initialization and batch preview; never writes data. */
+export function validateOpeningBalanceValues(
+  input: Readonly<{
+    entitlementYear: number;
+    n1Days: number;
+    n2Days: number;
+    reason: string;
+  }>,
+) {
+  const year = requireAnnualBalanceYear(input.entitlementYear);
+  const n1Days = requireOpeningDays(input.n1Days, "Saldo N-1");
+  const n2Days = requireOpeningDays(input.n2Days, "Saldo N-2");
+  const reason = requireText(
+    input.reason,
+    "Dasar administrasi",
+    OPENING_BALANCE_REASON_MAX_LENGTH,
+  );
+  if (12 + n1Days + n2Days > 24)
+    throw new AnnualBalanceAdministrationError(
+      "VALIDATION",
+      "Total saldo awal reguler tidak boleh melebihi 24 hari.",
+    );
+  return { year, n1Days, n2Days, reason };
+}
+
+export function annualBalanceReadiness(
+  accounts: readonly AnnualBalanceAccountState[],
+): AnnualBalanceReadiness {
+  if (!accounts.length) return "UNINITIALIZED";
+  const buckets = new Set(accounts.map((account) => account.bucket));
+  if (
+    accounts.length !== 4 ||
+    !ANNUAL_BALANCE_BUCKET_PRIORITY.every((bucket) => buckets.has(bucket))
+  )
+    return "PARTIAL";
+  if (
+    accounts.some(
+      (account) =>
+        ![
+          account.grantedDays,
+          account.reservedDays,
+          account.committedDays,
+        ].every((value) => Number.isSafeInteger(value) && value >= 0) ||
+        account.reservedDays + account.committedDays > account.grantedDays ||
+        account.availableDays !==
+          account.grantedDays - account.reservedDays - account.committedDays,
+    )
+  )
+    return "PARTIAL";
+  const regular = accounts.filter(
+    (account) => account.bucket !== "JOINT_LEAVE_CLAIM",
+  );
+  if (
+    regular.some(
+      (account) => account.grantedDays > (account.bucket === "N" ? 12 : 6),
+    )
+  )
+    return "PARTIAL";
+  if (regular.reduce((sum, account) => sum + account.grantedDays, 0) > 24)
+    return "PARTIAL";
+  return "INITIALIZED";
+}
+
 function detail(
   employee: AnnualBalanceEmployee,
   year: number,
@@ -140,13 +203,7 @@ function detail(
 ): AnnualBalanceAdministrationDetail {
   const balances = emptyBalances();
   for (const account of accounts) balances[account.bucket] = account;
-  const readiness: AnnualBalanceReadiness =
-    accounts.length === 0
-      ? "UNINITIALIZED"
-      : accounts.length === 4 &&
-          ANNUAL_BALANCE_BUCKET_PRIORITY.every((bucket) => balances[bucket])
-        ? "INITIALIZED"
-        : "PARTIAL";
+  const readiness = annualBalanceReadiness(accounts);
   return {
     employeeId: employee.id,
     nip: employee.nip,
@@ -182,7 +239,7 @@ export class AnnualBalanceAdministrationService {
   async list(
     entitlementYear: number,
   ): Promise<readonly AnnualBalanceAdministrationDetail[]> {
-    const year = requireYear(entitlementYear);
+    const year = requireAnnualBalanceYear(entitlementYear);
     const employees = await this.repository.listActiveEmployees();
     return Promise.all(
       employees.map(async (employee) =>
@@ -200,7 +257,7 @@ export class AnnualBalanceAdministrationService {
     entitlementYear: number,
   ): Promise<AnnualBalanceAdministrationDetail> {
     const id = requireText(employeeId, "ID pegawai", 191);
-    const year = requireYear(entitlementYear);
+    const year = requireAnnualBalanceYear(entitlementYear);
     const employee = await this.repository.findEmployee(id);
     if (!employee)
       throw new AnnualBalanceAdministrationError(
@@ -219,21 +276,10 @@ export class AnnualBalanceAdministrationService {
     input: InitializeOpeningBalanceInput,
   ): Promise<AnnualBalanceAdministrationDetail> {
     const employeeId = requireText(input.employeeId, "ID pegawai", 191);
-    const year = requireYear(input.entitlementYear);
-    const n1Days = requireOpeningDays(input.n1Days, "Saldo N-1");
-    const n2Days = requireOpeningDays(input.n2Days, "Saldo N-2");
-    const reason = requireText(
-      input.reason,
-      "Dasar administrasi",
-      OPENING_BALANCE_REASON_MAX_LENGTH,
-    );
+    const { year, n1Days, n2Days, reason } =
+      validateOpeningBalanceValues(input);
     const key = requireText(input.idempotencyKey, "Idempotency key", 150);
     requireText(input.actorUserId, "Identitas Admin", 191);
-    if (12 + n1Days + n2Days > 24)
-      throw new AnnualBalanceAdministrationError(
-        "VALIDATION",
-        "Total saldo awal reguler tidak boleh melebihi 24 hari.",
-      );
     const grants: Readonly<Record<AnnualBalanceBucket, number>> = {
       JOINT_LEAVE_CLAIM: 0,
       N2: n2Days,
@@ -257,12 +303,13 @@ export class AnnualBalanceAdministrationService {
               "INACTIVE_EMPLOYEE",
               "Saldo awal hanya dapat diinisialisasi untuk pegawai aktif.",
             );
-          if (transaction.accounts.length === 4)
+          const readiness = annualBalanceReadiness(transaction.accounts);
+          if (readiness === "INITIALIZED")
             throw new AnnualBalanceAdministrationError(
               "ALREADY_INITIALIZED",
               "Saldo cuti tahun tersebut sudah diinisialisasi.",
             );
-          if (transaction.accounts.length !== 0)
+          if (readiness === "PARTIAL")
             throw new AnnualBalanceAdministrationError(
               "PARTIAL_BALANCE",
               "Data saldo tahun tersebut tidak lengkap. Hubungi pengelola sistem.",

@@ -17,6 +17,7 @@ function unzip(input: Uint8Array): Map<string, Buffer> {
   if (eocd < 0 || eocd + 22 > buffer.length) throw new Error();
   const entries = buffer.readUInt16LE(eocd + 10);
   let offset = buffer.readUInt32LE(eocd + 16);
+  let expandedBytes = 0;
   if (entries > 1000) throw new Error("Terlalu banyak entri XLSX.");
   for (let entry = 0; entry < entries; entry++) {
     if (
@@ -44,21 +45,25 @@ function unzip(input: Uint8Array): Map<string, Buffer> {
     if (compressedSize > 5_000_000 || start + compressedSize > buffer.length)
       throw new Error("Arsip XLSX tidak aman.");
     const compressed = buffer.subarray(start, start + compressedSize);
-    if (name.startsWith("xl/") && !name.includes(".."))
-      files.set(
-        name,
+    if (name.startsWith("xl/") && !name.includes("..")) {
+      const contents =
         method === 0
           ? compressed
           : method === 8
             ? inflateRawSync(compressed, { maxOutputLength: 10_000_000 })
-            : Buffer.alloc(0),
-      );
+            : Buffer.alloc(0);
+      expandedBytes += contents.length;
+      if (expandedBytes > 20_000_000)
+        throw new Error("Arsip XLSX terlalu besar setelah ekstraksi.");
+      files.set(name, contents);
+    }
     offset += 46 + nameLength + extraLength + commentLength;
   }
   return files;
 }
 
 export class XlsxWorkbookReader implements EmployeeWorkbookReader {
+  constructor(private readonly rejectFormulas = false) {}
   async read(input: Uint8Array): Promise<readonly (readonly unknown[])[]> {
     try {
       if (input.length < 4 || Buffer.from(input).readUInt32LE(0) !== 0x04034b50)
@@ -81,10 +86,13 @@ export class XlsxWorkbookReader implements EmployeeWorkbookReader {
       for (const row of sheet.matchAll(/<row\b([^>]*)>([\s\S]*?)<\/row>/g)) {
         const cells: unknown[] = [];
         for (const cell of row[2].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g)) {
+          if (this.rejectFormulas && /<f\b/.test(cell[2]))
+            throw new Error("Formula tidak diperbolehkan.");
           const reference = /\br="([A-Z]+)\d+"/.exec(cell[1])?.[1] ?? "A";
           let column = 0;
           for (const letter of reference)
             column = column * 26 + letter.charCodeAt(0) - 64;
+          if (column > 256) throw new Error("Terlalu banyak kolom.");
           const raw =
             /<v>([\s\S]*?)<\/v>/.exec(cell[2])?.[1] ??
             /<t\b[^>]*>([\s\S]*?)<\/t>/.exec(cell[2])?.[1] ??
@@ -96,6 +104,12 @@ export class XlsxWorkbookReader implements EmployeeWorkbookReader {
         const rowNumber = Number(
           /\br="(\d+)"/.exec(row[1])?.[1] ?? rows.length + 1,
         );
+        if (
+          !Number.isSafeInteger(rowNumber) ||
+          rowNumber < 1 ||
+          rowNumber > 10001
+        )
+          throw new Error("Terlalu banyak baris.");
         while (rows.length < rowNumber - 1) rows.push([]);
         rows[rowNumber - 1] = cells;
       }

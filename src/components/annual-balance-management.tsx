@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { AnnualBalanceAdministrationDetail } from "@/application/leave-balance/administration";
+import { AnnualBalanceImport } from "./annual-balance-import";
 import type { AnnualBalanceBucket } from "@/domain/leave-balance";
 
 const labels: Record<AnnualBalanceBucket, string> = {
@@ -15,10 +16,7 @@ const order: AnnualBalanceBucket[] = ["N", "N1", "N2", "JOINT_LEAVE_CLAIM"];
 
 type ReadinessFilter = "all" | "INITIALIZED" | "UNINITIALIZED" | "PARTIAL";
 
-function readinessLabel(
-  item: AnnualBalanceAdministrationDetail,
-  year: number,
-) {
+function readinessLabel(item: AnnualBalanceAdministrationDetail, year: number) {
   if (item.readiness === "INITIALIZED") return `Saldo ${year} siap`;
   if (item.readiness === "PARTIAL") return "Data saldo perlu diperiksa";
   return `Saldo ${year} belum diinisialisasi`;
@@ -55,6 +53,7 @@ export function AnnualBalanceManagement() {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
   const [readinessFilter, setReadinessFilter] =
@@ -107,9 +106,7 @@ export function AnnualBalanceManagement() {
     let active = true;
     async function initialLoad() {
       try {
-        const response = await fetch(
-          `/api/admin/annual-balances?year=${year}`,
-        );
+        const response = await fetch(`/api/admin/annual-balances?year=${year}`);
         const data = await response.json();
         if (!active) return;
         if (!response.ok)
@@ -206,6 +203,7 @@ export function AnnualBalanceManagement() {
         <label className="year-selector">
           <span>Tahun administrasi</span>
           <select
+            disabled={batchBusy}
             value={year}
             onChange={(event) => {
               setLoading(true);
@@ -223,6 +221,13 @@ export function AnnualBalanceManagement() {
         </label>
       </header>
 
+      <AnnualBalanceImport
+        key={year}
+        year={year}
+        onCommitted={load}
+        onBusyChange={setBatchBusy}
+      />
+
       {message && (
         <p className="feedback" role="status">
           {message}
@@ -231,7 +236,10 @@ export function AnnualBalanceManagement() {
 
       {!loading && items.length > 0 && (
         <>
-          <div className="balance-summary-grid" aria-label="Ringkasan saldo cuti">
+          <div
+            className="balance-summary-grid"
+            aria-label="Ringkasan saldo cuti"
+          >
             <article>
               <span>PEGAWAI AKTIF</span>
               <strong>{summary.total}</strong>
@@ -254,7 +262,10 @@ export function AnnualBalanceManagement() {
             </article>
           </div>
 
-          <div className="balance-toolbar" aria-label="Pencarian dan filter saldo">
+          <div
+            className="balance-toolbar"
+            aria-label="Pencarian dan filter saldo"
+          >
             <label className="employee-search">
               <span className="sr-only">Cari pegawai</span>
               <span className="search-icon" aria-hidden="true">
@@ -326,10 +337,7 @@ export function AnnualBalanceManagement() {
 
             <div className="balance-employee-list">
               {visibleItems.map((item) => (
-                <article
-                  key={item.employeeId}
-                  className="balance-employee-row"
-                >
+                <article key={item.employeeId} className="balance-employee-row">
                   <div className="balance-person">
                     <span className="balance-avatar" aria-hidden="true">
                       {item.fullName
@@ -453,8 +461,8 @@ export function AnnualBalanceManagement() {
                   <div className="uninitialized-callout">
                     <strong>Saldo {year} belum diinisialisasi</strong>
                     <span>
-                      Siapkan saldo awal menggunakan data administrasi yang telah
-                      diverifikasi.
+                      Siapkan saldo awal menggunakan data administrasi yang
+                      telah diverifikasi.
                     </span>
                   </div>
 

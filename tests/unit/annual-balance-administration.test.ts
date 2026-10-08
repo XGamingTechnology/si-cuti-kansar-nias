@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AnnualBalanceAdministrationService,
+  annualBalanceReadiness,
   type AnnualBalanceAdministrationRepository,
   type AnnualBalanceEmployee,
   type LockedOpeningBalanceTransaction,
@@ -9,6 +10,11 @@ import type {
   AnnualBalanceAccountState,
   AnnualBalanceOperationRecord,
 } from "@/application/leave-balance/ports";
+
+import {
+  entitlementCapCases,
+  withRegularEntitlement,
+} from "../support/annual-balance-batch";
 
 const employee: AnnualBalanceEmployee = {
   id: "employee-1",
@@ -212,5 +218,106 @@ describe("AnnualBalanceAdministrationService", () => {
     ).rejects.toMatchObject({ code: "PARTIAL_BALANCE" });
     expect(repository.accounts).toHaveLength(1);
     expect(repository.operations).toHaveLength(0);
+  });
+});
+
+describe("Annual balance entitlement integrity", () => {
+  async function initializedRepository() {
+    const repository = new FakeRepository();
+    await new AnnualBalanceAdministrationService(repository).initialize({
+      ...input,
+      n1Days: 6,
+      n2Days: 6,
+    });
+    return repository;
+  }
+
+  it.each(entitlementCapCases)(
+    "classifies $label as PARTIAL and rejects single reinitialization",
+    async ({ granted, committed, reserved }) => {
+      const repository = await initializedRepository();
+      repository.accounts = withRegularEntitlement(
+        repository.accounts,
+        granted,
+        committed,
+        reserved,
+      );
+      const regular = repository.accounts.filter(
+        (account) => account.bucket !== "JOINT_LEAVE_CLAIM",
+      );
+      expect(
+        regular.reduce((sum, account) => sum + account.availableDays, 0),
+      ).toBeLessThanOrEqual(24);
+      expect(
+        regular.every(
+          (account) =>
+            account.availableDays <= (account.bucket === "N" ? 12 : 6),
+        ),
+      ).toBe(true);
+      expect(annualBalanceReadiness(repository.accounts)).toBe("PARTIAL");
+      const before = JSON.stringify(repository);
+      const service = new AnnualBalanceAdministrationService(repository);
+      expect((await service.get(employee.id, 2026)).readiness).toBe("PARTIAL");
+      await expect(
+        service.initialize({ ...input, idempotencyKey: "must-not-repair" }),
+      ).rejects.toMatchObject({ code: "PARTIAL_BALANCE" });
+      expect(JSON.stringify(repository)).toBe(before);
+    },
+  );
+
+  it("keeps legitimate entitlement with committed and reserved usage INITIALIZED", async () => {
+    const repository = await initializedRepository();
+    repository.accounts = withRegularEntitlement(
+      repository.accounts,
+      { N: 12, N1: 6, N2: 6 },
+      { N: 2, N1: 1 },
+      { N: 1, N2: 1 },
+    );
+    expect(annualBalanceReadiness(repository.accounts)).toBe("INITIALIZED");
+  });
+
+  it("excludes JOINT_LEAVE_CLAIM granted entitlement from the regular cap", async () => {
+    const repository = await initializedRepository();
+    repository.accounts = repository.accounts.map((account) =>
+      account.bucket === "JOINT_LEAVE_CLAIM"
+        ? { ...account, grantedDays: 10, availableDays: 10 }
+        : account,
+    );
+    expect(
+      repository.accounts.reduce(
+        (sum, account) => sum + account.grantedDays,
+        0,
+      ),
+    ).toBe(34);
+    expect(annualBalanceReadiness(repository.accounts)).toBe("INITIALIZED");
+  });
+
+  it("preserves empty, missing and duplicate bucket-set detection", async () => {
+    const { accounts } = await initializedRepository();
+    expect(annualBalanceReadiness([])).toBe("UNINITIALIZED");
+    expect(annualBalanceReadiness(accounts.slice(1))).toBe("PARTIAL");
+    expect(
+      annualBalanceReadiness([
+        accounts[0],
+        accounts[0],
+        accounts[2],
+        accounts[3],
+      ]),
+    ).toBe("PARTIAL");
+  });
+
+  it.each([
+    { grantedDays: -1, availableDays: -1 },
+    { reservedDays: -1, availableDays: 7 },
+    { committedDays: -1, availableDays: 7 },
+    { reservedDays: 4, committedDays: 3, availableDays: -1 },
+    { reservedDays: 1, committedDays: 1, availableDays: 6 },
+    { grantedDays: 1.5, availableDays: 1.5 },
+  ])("preserves counter integrity for %j", async (counters) => {
+    const repository = await initializedRepository();
+    repository.accounts = repository.accounts.map((account) =>
+      account.bucket === "N1" ? { ...account, ...counters } : account,
+    );
+    expect(annualBalanceReadiness(repository.accounts)).toBe("PARTIAL");
   });
 });
