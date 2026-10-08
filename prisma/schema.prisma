@@ -229,6 +229,7 @@ model User {
   authenticationIdentities      AuthenticationIdentity[]
   leaveRequestTransitions       LeaveRequestTransition[]
   permissionRequestTransitions PermissionRequestTransition[]
+  uploadedLeaveDocuments        LeaveDocument[]                @relation("LeaveDocumentUploader")
 }
 
 model LeaveRequest {
@@ -278,22 +279,29 @@ model LeaveRequestRevision {
 }
 
 model LeaveDocument {
-  id             String            @id @default(uuid()) @db.Uuid
-  leaveRequestId String            @db.Uuid
-  revisionId     String            @db.Uuid
-  documentType   LeaveDocumentType
-  storageKey     String            @unique @db.VarChar(191)
-  checksumSha256 String            @db.Char(64)
-  sizeBytes      Int
-  mimeType       String            @default("application/pdf") @db.VarChar(100)
-  snapshot       Json
-  generatedAt    DateTime          @default(now()) @db.Timestamptz(3)
+  id               String            @id @default(uuid()) @db.Uuid
+  leaveRequestId   String            @db.Uuid
+  revisionId       String            @db.Uuid
+  documentType     LeaveDocumentType
+  version          Int               @default(1)
+  storageKey       String            @unique @db.VarChar(191)
+  checksumSha256   String            @db.Char(64)
+  sizeBytes        Int
+  mimeType         String            @default("application/pdf") @db.VarChar(100)
+  originalFileName String?           @db.VarChar(255)
+  uploadedByUserId String?           @db.Uuid
+  uploadedAt       DateTime?         @db.Timestamptz(3)
+  sourceIp         String?           @db.VarChar(64)
+  snapshot         Json
+  generatedAt      DateTime          @default(now()) @db.Timestamptz(3)
 
   leaveRequest LeaveRequest         @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   revision     LeaveRequestRevision @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+  uploader     User?                @relation("LeaveDocumentUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
-  @@unique([revisionId, documentType])
+  @@unique([revisionId, documentType, version])
   @@index([leaveRequestId, generatedAt])
+  @@index([uploadedByUserId, uploadedAt])
 }
 
 model LeaveRequestTransition {
