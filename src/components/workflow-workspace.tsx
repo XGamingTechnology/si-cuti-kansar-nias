@@ -58,6 +58,17 @@ type Detail = {
     reason: string | null;
     evidenceReference: string | null;
   }>;
+  documents: Array<{
+    id: string;
+    documentType: "SUBMISSION_PROOF" | "APPROVED_FORM";
+    version: number;
+    checksumSha256: string;
+    sizeBytes: number;
+    mimeType: string;
+    originalFileName: string | null;
+    uploadedAt: string | null;
+    generatedAt: string;
+  }>;
 };
 
 const labels: Record<WorkflowStatus, string> = {
@@ -154,6 +165,12 @@ function formatDateTime(value: string) {
   });
 }
 
+function formatBytes(value: number) {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function statusGuidance(
   status: WorkflowStatus,
   role: "ADMIN_KEPEGAWAIAN" | "PEGAWAI",
@@ -164,7 +181,7 @@ function statusGuidance(
     if (status === "RETURNED_FOR_CORRECTION")
       return "Pengajuan sedang diperbaiki oleh pegawai.";
     if (status === "APPROVED")
-      return "Pengajuan telah disetujui dan selesai diproses.";
+      return "Pengajuan telah disetujui. Arsip bertanda tangan dapat dilihat setelah Admin mengunggah PDF final.";
     if (status === "REJECTED") return "Pengajuan telah ditolak.";
     if (status === "CANCELLED")
       return "Pengajuan telah dibatalkan oleh pegawai.";
@@ -177,7 +194,8 @@ function statusGuidance(
     return "Pengajuan sudah dikirim dan sedang menunggu tinjauan Admin Kepegawaian.";
   if (status === "RETURNED_FOR_CORRECTION")
     return "Admin meminta perbaikan. Buka edit, perbaiki data, lalu ajukan kembali.";
-  if (status === "APPROVED") return "Pengajuan telah disetujui.";
+  if (status === "APPROVED")
+    return "Pengajuan telah disetujui. PDF bertanda tangan akan tersedia setelah diarsipkan Admin.";
   if (status === "REJECTED")
     return "Pengajuan telah ditolak. Lihat riwayat untuk alasan keputusan.";
   return "Pengajuan telah dibatalkan.";
@@ -249,13 +267,17 @@ export function WorkflowWorkspace({
     setSelected(item);
     setDetail(null);
     try {
-      const [revisionData, historyData] = await Promise.all([
+      const [revisionData, historyData, documentData] = await Promise.all([
         api(`/api/workflow/${kind}/${item.id}/revisions`),
         api(`/api/workflow/${kind}/${item.id}/history`),
+        kind === "leave"
+          ? api(`/api/workflow/leave/${item.id}/documents`)
+          : Promise.resolve({ documents: [] }),
       ]);
       setDetail({
         revisions: revisionData.revisions,
         history: historyData.history,
+        documents: documentData.documents,
       });
     } catch (error) {
       setMessage(
@@ -336,6 +358,32 @@ export function WorkflowWorkspace({
   function openReview(action: ReviewAction) {
     setReviewAction(action);
     setReviewValue("");
+  }
+
+  async function uploadSignedDocument(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected || kind !== "leave") return;
+    const form = event.currentTarget;
+    const body = new FormData(form);
+    setActing(true);
+    try {
+      const response = await fetch(
+        `/api/workflow/leave/${selected.id}/documents`,
+        { method: "POST", body },
+      );
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error ?? "Dokumen gagal diunggah.");
+      form.reset();
+      await refreshSelected(selected.id);
+      setMessage("PDF bertanda tangan berhasil diarsipkan.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Dokumen gagal diunggah.",
+      );
+    } finally {
+      setActing(false);
+    }
   }
 
   async function submitReview(event: FormEvent<HTMLFormElement>) {
@@ -836,26 +884,124 @@ export function WorkflowWorkspace({
 
               {kind === "leave" && selected.currentRevision.submittedAt && (
                 <section className="workflow-document-panel">
-                  <div>
-                    <p className="eyebrow">DOKUMEN</p>
-                    <h3>FORMULIR PENGAJUAN CUTI</h3>
-                    <p>Unduh formulir ini untuk proses tanda tangan manual.</p>
+                  <div className="workflow-document-generated">
+                    <div>
+                      <p className="eyebrow">DOKUMEN</p>
+                      <h3>FORMULIR PENGAJUAN CUTI</h3>
+                      <p>Unduh formulir ini untuk proses tanda tangan manual.</p>
+                    </div>
+                    <div className="workflow-document-actions">
+                      <a
+                        className="secondary-button"
+                        href={`/api/workflow/leave/${selected.id}/document`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Lihat Formulir
+                      </a>
+                      <a
+                        className="secondary-button"
+                        href={`/api/workflow/leave/${selected.id}/document?download=1`}
+                      >
+                        Unduh PDF
+                      </a>
+                    </div>
                   </div>
-                  <div className="workflow-document-actions">
-                    <a
-                      className="secondary-button"
-                      href={`/api/workflow/leave/${selected.id}/document`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Lihat Formulir
-                    </a>
-                    <a
-                      className="secondary-button"
-                      href={`/api/workflow/leave/${selected.id}/document?download=1`}
-                    >
-                      Unduh PDF
-                    </a>
+
+                  <div className="workflow-signed-archive">
+                    <div className="workflow-section-title">
+                      <p className="eyebrow">ARSIP RESMI</p>
+                      <h3>PDF Bertanda Tangan</h3>
+                    </div>
+
+                    {role === "ADMIN_KEPEGAWAIAN" && (
+                      <form
+                        className="workflow-document-upload"
+                        onSubmit={uploadSignedDocument}
+                      >
+                        <label>
+                          <span>Unggah PDF final yang telah ditandatangani/distempel</span>
+                          <input
+                            type="file"
+                            name="file"
+                            accept=".pdf,application/pdf"
+                            required
+                          />
+                        </label>
+                        <small>
+                          PDF saja, maksimal 10 MB. Unggahan baru dibuat sebagai
+                          versi baru dan tidak menimpa arsip sebelumnya.
+                        </small>
+                        <button
+                          className="primary-button"
+                          type="submit"
+                          disabled={acting}
+                        >
+                          Unggah PDF Bertanda Tangan
+                        </button>
+                      </form>
+                    )}
+
+                    {!detail && (
+                      <p className="workflow-loading">Memuat arsip dokumen…</p>
+                    )}
+
+                    {detail &&
+                      detail.documents.filter(
+                        (document) => document.documentType === "APPROVED_FORM",
+                      ).length === 0 && (
+                        <p className="workflow-empty-copy">
+                          Belum ada PDF bertanda tangan yang diarsipkan.
+                        </p>
+                      )}
+
+                    {detail && (
+                      <div className="workflow-signed-list">
+                        {detail.documents
+                          .filter(
+                            (document) =>
+                              document.documentType === "APPROVED_FORM",
+                          )
+                          .map((document) => (
+                            <article
+                              className="workflow-signed-item"
+                              key={document.id}
+                            >
+                              <div>
+                                <strong>
+                                  Versi {document.version}
+                                  {document.originalFileName
+                                    ? ` · ${document.originalFileName}`
+                                    : ""}
+                                </strong>
+                                <span>
+                                  {formatDateTime(
+                                    document.uploadedAt ??
+                                      document.generatedAt,
+                                  )}{" "}
+                                  · {formatBytes(document.sizeBytes)}
+                                </span>
+                              </div>
+                              <div className="workflow-document-actions">
+                                <a
+                                  className="secondary-button"
+                                  href={`/api/workflow/leave/${selected.id}/documents/${document.id}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Lihat
+                                </a>
+                                <a
+                                  className="secondary-button"
+                                  href={`/api/workflow/leave/${selected.id}/documents/${document.id}?download=1`}
+                                >
+                                  Unduh
+                                </a>
+                              </div>
+                            </article>
+                          ))}
+                      </div>
+                    )}
                   </div>
                 </section>
               )}
