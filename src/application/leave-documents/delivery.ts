@@ -4,7 +4,7 @@ import {
   type LeaveDocumentMetadata,
 } from "@/application/leave-documents/service";
 import { workflowErrorResponse } from "@/application/workflow/http";
-import { requireWorkflowAdmin, WorkflowError } from "@/application/workflow/types";
+import { requireOwner, WorkflowError } from "@/application/workflow/types";
 import {
   createLeaveDocumentRuntime,
   type LeaveDocumentRuntime,
@@ -87,13 +87,13 @@ export function createLeaveDocumentCollectionHandlers(
         request,
         runtime.authentication,
       );
-      requireWorkflowAdmin(actor);
       const id = (await context.params).id;
       const leave = await runtime.leave.get(actor, id);
-      if (!leave.currentRevision.submittedAt)
+      requireOwner(actor, leave.employeeId);
+      if (leave.status !== "SUBMITTED" || !leave.currentRevision.submittedAt)
         throw new WorkflowError(
           "ILLEGAL_TRANSITION",
-          "Dokumen final hanya dapat diarsipkan setelah pengajuan dikirim.",
+          "PDF bertanda tangan hanya dapat diunggah saat pengajuan sedang diajukan.",
         );
 
       let form: FormData;
