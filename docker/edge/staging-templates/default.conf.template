@@ -14,6 +14,9 @@ server {
   # API Route Handlers are served by Next.js. The ^~ prefix keeps future
   # regex/static-file locations from intercepting application API requests.
   location ^~ /api/ {
+    # The application accepts signed leave PDFs up to 10 MB. Allow multipart
+    # overhead at the staging edge while the application keeps the real limit.
+    client_max_body_size 12m;
     proxy_pass http://si-cuti-staging-app:3000;
     include /etc/nginx/proxy_params;
   }
