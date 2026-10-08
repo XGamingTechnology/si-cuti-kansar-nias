@@ -176,20 +176,33 @@ export class LeaveWorkflowService {
       now,
     );
   }
-  approve(
+  async approve(
     actor: WorkflowActor,
     requestId: string,
     evidenceReference: string,
     idempotencyKey: string,
     now = new Date(),
   ) {
+    requireWorkflowAdmin(actor);
+    const reference = requireNonEmpty(evidenceReference, "Referensi bukti");
+    const request = await this.get(actor, requestId);
+    if (
+      request.status === "SUBMITTED" &&
+      !(await this.repository.hasApprovedLeaveDocument(
+        request.currentRevision.id,
+      ))
+    )
+      throw new WorkflowError(
+        "ILLEGAL_TRANSITION",
+        "Pengajuan belum dapat disetujui karena PDF bertanda tangan belum diunggah oleh pegawai.",
+      );
     return this.transition(
       actor,
       requestId,
       "APPROVED",
       idempotencyKey,
       null,
-      requireNonEmpty(evidenceReference, "Referensi bukti"),
+      reference,
       now,
     );
   }
