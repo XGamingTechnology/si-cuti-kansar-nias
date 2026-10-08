@@ -373,15 +373,57 @@ export function WorkflowWorkspace({
         `/api/workflow/leave/${selected.id}/documents`,
         { method: "POST", body },
       );
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.error ?? "Dokumen gagal diunggah.");
+      const data = await response
+        .json()
+        .catch(() => null as { error?: string } | null);
+      if (!response.ok) {
+        if (response.status === 413)
+          throw new Error(
+            "PDF terlalu besar untuk dikirim. Ukuran maksimal 10 MB.",
+          );
+        throw new Error(
+          data?.error ??
+            `Dokumen gagal diunggah (HTTP ${response.status}).`,
+        );
+      }
       form.reset();
       await refreshSelected(selected.id);
       setMessage("PDF bertanda tangan berhasil diarsipkan.");
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Dokumen gagal diunggah.",
+      );
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function downloadPdf(path: string, filename: string) {
+    setActing(true);
+    try {
+      const response = await fetch(path);
+      if (!response.ok) {
+        const data = await response
+          .json()
+          .catch(() => null as { error?: string } | null);
+        throw new Error(data?.error ?? "PDF gagal diunduh.");
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      setMessage(
+        "Unduhan PDF dimulai. Di iPad, periksa menu Unduhan atau aplikasi Files.",
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "PDF gagal diunduh.",
       );
     } finally {
       setActing(false);
@@ -917,12 +959,19 @@ export function WorkflowWorkspace({
                       >
                         Lihat Formulir
                       </a>
-                      <a
+                      <button
                         className="secondary-button"
-                        href={`/api/workflow/leave/${selected.id}/document?download=1`}
+                        type="button"
+                        disabled={acting}
+                        onClick={() =>
+                          void downloadPdf(
+                            `/api/workflow/leave/${selected.id}/document?download=1`,
+                            `formulir-pengajuan-cuti-${selected.employee.nip}.pdf`,
+                          )
+                        }
                       >
                         Unduh PDF
-                      </a>
+                      </button>
                     </div>
                   </div>
 
@@ -1012,12 +1061,20 @@ export function WorkflowWorkspace({
                                 >
                                   Lihat
                                 </a>
-                                <a
+                                <button
                                   className="secondary-button"
-                                  href={`/api/workflow/leave/${selected.id}/documents/${document.id}?download=1`}
+                                  type="button"
+                                  disabled={acting}
+                                  onClick={() =>
+                                    void downloadPdf(
+                                      `/api/workflow/leave/${selected.id}/documents/${document.id}?download=1`,
+                                      document.originalFileName ??
+                                        `formulir-cuti-bertanda-tangan-v${document.version}.pdf`,
+                                    )
+                                  }
                                 >
                                   Unduh
-                                </a>
+                                </button>
                               </div>
                             </article>
                           ))}
