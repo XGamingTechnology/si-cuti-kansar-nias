@@ -138,28 +138,8 @@ describe("signed leave document HTTP delivery", () => {
     expect(JSON.stringify(await response.json())).not.toContain("storageKey");
   });
 
-  it("forbids Pegawai from uploading a signed final PDF", async () => {
+  it("lets the Pegawai owner upload a signed PDF for a submitted leave", async () => {
     const mock = runtime(pegawai);
-    const form = new FormData();
-    form.set(
-      "file",
-      new File(["%PDF-1.7 test"], "scan.pdf", { type: "application/pdf" }),
-    );
-    const request = new Request("http://localhost/api", {
-      method: "POST",
-      headers: { cookie: "si_cuti_session=opaque" },
-      body: form,
-    });
-
-    const response = await createLeaveDocumentCollectionHandlers(
-      () => mock.value,
-    ).POST(request, context);
-    expect(response.status).toBe(403);
-    expect(mock.documents.uploadApprovedForm).not.toHaveBeenCalled();
-  });
-
-  it("lets Admin archive a submitted signed PDF", async () => {
-    const mock = runtime(admin);
     const form = new FormData();
     form.set(
       "file",
@@ -182,11 +162,31 @@ describe("signed leave document HTTP delivery", () => {
       expect.objectContaining({
         leaveRequestId: "request-1",
         revisionId: "revision-1",
-        uploadedByUserId: "admin-1",
+        uploadedByUserId: "user-1",
         originalFileName: "scan.pdf",
         mimeType: "application/pdf",
         sourceIp: "10.0.0.1",
       }),
     );
+  });
+
+  it("forbids Admin from uploading the employee signed PDF", async () => {
+    const mock = runtime(admin);
+    const form = new FormData();
+    form.set(
+      "file",
+      new File(["%PDF-1.7 test"], "scan.pdf", { type: "application/pdf" }),
+    );
+    const request = new Request("http://localhost/api", {
+      method: "POST",
+      headers: { cookie: "si_cuti_session=opaque" },
+      body: form,
+    });
+
+    const response = await createLeaveDocumentCollectionHandlers(
+      () => mock.value,
+    ).POST(request, context);
+    expect(response.status).toBe(403);
+    expect(mock.documents.uploadApprovedForm).not.toHaveBeenCalled();
   });
 });
