@@ -534,6 +534,13 @@ export class PrismaWorkflowRepository implements WorkflowRepository {
       })
     ).map(transition);
   }
+  hasApprovedLeaveDocument(revisionId: string) {
+    return this.db.leaveDocument
+      .count({
+        where: { revisionId, documentType: "APPROVED_FORM" },
+      })
+      .then(Boolean);
+  }
   permissionTypeIsActive(id: string) {
     return this.db.permissionType
       .count({ where: { id, isActive: true } })
