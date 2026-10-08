@@ -175,6 +175,18 @@ describe("edge routing", () => {
     },
   );
 
+  it("allows multipart PDF uploads above nginx's 1 MB default on staging", () => {
+    const configuration = readFileSync(
+      "docker/edge/staging-templates/default.conf.template",
+      "utf8",
+    );
+    const apiLocation = configuration.match(
+      /location \^~ \/api\/\s*\{(?<body>[\s\S]*?)\}/,
+    );
+
+    expect(apiLocation?.groups?.body).toContain("client_max_body_size 12m;");
+  });
+
   it.each([
     "docker/edge/staging-templates/default.conf.template",
     "docker/edge/templates/default.conf.template",

@@ -90,7 +90,17 @@ export class LeaveDocumentService {
         "VALIDATION",
         "Ukuran file PDF maksimal 10 MB.",
       );
-    if (input.mimeType !== "application/pdf" || !isPdf(input.content))
+    const declaredMimeType = input.mimeType.trim().toLowerCase();
+    const acceptedPdfMimeTypes = new Set([
+      "",
+      "application/pdf",
+      "application/octet-stream",
+      "binary/octet-stream",
+    ]);
+    if (
+      !acceptedPdfMimeTypes.has(declaredMimeType) ||
+      !isPdf(input.content)
+    )
       throw new LeaveDocumentError(
         "VALIDATION",
         "Dokumen bertanda tangan harus berupa PDF yang valid.",

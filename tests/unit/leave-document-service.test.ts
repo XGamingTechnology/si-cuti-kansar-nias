@@ -98,6 +98,28 @@ describe("LeaveDocumentService", () => {
     expect(storage.put).not.toHaveBeenCalled();
   });
 
+  it.each(["", "application/octet-stream", "binary/octet-stream"])(
+    "accepts a valid PDF when the browser reports generic MIME %s",
+    async (mimeType) => {
+      const { service } = setup();
+      await expect(
+        service.uploadApprovedForm({
+          leaveRequestId: "request-1",
+          revisionId: "revision-1",
+          uploadedByUserId: "user-1",
+          originalFileName: "scan.pdf",
+          mimeType,
+          sourceIp: null,
+          content: pdf(),
+          snapshot: {},
+        }),
+      ).resolves.toMatchObject({
+        documentType: "APPROVED_FORM",
+        mimeType: "application/pdf",
+      });
+    },
+  );
+
   it("rejects files above the technical size limit", async () => {
     const { service, storage } = setup();
     const content = new Uint8Array(SIGNED_LEAVE_DOCUMENT_MAX_BYTES + 1);
