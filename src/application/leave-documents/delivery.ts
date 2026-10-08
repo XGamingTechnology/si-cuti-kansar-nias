@@ -151,11 +151,12 @@ export function createLeaveDocumentContentHandler(
       await runtime.leave.get(actor, id);
       const { document, content } =
         await runtime.documents.readForLeaveRequest(id, documentId);
-      const disposition = new URL(request.url).searchParams.get("download")
-        ? "attachment"
-        : "inline";
+      const disposition =
+        new URL(request.url).searchParams.get("download") === "1"
+          ? "attachment"
+          : "inline";
       const filename = fileNameForHeader(document);
-      return new Response(new Blob([content], { type: document.mimeType }), {
+      return new Response(content, {
         status: 200,
         headers: {
           "content-type": document.mimeType,
