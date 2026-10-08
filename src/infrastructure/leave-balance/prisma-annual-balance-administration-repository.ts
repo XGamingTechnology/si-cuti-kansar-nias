@@ -43,6 +43,13 @@ export class PrismaAnnualBalanceAdministrationRepository implements AnnualBalanc
     ).map(employeeShape);
   }
 
+  async findEmployeesByNips(nips: readonly string[]) {
+    return this.database.employee.findMany({
+      where: { nip: { in: [...nips] } },
+      select: { id: true, nip: true, fullName: true, isActive: true },
+    });
+  }
+
   async findEmployee(employeeId: string) {
     const employee = await this.database.employee.findUnique({
       where: { id: employeeId },

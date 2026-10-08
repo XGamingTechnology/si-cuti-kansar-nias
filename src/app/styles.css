@@ -2371,7 +2371,6 @@ select:focus-visible {
   }
 }
 
-
 /* ==========================================================================
    SI CUTI UI FOUNDATION V1
    Professional, responsive application shell. Presentation only: no business
@@ -2506,8 +2505,7 @@ button:active:not(:disabled) {
 }
 
 .authenticated-shell {
-  background:
-    linear-gradient(180deg, #f8fafc 0, var(--background) 220px);
+  background: linear-gradient(180deg, #f8fafc 0, var(--background) 220px);
   min-height: 100dvh;
 }
 
@@ -2531,8 +2529,7 @@ button:active:not(:disabled) {
 }
 
 .authenticated-sidebar {
-  background:
-    linear-gradient(180deg, #062b4a 0%, var(--brand-950) 100%);
+  background: linear-gradient(180deg, #062b4a 0%, var(--brand-950) 100%);
   border-right: 1px solid rgb(255 255 255 / 0.06);
   box-shadow: 8px 0 24px rgb(2 17 31 / 0.05);
   height: 100dvh;
@@ -2936,7 +2933,6 @@ button:active:not(:disabled) {
   }
 }
 
-
 /* ==========================================================================
    UI-03 Employee Management polish
    ========================================================================== */
@@ -3052,8 +3048,7 @@ button:active:not(:disabled) {
 }
 
 .management-panel {
-  background:
-    linear-gradient(180deg, #ffffff 0%, #ffffff 150px, #fbfcfd 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 150px, #fbfcfd 100%);
   box-shadow: var(--shadow-drawer);
 }
 
@@ -3220,7 +3215,6 @@ button:active:not(:disabled) {
     width: 100%;
   }
 }
-
 
 /* ==========================================================================
    UI-04 Annual Balance Management polish
@@ -3413,8 +3407,7 @@ button:active:not(:disabled) {
 }
 
 .balance-detail-panel {
-  background:
-    linear-gradient(180deg, #fff 0%, #fff 115px, #f8fafc 100%);
+  background: linear-gradient(180deg, #fff 0%, #fff 115px, #f8fafc 100%);
   display: flex;
   flex-direction: column;
   height: 100dvh;
@@ -3456,8 +3449,7 @@ button:active:not(:disabled) {
 }
 
 .balance-detail-summary {
-  background:
-    linear-gradient(135deg, #0b3d68 0%, #176fc1 100%);
+  background: linear-gradient(135deg, #0b3d68 0%, #176fc1 100%);
   border-radius: var(--radius-md);
   color: white;
   display: grid;
@@ -3787,7 +3779,6 @@ button:active:not(:disabled) {
     width: 100%;
   }
 }
-
 
 /* ==========================================================================
    UI-05 Workflow polish
@@ -4445,7 +4436,6 @@ button:active:not(:disabled) {
   }
 }
 
-
 /* Workflow ownership and correction flow */
 .request-card-employee {
   border-bottom: 1px solid var(--border);
@@ -4562,7 +4552,6 @@ button:active:not(:disabled) {
   }
 }
 
-
 /* Leave document actions */
 .workflow-document-panel {
   align-items: center;
@@ -4616,7 +4605,6 @@ button:active:not(:disabled) {
     width: 100%;
   }
 }
-
 
 /* Signed leave-document archive */
 .workflow-document-panel {
@@ -4725,5 +4713,59 @@ button:active:not(:disabled) {
   .workflow-document-upload .primary-button {
     justify-self: stretch;
     width: 100%;
+  }
+}
+
+.balance-import {
+  margin-block: 1.25rem;
+}
+.balance-import-actions,
+.balance-import-content form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+.balance-import-content {
+  margin-top: 1rem;
+  padding: 1.5rem;
+}
+.balance-import-content p {
+  margin-block: 1rem;
+}
+.balance-import-content form label {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.balance-import-content input[type="file"] {
+  max-width: 100%;
+}
+.balance-import-table {
+  overflow-x: auto;
+  margin-block: 1rem;
+}
+.balance-import-table table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.balance-import-table th,
+.balance-import-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  min-width: 5rem;
+}
+.balance-import-confirm {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+}
+.balance-import-confirm input {
+  margin-right: 0.5rem;
+}
+@media (max-width: 640px) {
+  .balance-import-content {
+    padding: 1rem;
   }
 }

@@ -81,11 +81,31 @@ run("M4 workflow services on PostgreSQL", () => {
     });
   }
 
+  async function signedDocument(owner: Principal, requestId: string) {
+    const request = await leave.get(owner, requestId);
+    await database.leaveDocument.create({
+      data: {
+        leaveRequestId: requestId,
+        revisionId: request.currentRevision.id,
+        documentType: "APPROVED_FORM",
+        storageKey: randomUUID().replaceAll("-", ""),
+        checksumSha256: "a".repeat(64),
+        sizeBytes: 100,
+        uploadedByUserId: owner.userId,
+        uploadedAt: new Date(),
+        snapshot: { fixture: "synthetic signed-document metadata" },
+      },
+    });
+  }
+
   const leaveContent = {
     leaveType: "SICK" as const,
     startDate: "2099-01-12",
     endDate: "2099-01-13",
     reason: "Keperluan integrasi workflow",
+    formPlace: "Kota Uji",
+    leaveAddress: "Alamat sintetis pengujian",
+    leavePhone: "0000000000",
   };
   const annualContent = { ...leaveContent, leaveType: "ANNUAL" as const };
   const permissionContent = (permissionTypeId: string) => ({
@@ -104,6 +124,9 @@ run("M4 workflow services on PostgreSQL", () => {
     });
     await database.permissionRequestTransition.deleteMany({
       where: { permissionRequest: { employeeId: { in: employees } } },
+    });
+    await database.leaveDocument.deleteMany({
+      where: { leaveRequest: { employeeId: { in: employees } } },
     });
     await database.leaveRequestRevision.deleteMany({
       where: { leaveRequest: { employeeId: { in: employees } } },
@@ -230,6 +253,7 @@ run("M4 workflow services on PostgreSQL", () => {
         );
         histories.push([x.fromStatus, x.toStatus]);
       } else if (target === "APPROVED") {
+        await signedDocument(owner, request.id);
         const x = await leave.approve(
           admin,
           request.id,
@@ -386,6 +410,7 @@ run("M4 workflow services on PostgreSQL", () => {
       endDate: "2099-01-14",
     });
     await leave.submit(owner, request.id, key("resubmit"));
+    await signedDocument(owner, request.id);
     await leave.approve(admin, request.id, "BUKTI", key("approve"));
     const ops = await database.annualBalanceOperation.findMany({
       where: { employeeId: owner.employeeId },
