@@ -36,6 +36,29 @@ run("leave document persistence foundation", () => {
     return { employee, request, revision };
   }
 
+  function documentInput(
+    requestId: string,
+    revisionId: string,
+    version = 1,
+  ) {
+    return {
+      leaveRequestId: requestId,
+      revisionId,
+      documentType: "APPROVED_FORM" as const,
+      version,
+      storageKey: randomUUID().replaceAll("-", ""),
+      checksumSha256: "a".repeat(64),
+      sizeBytes: 12_345,
+      mimeType: "application/pdf",
+      originalFileName: `cuti-v${version}.pdf`,
+      uploadedByUserId: null,
+      uploadedAt: new Date("2099-04-05T06:07:08.123Z"),
+      sourceIp: "127.0.0.1",
+      snapshot: { employee: { fullName: "Pegawai Uji Dokumen" }, revision: 1 },
+      generatedAt: new Date("2099-04-05T06:07:08.123Z"),
+    };
+  }
+
   afterEach(async () => {
     await database.leaveDocument.deleteMany({
       where: { leaveRequest: { employeeId: { in: employeeIds } } },
@@ -84,60 +107,45 @@ run("leave document persistence foundation", () => {
     });
   });
 
-  it("creates and queries complete document metadata and its snapshot", async () => {
+  it("persists versioned signed-document metadata and returns newest first", async () => {
     const { request, revision } = await createLeave();
-    const generatedAt = new Date("2099-04-05T06:07:08.123Z");
-    const input = {
-      leaveRequestId: request.id,
-      revisionId: revision.id,
-      documentType: "SUBMISSION_PROOF" as const,
-      storageKey: `private/${randomUUID()}.pdf`,
-      checksumSha256: "a".repeat(64),
-      sizeBytes: 12_345,
-      mimeType: "application/pdf",
-      snapshot: { employee: { fullName: "Pegawai Uji Dokumen" }, revision: 1 },
-      generatedAt,
-    };
+    const first = await repository.create(
+      documentInput(request.id, revision.id, 1),
+    );
+    const second = await repository.create({
+      ...documentInput(request.id, revision.id, 2),
+      checksumSha256: "b".repeat(64),
+    });
 
-    const created = await repository.create(input);
-
-    expect(created).toMatchObject(input);
     await expect(
-      repository.findByRevisionAndType(revision.id, "SUBMISSION_PROOF"),
-    ).resolves.toEqual(created);
-    await expect(repository.findById(created.id)).resolves.toEqual(created);
+      repository.findByRevisionAndType(revision.id, "APPROVED_FORM"),
+    ).resolves.toEqual(second);
+    await expect(repository.findById(first.id)).resolves.toEqual(first);
     await expect(repository.listForLeaveRequest(request.id)).resolves.toEqual([
-      created,
+      second,
+      first,
     ]);
+    await expect(
+      repository.nextVersion(revision.id, "APPROVED_FORM"),
+    ).resolves.toBe(3);
   });
 
-  it("enforces revision/type and storage-key uniqueness", async () => {
+  it("enforces version and storage-key uniqueness while allowing later versions", async () => {
     const { request, revision } = await createLeave();
-    const storageKey = `private/${randomUUID()}.pdf`;
-    const base = {
-      leaveRequestId: request.id,
-      revisionId: revision.id,
-      documentType: "APPROVED_FORM" as const,
-      storageKey,
-      checksumSha256: "b".repeat(64),
-      sizeBytes: 42,
-      mimeType: "application/pdf",
-      snapshot: { revision: 1 },
-      generatedAt: new Date(),
-    };
+    const base = documentInput(request.id, revision.id, 1);
     await repository.create(base);
 
     await expect(
-      repository.create({ ...base, storageKey: `${storageKey}-other` }),
+      repository.create({ ...base, storageKey: randomUUID().replaceAll("-", "") }),
     ).rejects.toThrow();
-    const second = await createLeave();
+
     await expect(
       repository.create({
         ...base,
-        leaveRequestId: second.request.id,
-        revisionId: second.revision.id,
+        version: 2,
+        storageKey: randomUUID().replaceAll("-", ""),
       }),
-    ).rejects.toThrow();
+    ).resolves.toMatchObject({ version: 2 });
   });
 
   it("rejects a document whose revision belongs to another request", async () => {
@@ -145,33 +153,15 @@ run("leave document persistence foundation", () => {
     const second = await createLeave();
 
     await expect(
-      repository.create({
-        leaveRequestId: first.request.id,
-        revisionId: second.revision.id,
-        documentType: "SUBMISSION_PROOF",
-        storageKey: `private/${randomUUID()}.pdf`,
-        checksumSha256: "c".repeat(64),
-        sizeBytes: 84,
-        mimeType: "application/pdf",
-        snapshot: { revision: 1 },
-        generatedAt: new Date(),
-      }),
+      repository.create(
+        documentInput(first.request.id, second.revision.id, 1),
+      ),
     ).rejects.toThrow();
   });
 
   it("restricts deletion of requests and revisions referenced by documents", async () => {
     const { request, revision } = await createLeave();
-    await repository.create({
-      leaveRequestId: request.id,
-      revisionId: revision.id,
-      documentType: "SUBMISSION_PROOF",
-      storageKey: `private/${randomUUID()}.pdf`,
-      checksumSha256: "d".repeat(64),
-      sizeBytes: 128,
-      mimeType: "application/pdf",
-      snapshot: { revision: 1 },
-      generatedAt: new Date(),
-    });
+    await repository.create(documentInput(request.id, revision.id, 1));
 
     await expect(
       database.leaveRequest.delete({ where: { id: request.id } }),
