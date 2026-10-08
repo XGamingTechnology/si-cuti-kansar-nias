@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  createLeaveDocumentCollectionHandlers,
-  type LeaveDocumentMetadata,
-} from "@/application/leave-documents/delivery";
+import { createLeaveDocumentCollectionHandlers } from "@/application/leave-documents/delivery";
+import type { LeaveDocumentMetadata } from "@/application/leave-documents/service";
 import { WorkflowError } from "@/application/workflow/types";
 import type { Principal } from "@/modules/auth/service";
 import type { LeaveDocumentRuntime } from "@/infrastructure/leave-documents/runtime";
