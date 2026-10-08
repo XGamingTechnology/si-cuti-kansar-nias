@@ -205,6 +205,70 @@ describe("workflow application policy", () => {
     );
   });
 
+  it("blocks leave approval until the current revision has a signed PDF", async () => {
+    const submitted = {
+      ...leave,
+      status: "SUBMITTED" as const,
+      currentRevision: {
+        ...leave.currentRevision,
+        submittedAt: new Date("2026-10-08T03:00:00.000Z"),
+      },
+    };
+    const service = new LeaveWorkflowService(
+      repository({
+        getLeave: vi.fn(async () => submitted),
+        hasApprovedLeaveDocument: vi.fn(async () => false),
+      }),
+    );
+
+    await expect(
+      service.approve(admin, submitted.id, "ARSIP-FISIK-01", "approve-no-pdf"),
+    ).rejects.toMatchObject({
+      code: "ILLEGAL_TRANSITION",
+      message:
+        "Pengajuan belum dapat disetujui karena PDF bertanda tangan belum diunggah oleh pegawai.",
+    });
+  });
+
+  it("allows Admin to approve after signed PDF evidence exists", async () => {
+    const submitted = {
+      ...leave,
+      status: "SUBMITTED" as const,
+      currentRevision: {
+        ...leave.currentRevision,
+        submittedAt: new Date("2026-10-08T03:00:00.000Z"),
+      },
+    };
+    const appendLeaveTransition = vi.fn(async (input: TransitionWrite) => ({
+      id: "transition-approved",
+      ...input,
+    }));
+    const transaction = {
+      lockLeaveRequest: vi.fn(async () => submitted),
+      findLeaveTransitionByKey: vi.fn(async () => null),
+      setLeaveStatus: vi.fn(async () => undefined),
+      appendLeaveTransition,
+      annualBalanceRepository: {},
+    } as unknown as WorkflowTransaction;
+    const service = new LeaveWorkflowService(
+      repository({
+        getLeave: vi.fn(async () => submitted),
+        hasApprovedLeaveDocument: vi.fn(async () => true),
+        transaction: (work) => work(transaction),
+      }),
+    );
+
+    await expect(
+      service.approve(
+        admin,
+        submitted.id,
+        "ARSIP-FISIK-01",
+        "approve-with-pdf",
+      ),
+    ).resolves.toMatchObject({ toStatus: "APPROVED" });
+    expect(appendLeaveTransition).toHaveBeenCalledOnce();
+  });
+
   it("requires an evidence reference for approval", () => {
     const service = new PermissionWorkflowService(repository());
     expect(() =>
