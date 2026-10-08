@@ -43,8 +43,21 @@ function safeOriginalName(value: string) {
 export function publicLeaveDocument(
   document: LeaveDocumentRecord,
 ): LeaveDocumentMetadata {
-  const { storageKey: _storageKey, snapshot: _snapshot, ...metadata } = document;
-  return metadata;
+  return {
+    id: document.id,
+    leaveRequestId: document.leaveRequestId,
+    revisionId: document.revisionId,
+    documentType: document.documentType,
+    version: document.version,
+    checksumSha256: document.checksumSha256,
+    sizeBytes: document.sizeBytes,
+    mimeType: document.mimeType,
+    originalFileName: document.originalFileName,
+    uploadedByUserId: document.uploadedByUserId,
+    uploadedAt: document.uploadedAt,
+    sourceIp: document.sourceIp,
+    generatedAt: document.generatedAt,
+  };
 }
 
 export class LeaveDocumentService {
