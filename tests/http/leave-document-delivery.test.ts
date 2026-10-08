@@ -52,7 +52,9 @@ function runtime(principal: Principal | null) {
     get: vi.fn(async () => leaveRecord),
   };
   const documents = {
-    listForLeaveRequest: vi.fn(async () => []),
+    listForLeaveRequest: vi.fn(
+      async (): Promise<LeaveDocumentMetadata[]> => [],
+    ),
     uploadApprovedForm: vi.fn(async () => ({
       id: "doc-1",
       leaveRequestId: "request-1",
