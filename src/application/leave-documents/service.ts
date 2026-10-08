@@ -122,7 +122,7 @@ export class LeaveDocumentService {
           generatedAt: uploadedAt,
         }),
       );
-    } catch (error) {
+    } catch {
       await this.storage.delete(stored.key).catch(() => undefined);
       throw new LeaveDocumentError(
         "CONFLICT",
