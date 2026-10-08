@@ -143,5 +143,6 @@ export interface WorkflowRepository {
   listPermissionRevisions(id: string): Promise<readonly PermissionRevision[]>;
   listLeaveTransitions(id: string): Promise<readonly TransitionRecord[]>;
   listPermissionTransitions(id: string): Promise<readonly TransitionRecord[]>;
+  hasApprovedLeaveDocument(revisionId: string): Promise<boolean>;
   permissionTypeIsActive(id: string): Promise<boolean>;
 }
