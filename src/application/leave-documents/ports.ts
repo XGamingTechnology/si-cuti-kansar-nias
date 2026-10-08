@@ -20,10 +20,15 @@ export type LeaveDocumentRecord = Readonly<{
   leaveRequestId: string;
   revisionId: string;
   documentType: LeaveDocumentType;
+  version: number;
   storageKey: string;
   checksumSha256: string;
   sizeBytes: number;
   mimeType: string;
+  originalFileName: string | null;
+  uploadedByUserId: string | null;
+  uploadedAt: Date | null;
+  sourceIp: string | null;
   snapshot: DocumentSnapshot;
   generatedAt: Date;
 }>;
@@ -40,4 +45,8 @@ export interface LeaveDocumentRepository {
   listForLeaveRequest(
     leaveRequestId: string,
   ): Promise<readonly LeaveDocumentRecord[]>;
+  nextVersion(
+    revisionId: string,
+    documentType: LeaveDocumentType,
+  ): Promise<number>;
 }
