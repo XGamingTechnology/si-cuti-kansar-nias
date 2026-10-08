@@ -156,7 +156,8 @@ export function createLeaveDocumentContentHandler(
           ? "attachment"
           : "inline";
       const filename = fileNameForHeader(document);
-      return new Response(content, {
+      const responseBody = Uint8Array.from(content).buffer;
+      return new Response(responseBody, {
         status: 200,
         headers: {
           "content-type": document.mimeType,
