@@ -26,6 +26,7 @@ type RequestRecord = {
   status: WorkflowStatus;
   currentRevisionNumber: number;
   currentRevision: {
+    id: string;
     leaveType?: LeaveType;
     permissionTypeId?: string;
     startDate: string;
@@ -60,6 +61,7 @@ type Detail = {
   }>;
   documents: Array<{
     id: string;
+    revisionId: string;
     documentType: "SUBMISSION_PROOF" | "APPROVED_FORM";
     version: number;
     checksumSha256: string;
@@ -177,11 +179,11 @@ function statusGuidance(
 ) {
   if (role === "ADMIN_KEPEGAWAIAN") {
     if (status === "SUBMITTED")
-      return "Pengajuan menunggu keputusan administrasi.";
+      return "Pengajuan menunggu PDF bertanda tangan dari pegawai dan verifikasi Admin Kepegawaian.";
     if (status === "RETURNED_FOR_CORRECTION")
       return "Pengajuan sedang diperbaiki oleh pegawai.";
     if (status === "APPROVED")
-      return "Pengajuan telah disetujui. Arsip bertanda tangan dapat dilihat setelah Admin mengunggah PDF final.";
+      return "Pengajuan telah disetujui setelah dokumen bertanda tangan diverifikasi.";
     if (status === "REJECTED") return "Pengajuan telah ditolak.";
     if (status === "CANCELLED")
       return "Pengajuan telah dibatalkan oleh pegawai.";
@@ -191,11 +193,11 @@ function statusGuidance(
   if (status === "DRAFT")
     return "Draf belum dikirim. Periksa kembali sebelum diajukan.";
   if (status === "SUBMITTED")
-    return "Pengajuan sudah dikirim dan sedang menunggu tinjauan Admin Kepegawaian.";
+    return "Unduh formulir, selesaikan tanda tangan manual, lalu unggah kembali PDF bertanda tangan untuk diperiksa Admin Kepegawaian.";
   if (status === "RETURNED_FOR_CORRECTION")
     return "Admin meminta perbaikan. Buka edit, perbaiki data, lalu ajukan kembali.";
   if (status === "APPROVED")
-    return "Pengajuan telah disetujui. PDF bertanda tangan akan tersedia setelah diarsipkan Admin.";
+    return "Pengajuan telah disetujui. PDF bertanda tangan tetap tersedia sebagai arsip.";
   if (status === "REJECTED")
     return "Pengajuan telah ditolak. Lihat riwayat untuk alasan keputusan.";
   return "Pengajuan telah dibatalkan.";
@@ -873,7 +875,23 @@ export function WorkflowWorkspace({
                       <button
                         className="primary-button"
                         type="button"
-                        disabled={acting}
+                        disabled={
+                          acting ||
+                          !detail?.documents.some(
+                            (document) =>
+                              document.documentType === "APPROVED_FORM" &&
+                              document.revisionId === selected.currentRevision.id,
+                          )
+                        }
+                        title={
+                          detail?.documents.some(
+                            (document) =>
+                              document.documentType === "APPROVED_FORM" &&
+                              document.revisionId === selected.currentRevision.id,
+                          )
+                            ? undefined
+                            : "PDF bertanda tangan dari pegawai belum tersedia."
+                        }
                         onClick={() => openReview("APPROVE")}
                       >
                         Setujui Pengajuan
@@ -914,13 +932,14 @@ export function WorkflowWorkspace({
                       <h3>PDF Bertanda Tangan</h3>
                     </div>
 
-                    {role === "ADMIN_KEPEGAWAIAN" && (
+                    {role === "PEGAWAI" &&
+                      selected.status === "SUBMITTED" && (
                       <form
                         className="workflow-document-upload"
                         onSubmit={uploadSignedDocument}
                       >
                         <label>
-                          <span>Unggah PDF final yang telah ditandatangani/distempel</span>
+                          <span>Unggah PDF yang sudah ditandatangani/distempel</span>
                           <input
                             type="file"
                             name="file"
@@ -929,8 +948,10 @@ export function WorkflowWorkspace({
                           />
                         </label>
                         <small>
-                          PDF saja, maksimal 10 MB. Unggahan baru dibuat sebagai
-                          versi baru dan tidak menimpa arsip sebelumnya.
+                          Setelah formulir dicetak dan ditandatangani manual,
+                          unggah hasil scan PDF di sini. Maksimal 10 MB. Unggahan
+                          baru dibuat sebagai versi baru dan tidak menimpa arsip
+                          sebelumnya.
                         </small>
                         <button
                           className="primary-button"
