@@ -10,6 +10,7 @@ import {
 import type { AccountStatus } from "@/application/accounts/service";
 import type { Employee } from "@/application/employees/service";
 import type { EmployeeImportPreview } from "@/application/employees/import-service";
+import { AdminUiIcon } from "./admin-ui-icon";
 import { EmployeeAccountControls } from "@/components/employee-account-controls";
 
 const empty = {
@@ -94,7 +95,11 @@ function AccountBadge({
   if (state.status === "loading")
     return <span className="status-loading">Memuat…</span>;
   if (state.status === "error")
-    return <span className="status-loading">Gagal memuat</span>;
+    return (
+      <span className="status-loading directory-account-error">
+        Gagal memuat
+      </span>
+    );
   return (
     <StatusBadge
       active={state.account?.isActive}
@@ -110,6 +115,7 @@ export function EmployeeManagement() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<EmployeeImportPreview | null>(null);
@@ -142,6 +148,22 @@ export function EmployeeManagement() {
     });
   }, [employees, query, statusFilter]);
 
+  const summary = useMemo(
+    () => ({
+      total: employees.length,
+      active: employees.filter((employee) => employee.isActive).length,
+      inactive: employees.filter((employee) => !employee.isActive).length,
+      units: new Set(
+        employees
+          .map((employee) =>
+            employee.workUnit.trim().toLocaleLowerCase("id-ID"),
+          )
+          .filter(Boolean),
+      ).size,
+    }),
+    [employees],
+  );
+
   const panelOpen = importOpen || Boolean(mode || selected);
 
   const handleAccountChanged = useCallback((employeeId: string) => {
@@ -151,29 +173,46 @@ export function EmployeeManagement() {
     }));
   }, []);
 
-  async function load() {
+  const requestEmployees = useCallback(
+    async (isCurrent: () => boolean = () => true) => {
+      try {
+        const response = await fetch("/api/admin/employees");
+        const data = await response.json();
+        if (!isCurrent()) return;
+        if (response.ok) setEmployees(data.employees);
+        else {
+          setListError(true);
+          setMessage(data.error ?? "Data pegawai gagal dimuat.");
+        }
+      } catch {
+        if (isCurrent()) {
+          setListError(true);
+          setMessage(
+            "Data pegawai gagal dimuat. Periksa koneksi lalu coba lagi.",
+          );
+        }
+      } finally {
+        if (isCurrent()) setLoading(false);
+      }
+    },
+    [],
+  );
+  function load(resetFeedback = false) {
     setLoading(true);
-    const response = await fetch("/api/admin/employees");
-    const data = await response.json();
-    if (response.ok) setEmployees(data.employees);
-    else setMessage(data.error ?? "Data pegawai gagal dimuat.");
-    setLoading(false);
+    setListError(false);
+    if (resetFeedback) setMessage("");
+    return requestEmployees();
   }
   useEffect(() => {
     let active = true;
     async function initialLoad() {
-      const response = await fetch("/api/admin/employees");
-      const data = await response.json();
-      if (!active) return;
-      if (response.ok) setEmployees(data.employees);
-      else setMessage(data.error ?? "Data pegawai gagal dimuat.");
-      setLoading(false);
+      await requestEmployees(() => active);
     }
     void initialLoad();
     return () => {
       active = false;
     };
-  }, []);
+  }, [requestEmployees]);
 
   useEffect(() => {
     if (!panelOpen) return;
@@ -293,12 +332,14 @@ export function EmployeeManagement() {
   }
 
   return (
-    <section className="employee-page" id="pegawai">
+    <section className="employee-page employee-directory" id="pegawai">
       <header className="employee-page-header">
         <div>
           <p className="eyebrow">MASTER PEGAWAI</p>
           <h1>Kelola Pegawai</h1>
-          <p>Kelola data pegawai dan akses akun.</p>
+          <p>
+            Satu tempat untuk mengelola data kepegawaian dan akses aplikasi.
+          </p>
         </div>
         <div className="employee-header-actions">
           <button
@@ -310,32 +351,65 @@ export function EmployeeManagement() {
               setMessage("");
             }}
           >
-            Import Excel
+            <AdminUiIcon name="upload" /> Import Excel
           </button>
           <button className="primary-button" type="button" onClick={openCreate}>
-            ＋ Tambah Pegawai
+            <AdminUiIcon name="plus" /> Tambah Pegawai
           </button>
         </div>
       </header>
       {message && (
-        <p className="feedback" role="status">
+        <p
+          className={`feedback${listError ? " directory-load-error" : ""}`}
+          role={listError ? "alert" : "status"}
+        >
           {message}
         </p>
       )}
+      <div
+        className="directory-summary"
+        aria-label="Ringkasan data pegawai"
+        aria-busy={loading}
+      >
+        {(
+          [
+            ["total", "Total pegawai", "people", "Data terdaftar"],
+            ["active", "Pegawai aktif", "active", "Status kepegawaian aktif"],
+            ["inactive", "Tidak aktif", "inactive", "Riwayat tetap tersimpan"],
+            ["units", "Unit kerja", "unit", "Dari data pegawai terdaftar"],
+          ] as const
+        ).map(([key, label, icon, caption]) => (
+          <article
+            key={key}
+            className={`directory-stat directory-stat--${key}`}
+          >
+            <div>
+              <span>{label}</span>
+              <strong>{loading || listError ? "—" : summary[key]}</strong>
+              <small>{caption}</small>
+            </div>
+            <span className="directory-stat-icon">
+              <AdminUiIcon name={icon} />
+            </span>
+          </article>
+        ))}
+      </div>
       <div className="employee-list-surface">
         <div className="list-heading">
           <div>
             <h2>Daftar Pegawai</h2>
             <p>
-              {loading
-                ? "Memuat data…"
-                : query || statusFilter !== "all"
-                  ? `${visibleEmployees.length} dari ${employees.length} pegawai ditampilkan`
-                  : `${employees.length} pegawai terdaftar`}
+              {listError
+                ? "Data belum tersedia"
+                : loading
+                  ? "Memuat data…"
+                  : query || statusFilter !== "all"
+                    ? `${visibleEmployees.length} dari ${employees.length} pegawai ditampilkan`
+                    : `${employees.length} pegawai terdaftar`}
             </p>
           </div>
         </div>
-        {!loading && employees.length > 0 && (
+        {!loading && !listError && employees.length > 0 && (
           <div
             className="employee-toolbar"
             aria-label="Pencarian dan filter pegawai"
@@ -343,7 +417,7 @@ export function EmployeeManagement() {
             <label className="employee-search">
               <span className="sr-only">Cari pegawai</span>
               <span className="search-icon" aria-hidden="true">
-                ⌕
+                <AdminUiIcon name="search" />
               </span>
               <input
                 type="search"
@@ -371,8 +445,26 @@ export function EmployeeManagement() {
           <div className="empty-state" aria-live="polite">
             Memuat data pegawai…
           </div>
+        ) : listError ? (
+          <div className="empty-state directory-error-state">
+            <span className="directory-empty-icon">
+              <AdminUiIcon name="inactive" />
+            </span>
+            <strong>Data pegawai belum dapat dimuat</strong>
+            <span>Periksa sesi atau koneksi Anda, lalu coba kembali.</span>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => void load(true)}
+            >
+              Coba lagi
+            </button>
+          </div>
         ) : employees.length === 0 ? (
           <div className="empty-state">
+            <span className="directory-empty-icon">
+              <AdminUiIcon name="people" />
+            </span>
             <strong>Belum ada data pegawai</strong>
             <span>
               Gunakan tombol Tambah Pegawai untuk membuat data pertama.
@@ -395,17 +487,21 @@ export function EmployeeManagement() {
           </div>
         ) : (
           <>
-            <div className="employee-table-wrap">
+            <div
+              className="employee-table-wrap"
+              role="region"
+              aria-label="Daftar pegawai"
+              tabIndex={0}
+            >
               <table className="employee-table">
                 <thead>
                   <tr>
-                    <th>Nama</th>
-                    <th>NIP</th>
-                    <th>Jabatan</th>
-                    <th>Unit kerja</th>
-                    <th>Status Pegawai</th>
-                    <th>Status Akun Login</th>
-                    <th>
+                    <th scope="col">Pegawai</th>
+                    <th scope="col">Jabatan</th>
+                    <th scope="col">Unit kerja</th>
+                    <th scope="col">Status Pegawai</th>
+                    <th scope="col">Status Akun Login</th>
+                    <th scope="col">
                       <span className="sr-only">Tindakan</span>
                     </th>
                   </tr>
@@ -414,9 +510,18 @@ export function EmployeeManagement() {
                   {visibleEmployees.map((employee) => (
                     <tr key={employee.id}>
                       <td>
-                        <strong>{employee.fullName}</strong>
+                        <div className="directory-person">
+                          <span className="directory-avatar" aria-hidden="true">
+                            {employeeInitials(employee.fullName)}
+                          </span>
+                          <div>
+                            <strong>{employee.fullName}</strong>
+                            <span className="directory-nip">
+                              {employee.nip}
+                            </span>
+                          </div>
+                        </div>
                       </td>
-                      <td className="mono">{employee.nip}</td>
                       <td>{employee.positionTitle}</td>
                       <td>{employee.workUnit}</td>
                       <td>
@@ -434,9 +539,10 @@ export function EmployeeManagement() {
                         <button
                           className="detail-button"
                           type="button"
+                          aria-label={`Lihat detail ${employee.fullName}`}
                           onClick={() => openDetail(employee)}
                         >
-                          Lihat Detail
+                          Lihat Detail <AdminUiIcon name="arrow" />
                         </button>
                       </td>
                     </tr>
@@ -481,9 +587,10 @@ export function EmployeeManagement() {
                   <button
                     className="detail-button"
                     type="button"
+                    aria-label={`Lihat detail ${employee.fullName}`}
                     onClick={() => openDetail(employee)}
                   >
-                    Lihat Detail
+                    Lihat Detail <AdminUiIcon name="arrow" />
                   </button>
                 </article>
               ))}
@@ -520,6 +627,11 @@ export function EmployeeManagement() {
               </button>
             </header>
             <div className="management-form">
+              {message && (
+                <p className="feedback" role="status">
+                  {message}
+                </p>
+              )}
               <p className="panel-description">
                 Gunakan file .xlsx maksimal 2 MB dengan kolom persis: NIP, Nama
                 Lengkap, Jabatan, Unit Kerja, Status Aktif. Status menerima
@@ -536,6 +648,10 @@ export function EmployeeManagement() {
                   }}
                 />
               </label>
+              <p className="panel-description">
+                Pratinjau belum menyimpan data. Periksa hasil validasi sebelum
+                mengimpor pegawai.
+              </p>
               {preview && (
                 <section className="import-preview" aria-live="polite">
                   <div className="import-summary">
@@ -554,10 +670,10 @@ export function EmployeeManagement() {
                       <table className="employee-table">
                         <thead>
                           <tr>
-                            <th>Baris</th>
-                            <th>NIP</th>
-                            <th>Kolom</th>
-                            <th>Kesalahan</th>
+                            <th scope="col">Baris</th>
+                            <th scope="col">NIP</th>
+                            <th scope="col">Kolom</th>
+                            <th scope="col">Kesalahan</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -601,7 +717,7 @@ export function EmployeeManagement() {
                   }
                   onClick={() => void sendImport(true)}
                 >
-                  Commit Import
+                  Impor Pegawai
                 </button>
               </div>
             </div>
@@ -644,6 +760,11 @@ export function EmployeeManagement() {
                 ×
               </button>
             </header>
+            {message && (
+              <p className="feedback directory-panel-feedback" role="status">
+                {message}
+              </p>
+            )}
             {mode ? (
               <EmployeeForm
                 form={form}
