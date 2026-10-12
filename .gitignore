@@ -13,6 +13,7 @@ Thumbs.db
 !.env.production.example
 !.env.staging.example
 !.env.edge.example
+!.env.edge.staging.example
 
 # Node / common web build artifacts (future use)
 node_modules/
@@ -38,8 +39,10 @@ src/generated/prisma/
 !.env.production.example
 !.env.staging.example
 !.env.edge.example
+!.env.edge.staging.example
 *.log
 *.dump
 backups/
 private-documents/
 .DS_Store
+tsconfig.tsbuildinfo

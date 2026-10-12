@@ -296,6 +296,18 @@ User 1 --- * AuditLog
 - PostgreSQL 18 internal-only dengan persistent volume.
 - App role non-superuser tanpa DDL; migration role terpisah.
 - Prisma 7 migration SQL committed, immutable setelah diterapkan, dijalankan `migrate deploy`.
+
+## 3.2 Master pejabat yang berwenang memberikan cuti
+
+`LeaveAuthorizedOfficialAssignment` menyimpan identitas pejabat, kapasitas
+`DEFINITIVE`/`PLT`/`PLH`, dan periode efektif inklusif sebagai kolom `DATE`.
+Penugasan aktif maupun berakhir mengunci nama, NIP, kapasitas, dan tanggal mulai;
+penugasan berakhir juga mengunci tanggal akhir. `sourceReference` dan `notes`
+tetap dapat dilengkapi sebagai metadata pengarsipan karena keduanya tidak
+menentukan identitas dan tidak dicetak pada formulir historis. Pergantian
+pejabat selalu dibuat sebagai penugasan baru. PostgreSQL melindungi periode
+dengan `CHECK` urutan tanggal serta exclusion constraint `daterange` agar write
+konkuren tidak dapat menghasilkan periode yang bertumpang tindih.
 - Test memakai PostgreSQL nyata, bukan SQLite, untuk constraint/isolation/locking.
 - M1 tidak memfinalkan entitas/kolom BAL/WF/NOT unresolved.
 

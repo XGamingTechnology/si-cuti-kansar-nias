@@ -1,0 +1,41 @@
+server {
+  listen 80;
+  server_name ${STAGING_HOSTNAME};
+  return 308 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name ${STAGING_HOSTNAME};
+
+  ssl_certificate /etc/nginx/tls/fullchain.pem;
+  ssl_certificate_key /etc/nginx/tls/privkey.pem;
+
+  # API Route Handlers are served by Next.js. The ^~ prefix keeps future
+  # regex/static-file locations from intercepting application API requests.
+  location ^~ /api/ {
+    # The application accepts signed leave PDFs up to 10 MB. Allow multipart
+    # overhead at the staging edge while the application keeps the real limit.
+    client_max_body_size 12m;
+    proxy_pass http://si-cuti-staging-app:3000;
+    include /etc/nginx/proxy_params;
+  }
+
+  # Keep application routes, including the Admin App Router subtree, on the
+  # Next.js upstream. This explicit block also prevents a future generic
+  # static-file location from shadowing /admin/.
+  location = /admin {
+    proxy_pass http://si-cuti-staging-app:3000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /admin/ {
+    proxy_pass http://si-cuti-staging-app:3000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location / {
+    proxy_pass http://si-cuti-staging-app:3000;
+    include /etc/nginx/proxy_params;
+  }
+}

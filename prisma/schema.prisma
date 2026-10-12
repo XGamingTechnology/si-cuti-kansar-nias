@@ -7,4 +7,427 @@ datasource db {
   provider = "postgresql"
 }
 
-// M1 intentionally contains no business or identity models.
+enum ApplicationRole {
+  ADMIN_KEPEGAWAIAN
+  PEGAWAI
+}
+
+enum AuthenticationProvider {
+  LOCAL
+}
+
+enum WorkingCalendarExceptionType {
+  PUBLIC_HOLIDAY
+  JOINT_LEAVE
+  INSTITUTION_NON_WORKING
+}
+
+enum AnnualBalanceBucket {
+  JOINT_LEAVE_CLAIM
+  N2
+  N1
+  N
+}
+
+enum AnnualBalanceOperationType {
+  GRANT
+  RESERVE
+  RELEASE
+  COMMIT
+  REVERSAL
+  ADJUSTMENT
+}
+
+enum WorkflowRequestStatus {
+  DRAFT
+  SUBMITTED
+  RETURNED_FOR_CORRECTION
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  IMPORTANT_REASON
+  LARGE
+  MATERNITY
+  CLTN
+}
+
+enum LeaveDocumentType {
+  SUBMISSION_PROOF
+  APPROVED_FORM
+}
+
+enum LeaveAuthorizedOfficialCapacity {
+  DEFINITIVE
+  PLT
+  PLH
+}
+
+model LeaveAuthorizedOfficialAssignment {
+  id              String                          @id @default(uuid()) @db.Uuid
+  fullName        String                          @db.VarChar(200)
+  nip             String                          @db.VarChar(32)
+  capacity        LeaveAuthorizedOfficialCapacity
+  effectiveFrom   DateTime                        @db.Date
+  effectiveTo     DateTime?                       @db.Date
+  sourceReference String?                         @db.VarChar(500)
+  notes           String?                         @db.Text
+  createdAt       DateTime                        @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                        @updatedAt @db.Timestamptz(3)
+
+  @@index([effectiveFrom, effectiveTo])
+}
+
+model Employee {
+  id                 String     @id @default(uuid()) @db.Uuid
+  nip                String     @unique @db.VarChar(32)
+  fullName           String     @db.VarChar(200)
+  positionTitle      String     @db.VarChar(200)
+  workUnit           String     @db.VarChar(200)
+  isActive           Boolean    @default(true)
+  directSupervisorId String?    @db.Uuid
+  employmentStartDate DateTime? @db.Date
+  createdAt          DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime   @updatedAt @db.Timestamptz(3)
+
+  directSupervisor Employee?  @relation("EmployeeDirectSupervisor", fields: [directSupervisorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  directReports    Employee[] @relation("EmployeeDirectSupervisor")
+  user             User?
+  annualBalanceAccounts   AnnualBalanceAccount[]
+  annualBalanceOperations AnnualBalanceOperation[]
+  annualRolloverCommits   AnnualRolloverCommit[]
+  n2QualifyingPeriods     N2QualifyingPeriod[]
+  leaveRequests           LeaveRequest[]
+  permissionRequests      PermissionRequest[]
+
+  @@index([directSupervisorId])
+}
+
+model WorkingCalendarException {
+  id              String                       @id @default(uuid()) @db.Uuid
+  date            DateTime                     @unique @db.Date
+  type            WorkingCalendarExceptionType
+  name            String                       @db.VarChar(200)
+  sourceReference String?                      @db.VarChar(500)
+  notes           String?                      @db.Text
+  createdAt       DateTime                     @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                     @updatedAt @db.Timestamptz(3)
+}
+
+model AnnualBalanceAccount {
+  id              String              @id @default(uuid()) @db.Uuid
+  employeeId      String              @db.Uuid
+  entitlementYear Int
+  bucket          AnnualBalanceBucket
+  grantedDays     Int                 @default(0)
+  reservedDays    Int                 @default(0)
+  committedDays   Int                 @default(0)
+  createdAt       DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime            @updatedAt @db.Timestamptz(3)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([employeeId, entitlementYear, bucket])
+}
+
+model AnnualBalanceOperation {
+  id                     String                     @id @default(uuid()) @db.Uuid
+  employeeId             String                     @db.Uuid
+  entitlementYear        Int
+  bucket                  AnnualBalanceBucket
+  operationType           AnnualBalanceOperationType
+  days                    Int
+  occurredAt              DateTime                   @db.Timestamptz(3)
+  idempotencyKey          String                     @unique @db.VarChar(191)
+  referenceType           String?                    @db.VarChar(100)
+  referenceId             String?                    @db.VarChar(191)
+  compensatesOperationId  String?                    @db.Uuid
+  reason                  String?                    @db.Text
+  createdAt               DateTime                   @default(now()) @db.Timestamptz(3)
+
+  employee              Employee                  @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  compensatesOperation AnnualBalanceOperation?    @relation("AnnualBalanceCompensation", fields: [compensatesOperationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  compensatingOperations AnnualBalanceOperation[] @relation("AnnualBalanceCompensation")
+
+  @@index([employeeId, entitlementYear, bucket, occurredAt])
+  @@index([compensatesOperationId])
+}
+
+model AnnualRolloverCommit {
+  id             String   @id @default(uuid()) @db.Uuid
+  employeeId     String   @db.Uuid
+  targetYear     Int
+  committedAt    DateTime @db.Timestamptz(3)
+  idempotencyKey String   @unique @db.VarChar(191)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([employeeId, targetYear])
+}
+
+model N2QualifyingPeriod {
+  id                    String   @id @default(uuid()) @db.Uuid
+  employeeId            String   @db.Uuid
+  firstZeroUsageYear    Int
+  secondZeroUsageYear   Int
+  creditedYear          Int
+  grantedDays           Int
+  consumedAt            DateTime @db.Timestamptz(3)
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([employeeId, firstZeroUsageYear, secondZeroUsageYear])
+  @@index([employeeId, creditedYear])
+}
+
+model JointLeavePolicy {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @db.VarChar(200)
+  applicableYear  Int
+  quotaDays       Int
+  claimOpensAt    DateTime @db.Timestamptz(3)
+  claimDeadlineAt DateTime @db.Timestamptz(3)
+  creditYear      Int
+  isActive        Boolean  @default(true)
+  sourceReference String?  @db.VarChar(500)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  eventDates JointLeaveEvent[]
+
+  @@unique([applicableYear, name])
+}
+
+model JointLeaveEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  policyId  String   @db.Uuid
+  eventDate DateTime @db.Date
+  name      String   @db.VarChar(200)
+
+  policy JointLeavePolicy @relation(fields: [policyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([policyId, eventDate])
+  @@index([eventDate])
+}
+
+model User {
+  id         String          @id @default(uuid()) @db.Uuid
+  employeeId String          @unique @db.Uuid
+  role       ApplicationRole
+  isActive   Boolean         @default(true)
+  createdAt  DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime        @updatedAt @db.Timestamptz(3)
+
+  employee                     Employee                      @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  authenticationIdentities      AuthenticationIdentity[]
+  leaveRequestTransitions       LeaveRequestTransition[]
+  permissionRequestTransitions PermissionRequestTransition[]
+  uploadedLeaveDocuments        LeaveDocument[]                @relation("LeaveDocumentUploader")
+}
+
+model LeaveRequest {
+  id                    String                @id @default(uuid()) @db.Uuid
+  employeeId            String                @db.Uuid
+  status                WorkflowRequestStatus @default(DRAFT)
+  currentRevisionNumber Int                   @default(1)
+  createdAt             DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime              @updatedAt @db.Timestamptz(3)
+
+  employee    Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revisions   LeaveRequestRevision[]
+  transitions LeaveRequestTransition[]
+  documents   LeaveDocument[]
+
+  @@index([employeeId, status])
+  @@index([employeeId, createdAt])
+}
+
+model LeaveRequestRevision {
+  id                    String    @id @default(uuid()) @db.Uuid
+  leaveRequestId        String    @db.Uuid
+  revisionNumber        Int
+  leaveType             LeaveType
+  startDate             DateTime  @db.Date
+  endDate               DateTime  @db.Date
+  reason                String    @db.Text
+  formPlace             String?   @db.VarChar(100)
+  leaveAddress          String?   @db.Text
+  leavePhone            String?   @db.VarChar(32)
+  calculatedWorkingDays              Int?
+  submittedAt                        DateTime? @db.Timestamptz(3)
+  directSupervisorSnapshotCaptured   Boolean   @default(false)
+  directSupervisorIdSnapshot         String?   @db.Uuid
+  directSupervisorNipSnapshot        String?   @db.VarChar(32)
+  directSupervisorNameSnapshot       String?   @db.VarChar(200)
+  directSupervisorTitleSnapshot      String?   @db.VarChar(200)
+  createdAt                          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+
+  leaveRequest LeaveRequest             @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  transitions LeaveRequestTransition[]
+  documents   LeaveDocument[]
+
+  @@unique([leaveRequestId, revisionNumber])
+  @@unique([id, leaveRequestId])
+}
+
+model LeaveDocument {
+  id               String            @id @default(uuid()) @db.Uuid
+  leaveRequestId   String            @db.Uuid
+  revisionId       String            @db.Uuid
+  documentType     LeaveDocumentType
+  version          Int               @default(1)
+  storageKey       String            @unique @db.VarChar(191)
+  checksumSha256   String            @db.Char(64)
+  sizeBytes        Int
+  mimeType         String            @default("application/pdf") @db.VarChar(100)
+  originalFileName String?           @db.VarChar(255)
+  uploadedByUserId String?           @db.Uuid
+  uploadedAt       DateTime?         @db.Timestamptz(3)
+  sourceIp         String?           @db.VarChar(64)
+  snapshot         Json
+  generatedAt      DateTime          @default(now()) @db.Timestamptz(3)
+
+  leaveRequest LeaveRequest         @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision     LeaveRequestRevision @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+  uploader     User?                @relation("LeaveDocumentUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([revisionId, documentType, version])
+  @@index([leaveRequestId, generatedAt])
+  @@index([uploadedByUserId, uploadedAt])
+}
+
+model LeaveRequestTransition {
+  id                String                @id @default(uuid()) @db.Uuid
+  leaveRequestId    String                @db.Uuid
+  revisionId        String                @db.Uuid
+  fromStatus        WorkflowRequestStatus
+  toStatus          WorkflowRequestStatus
+  actorUserId       String                @db.Uuid
+  reason            String?               @db.Text
+  evidenceReference String?               @db.VarChar(191)
+  occurredAt        DateTime              @db.Timestamptz(3)
+  idempotencyKey    String                @unique @db.VarChar(191)
+  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
+
+  leaveRequest LeaveRequest         @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision     LeaveRequestRevision @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+  actor        User                 @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model PermissionType {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(64)
+  name        String   @db.VarChar(200)
+  description String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  revisions PermissionRequestRevision[]
+}
+
+model PermissionRequest {
+  id                    String                @id @default(uuid()) @db.Uuid
+  employeeId            String                @db.Uuid
+  status                WorkflowRequestStatus @default(DRAFT)
+  currentRevisionNumber Int                   @default(1)
+  createdAt             DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime              @updatedAt @db.Timestamptz(3)
+
+  employee    Employee                      @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revisions   PermissionRequestRevision[]
+  transitions PermissionRequestTransition[]
+
+  @@index([employeeId, status])
+  @@index([employeeId, createdAt])
+}
+
+model PermissionRequestRevision {
+  id                  String    @id @default(uuid()) @db.Uuid
+  permissionRequestId String    @db.Uuid
+  revisionNumber      Int
+  permissionTypeId    String    @db.Uuid
+  startDate           DateTime  @db.Date
+  endDate             DateTime  @db.Date
+  reason              String    @db.Text
+  submittedAt         DateTime? @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
+
+  permissionRequest PermissionRequest             @relation(fields: [permissionRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  permissionType    PermissionType                @relation(fields: [permissionTypeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  transitions       PermissionRequestTransition[]
+
+  @@unique([permissionRequestId, revisionNumber])
+  @@unique([id, permissionRequestId])
+  @@index([permissionTypeId])
+}
+
+model PermissionRequestTransition {
+  id                  String                @id @default(uuid()) @db.Uuid
+  permissionRequestId String                @db.Uuid
+  revisionId          String                @db.Uuid
+  fromStatus          WorkflowRequestStatus
+  toStatus            WorkflowRequestStatus
+  actorUserId         String                @db.Uuid
+  reason              String?               @db.Text
+  evidenceReference   String?               @db.VarChar(191)
+  occurredAt          DateTime              @db.Timestamptz(3)
+  idempotencyKey      String                @unique @db.VarChar(191)
+  createdAt           DateTime              @default(now()) @db.Timestamptz(3)
+
+  permissionRequest PermissionRequest         @relation(fields: [permissionRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision          PermissionRequestRevision @relation(fields: [revisionId, permissionRequestId], references: [id, permissionRequestId], onDelete: Restrict, onUpdate: Restrict)
+  actor             User                      @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model AuthenticationIdentity {
+  id              String                 @id @default(uuid()) @db.Uuid
+  userId          String                 @db.Uuid
+  provider        AuthenticationProvider
+  providerSubject String                 @db.VarChar(191)
+  isActive        Boolean                @default(true)
+  lastLoginAt     DateTime?              @db.Timestamptz(3)
+  createdAt       DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime               @updatedAt @db.Timestamptz(3)
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  localCredential LocalCredential?
+  sessions        Session[]
+
+  @@unique([provider, providerSubject])
+  @@unique([userId, provider])
+}
+
+model LocalCredential {
+  authenticationIdentityId String   @id @db.Uuid
+  passwordHash             String   @db.Text
+  passwordChangedAt        DateTime @default(now()) @db.Timestamptz(3)
+  createdAt                DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @db.Timestamptz(3)
+
+  authenticationIdentity AuthenticationIdentity @relation(fields: [authenticationIdentityId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model Session {
+  id                       String    @id @default(uuid()) @db.Uuid
+  authenticationIdentityId String    @db.Uuid
+  tokenHash                String    @unique @db.Char(64)
+  expiresAt                DateTime  @db.Timestamptz(3)
+  revokedAt                DateTime? @db.Timestamptz(3)
+  lastSeenAt               DateTime? @db.Timestamptz(3)
+  createdAt                DateTime  @default(now()) @db.Timestamptz(3)
+
+  authenticationIdentity AuthenticationIdentity @relation(fields: [authenticationIdentityId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([authenticationIdentityId, revokedAt])
+  @@index([expiresAt])
+}

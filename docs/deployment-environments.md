@@ -62,6 +62,9 @@ credential, network, volume, dan backup.
 
 ## 4. Release dan migrasi aman
 
+> **MERGED TO STAGING != DEPLOYED TO STAGING.** Merge hanya memperbarui referensi Git. Status
+> runtime harus dibuktikan secara terpisah dari source commit sampai konfigurasi edge efektif.
+
 1. Git commit yang direview membangun image app dan migrator immutable dengan version/digest terkait,
    lalu automated test berjalan di lingkungan ephemeral terpisah.
 2. Deploy exact version ke staging. Jalankan guard, review migration SQL, backup staging bila perlu,
@@ -73,6 +76,67 @@ credential, network, volume, dan backup.
    health check, dan monitoring. Deploy branch saja tidak memberi izin menjalankan migration.
 6. Rollback app memakai image sebelumnya. Schema rollback/forward-fix harus mengikuti migration plan
    yang direview dan kompatibilitasnya dinilai, bukan perintah otomatis.
+
+### 4.1 Rantai provenance staging dan BUILD ONCE
+
+Operator wajib mencatat enam identitas yang berbeda; kesamaan nama/tag saja tidak cukup:
+
+1. **source commit**: SHA `HEAD`, yang harus sama dengan `origin/staging`;
+2. **built image tag**: tag immutable hasil gate **BUILD ONCE** yang dilakukan terpisah;
+3. **local image ID**: `.Id` dari image lokal yang dirujuk tag tersebut;
+4. **configured image reference**: nilai aman `IMAGE_REF` dalam `.env.staging`;
+5. **running container image ID**: `.Image` container app, yang harus sama persis dengan local image
+   ID; dan
+6. **effective Nginx config**: hasil `nginx -T` dari container edge setelah template dirender ulang.
+
+Helper rollout tidak melakukan build, pull, migration, reset Git, pembersihan file, atau penghapusan
+volume. Sebelum menjalankannya, lakukan BUILD ONCE sebagai gate eksplisit, tetapkan tag hasil build
+ke `IMAGE_REF`, lalu pastikan tidak ada perubahan atau file untracked yang belum diinspeksi:
+
+```bash
+# Contoh gate terpisah; pilih tag immutable yang disetujui operator.
+docker build --target runner -t "si-cuti:app-$(git rev-parse --short=7 HEAD)" .
+chmod 600 .env.staging .env.edge.staging
+
+# Memvalidasi source, guard staging, provenance DB read-only, lalu hanya recreate app.
+./scripts/staging-rollout.sh
+
+# Gate terpisah: hanya recreate edge staging dan validasi config/network/HTTPS.
+./scripts/staging-edge-reconcile.sh
+```
+
+`staging-rollout.sh` akan berhenti jika `HEAD != origin/staging`, worktree kotor, env bukan mode
+`0600`, marker bukan `staging`, identitas DB/volume bukan staging, image lokal tidak ada, atau image
+ID container berbeda. File tidak dikenal—termasuk file bernama `--filter`, `--format`, dan artifact
+lain—harus diperiksa operator; helper tidak menghapusnya. `tsconfig.tsbuildinfo` diabaikan secara
+spesifik karena merupakan incremental compiler cache TypeScript, bukan source atau deployment input.
+Jangan memperluas ignore untuk menyembunyikan artifact lain.
+
+Pemeriksaan provenance database bersifat **read only**: helper hanya melaporkan host, port, database,
+username app, identitas container PostgreSQL, `current_database()`, marker deployment, dan volume yang
+terpasang pada `/var/lib/postgresql`. Nilai staging yang diharapkan adalah `postgres:5432`, database
+`si_cuti_staging`, user `si_cuti_staging_app`, marker `staging`, dan volume
+`si-cuti-staging_postgres_data`. Jika volume `staging_postgres_data` juga ada, catat sebagai bahan
+investigasi saja. **Jangan hapus volume mana pun.** Helper tidak menampilkan URL database utuh,
+password, rendered Compose config, atau secret lain.
+
+### 4.2 Rekonsiliasi edge staging
+
+Image Nginx resmi menjalankan entrypoint yang merender template yang di-mount dari
+`docker/edge/staging-templates` ke konfigurasi efektif ketika container dimulai. Karena itu perubahan
+repository/template **belum terbukti aktif** hanya karena file host sudah benar. Container edge yang
+dibuat sebelum perubahan tetap dapat memakai hasil render lama sampai edge staging dibuat ulang.
+
+`staging-edge-reconcile.sh` secara eksklusif memakai `compose.edge.staging.yaml` dan
+`.env.edge.staging`. Helper memvalidasi Compose tanpa mencetak hasil render, memeriksa source template,
+hanya me-recreate service `edge`, menjalankan `nginx -t`, menangkap `nginx -T`, dan memastikan blok
+`location ^~ /api/`, `location ^~ /admin/`, serta `location /` semuanya menuju
+`http://si-cuti-staging-app:3000`. Helper juga membuktikan edge berada di
+`si-cuti-staging-frontend`, menolak nama network production, lalu mengulang HTTPS liveness dan
+readiness. Prosedur ini tidak merujuk Compose production, tidak me-restart production, dan tidak
+menambahkan edge ke network production. Sebelum recreate, helper juga menolak berjalan bila container
+edge yang sudah ada terdeteksi terhubung ke network bernama production; kondisi tersebut harus
+diinvestigasi, bukan direkonsiliasi secara otomatis.
 
 ## 5. Checklist verifikasi pada VPS Ubuntu
 
