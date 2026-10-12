@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AdminUiIcon } from "./admin-ui-icon";
+import "./admin-employee-ui.css";
 import type { Principal } from "@/modules/auth/service";
 import { EmployeeManagement } from "@/components/employee-management";
 import { BrandMark } from "@/components/login-preview";
@@ -33,6 +35,54 @@ export function AuthenticatedShell({
   const isAdmin = isAdminPrincipal(principal);
   const role = isAdmin ? "Admin Kepegawaian" : "Pegawai";
 
+  useEffect(() => {
+    if (!isAdmin || !menuOpen) return;
+    const sidebar = document.querySelector<HTMLElement>(
+      ".admin-interface .authenticated-sidebar",
+    );
+    const trigger = document.querySelector<HTMLElement>(
+      ".admin-interface .shell-menu-button",
+    );
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    (
+      sidebar?.querySelector<HTMLElement>("nav a[aria-current='page']") ??
+      sidebar?.querySelector<HTMLElement>("nav a")
+    )?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+      } else if (event.key === "Tab") {
+        const controls = sidebar?.querySelectorAll<HTMLElement>(
+          "a[href], button:not([disabled])",
+        );
+        if (!controls?.length) return;
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    const desktop = window.matchMedia("(min-width: 1025px)");
+    const onDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMenuOpen(false);
+    };
+    desktop.addEventListener("change", onDesktop);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      desktop.removeEventListener("change", onDesktop);
+      document.body.style.overflow = previousOverflow;
+      trigger?.focus();
+    };
+  }, [isAdmin, menuOpen]);
+
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.assign("/");
@@ -44,7 +94,7 @@ export function AuthenticatedShell({
   const workflowActive = isAdmin && adminSurface === "pengajuan";
 
   return (
-    <div className="authenticated-shell">
+    <div className={`authenticated-shell${isAdmin ? " admin-interface" : ""}`}>
       <a className="skip-link" href="#main-content">
         Lewati ke konten utama
       </a>
@@ -52,6 +102,7 @@ export function AuthenticatedShell({
       <aside
         className={`authenticated-sidebar ${menuOpen ? "open" : ""}`}
         aria-label="Navigasi aplikasi"
+        id="application-navigation"
       >
         <div className="shell-brand">
           <BrandMark />
@@ -65,7 +116,7 @@ export function AuthenticatedShell({
             onClick={() => setMenuOpen(false)}
             aria-label="Tutup menu"
           >
-            ×
+            {isAdmin ? <AdminUiIcon name="close" /> : "×"}
           </button>
         </div>
 
@@ -157,8 +208,13 @@ export function AuthenticatedShell({
               onClick={() => setMenuOpen(true)}
               aria-label="Buka menu"
               aria-expanded={menuOpen}
+              aria-controls="application-navigation"
             >
-              <span aria-hidden="true">☰</span>
+              {isAdmin ? (
+                <AdminUiIcon name="menu" />
+              ) : (
+                <span aria-hidden="true">☰</span>
+              )}
             </button>
             <span className="mobile-app-name">SI CUTI</span>
             <span className="desktop-context">
@@ -178,6 +234,7 @@ export function AuthenticatedShell({
               <span>{role}</span>
             </div>
             <button type="button" className="logout-button" onClick={logout}>
+              {isAdmin && <AdminUiIcon name="logout" />}
               Keluar
             </button>
           </div>
