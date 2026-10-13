@@ -1,5 +1,9 @@
 "use client";
 
+import { useAdminPanelFocus } from "./use-admin-panel-focus";
+
+import { AdminPagination, useAdminPagination } from "./admin-pagination";
+
 import {
   useCallback,
   useEffect,
@@ -148,6 +152,11 @@ export function EmployeeManagement() {
     });
   }, [employees, query, statusFilter]);
 
+  const pagination = useAdminPagination(
+    visibleEmployees,
+    `${query}|${statusFilter}`,
+  );
+
   const summary = useMemo(
     () => ({
       total: employees.length,
@@ -165,6 +174,7 @@ export function EmployeeManagement() {
   );
 
   const panelOpen = importOpen || Boolean(mode || selected);
+  useAdminPanelFocus(panelOpen, ".employee-directory .management-panel");
 
   const handleAccountChanged = useCallback((employeeId: string) => {
     setAccountRefreshVersions((versions) => ({
@@ -507,7 +517,7 @@ export function EmployeeManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleEmployees.map((employee) => (
+                  {pagination.items.map((employee) => (
                     <tr key={employee.id}>
                       <td>
                         <div className="directory-person">
@@ -551,7 +561,7 @@ export function EmployeeManagement() {
               </table>
             </div>
             <div className="employee-mobile-list">
-              {visibleEmployees.map((employee) => (
+              {pagination.items.map((employee) => (
                 <article key={employee.id}>
                   <div className="mobile-employee-heading">
                     <span className="employee-card-avatar" aria-hidden="true">
@@ -598,6 +608,7 @@ export function EmployeeManagement() {
           </>
         )}
       </div>
+      {!loading && !listError && <AdminPagination {...pagination.controls} />}
       {importOpen && (
         <>
           <button

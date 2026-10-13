@@ -1,5 +1,8 @@
 "use client";
 
+import { AdminPagination, useAdminPagination } from "./admin-pagination";
+import { AdminFloatingWindow } from "./admin-floating-window";
+
 import { useState, type FormEvent } from "react";
 import type {
   BalanceImportPreview,
@@ -142,6 +145,10 @@ export function AnnualBalanceImport({
     URL.revokeObjectURL(url);
   }
   const rows = result?.rows ?? preview?.rows ?? [];
+  const pagination = useAdminPagination<(typeof rows)[number]>(
+    rows,
+    `${batchId}|${Boolean(result)}`,
+  );
   return (
     <section className="balance-import" aria-label="Impor saldo awal">
       <div className="balance-import-actions">
@@ -168,137 +175,150 @@ export function AnnualBalanceImport({
         </p>
       )}
       {open && (
-        <div className="employee-list-surface balance-import-content">
-          <h2>Import Saldo Awal {year}</h2>
-          <p>
-            Unduh template pegawai aktif. Isi N-1, N-2, dan Dasar Administrasi
-            berdasarkan data sah. N=12 dan Cuti Bersama=0 merupakan referensi
-            tetap. Nama hanya referensi; pegawai dicocokkan berdasarkan NIP.
-          </p>
-          <form
-            onSubmit={(event: FormEvent) => {
-              event.preventDefault();
-              void run(false);
-            }}
-          >
-            <label>
-              File Excel (.xlsx, maksimal 2 MB)
-              <input
-                type="file"
-                accept=".xlsx"
-                required
-                disabled={busy}
-                onChange={(event) => {
-                  setFile(event.target.files?.[0] ?? null);
-                  setPreview(null);
-                  setResult(null);
-                  setConfirmed(false);
-                  setBatchId("");
-                  setMessage("");
-                }}
-              />
-            </label>
-            <button className="secondary-button" disabled={busy || !file}>
-              {busy ? "Memproses…" : "Preview dan Validasi"}
-            </button>
-          </form>
-          <p>
-            Preview belum menulis saldo. Baris salah perlu diperbaiki; saldo
-            yang sudah siap tidak diubah.
-          </p>
-          {preview && (
-            <>
-              <p role="status">
-                Total {preview.totalRows} · Valid {preview.validRows} · Dilewati{" "}
-                {preview.skippedRows} · Error {preview.errorRows}
-              </p>
-              {result && (
-                <p className="feedback" role="status">
-                  Berhasil {result.succeededRows} · Dilewati{" "}
-                  {result.skippedRows} · Gagal {result.failedRows}
+        <AdminFloatingWindow
+          title={`Impor Saldo Awal ${year}`}
+          busy={busy}
+          onClose={() => setOpen(false)}
+        >
+          {message && (
+            <p className="feedback error" role="alert">
+              {message}
+            </p>
+          )}
+          <div className="employee-list-surface balance-import-content">
+            <h2>Import Saldo Awal {year}</h2>
+            <p>
+              Unduh template pegawai aktif. Isi N-1, N-2, dan Dasar Administrasi
+              berdasarkan data sah. N=12 dan Cuti Bersama=0 merupakan referensi
+              tetap. Nama hanya referensi; pegawai dicocokkan berdasarkan NIP.
+            </p>
+            <form
+              onSubmit={(event: FormEvent) => {
+                event.preventDefault();
+                void run(false);
+              }}
+            >
+              <label>
+                File Excel (.xlsx, maksimal 2 MB)
+                <input
+                  type="file"
+                  accept=".xlsx"
+                  required
+                  disabled={busy}
+                  onChange={(event) => {
+                    setFile(event.target.files?.[0] ?? null);
+                    setPreview(null);
+                    setResult(null);
+                    setConfirmed(false);
+                    setBatchId("");
+                    setMessage("");
+                  }}
+                />
+              </label>
+              <button className="secondary-button" disabled={busy || !file}>
+                {busy ? "Memproses…" : "Preview dan Validasi"}
+              </button>
+            </form>
+            <p>
+              Preview belum menulis saldo. Baris salah perlu diperbaiki; saldo
+              yang sudah siap tidak diubah.
+            </p>
+            {preview && (
+              <>
+                <p role="status">
+                  Total {preview.totalRows} · Valid {preview.validRows} ·
+                  Dilewati {preview.skippedRows} · Error {preview.errorRows}
                 </p>
-              )}
-              <div
-                className="balance-import-table"
-                tabIndex={0}
-                role="region"
-                aria-label="Hasil validasi per baris"
-              >
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Baris</th>
-                      <th>NIP / Nama</th>
-                      <th>Tahun</th>
-                      <th>N-1</th>
-                      <th>N-2</th>
-                      <th>Status</th>
-                      <th>Keterangan</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => (
-                      <tr key={row.rowNumber}>
-                        <td>{row.rowNumber}</td>
-                        <td>
-                          {row.nip}
-                          <br />
-                          {row.fullName}
-                        </td>
-                        <td>{row.entitlementYear}</td>
-                        <td>{row.n1Days ?? "—"}</td>
-                        <td>{row.n2Days ?? "—"}</td>
-                        <td>{statusLabels[row.status]}</td>
-                        <td>{row.messages.join(" ") || "Siap diproses."}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {result && (
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={downloadResult}
+                {result && (
+                  <p className="feedback" role="status">
+                    Berhasil {result.succeededRows} · Dilewati{" "}
+                    {result.skippedRows} · Gagal {result.failedRows}
+                  </p>
+                )}
+                <div
+                  className="balance-import-table"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Hasil validasi per baris"
                 >
-                  Unduh Hasil Proses
-                </button>
-              )}
-              {preview.validRows > 0 && (
-                <div className="balance-import-confirm">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={confirmed}
-                      disabled={busy}
-                      onChange={(event) => setConfirmed(event.target.checked)}
-                    />{" "}
-                    Saya telah memeriksa preview dan mengonfirmasi{" "}
-                    {preview.validRows} baris valid. Baris error tidak diproses.
-                  </label>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Baris</th>
+                        <th>NIP / Nama</th>
+                        <th>Tahun</th>
+                        <th>N-1</th>
+                        <th>N-2</th>
+                        <th>Status</th>
+                        <th>Keterangan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagination.items.map((row) => (
+                        <tr key={row.rowNumber}>
+                          <td>{row.rowNumber}</td>
+                          <td>
+                            {row.nip}
+                            <br />
+                            {row.fullName}
+                          </td>
+                          <td>{row.entitlementYear}</td>
+                          <td>{row.n1Days ?? "—"}</td>
+                          <td>{row.n2Days ?? "—"}</td>
+                          <td>{statusLabels[row.status]}</td>
+                          <td>{row.messages.join(" ") || "Siap diproses."}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <AdminPagination {...pagination.controls} />
+                {result && (
                   <button
                     type="button"
-                    className="primary-button"
-                    disabled={busy || !confirmed}
-                    onClick={() => void run(true)}
+                    className="secondary-button"
+                    onClick={downloadResult}
                   >
-                    {busy
-                      ? "Memproses…"
-                      : result
-                        ? "Coba Ulang Batch yang Sama"
-                        : "Konfirmasi dan Inisialisasi Saldo"}
+                    Unduh Hasil Proses
                   </button>
-                </div>
-              )}
-              {preview.validRows === 0 && (
-                <p>
-                  Tidak ada baris valid yang dapat diinisialisasi. Perbaiki file
-                  bila terdapat error lalu lakukan preview ulang.
-                </p>
-              )}
-            </>
-          )}
-        </div>
+                )}
+                {preview.validRows > 0 && (
+                  <div className="balance-import-confirm">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={confirmed}
+                        disabled={busy}
+                        onChange={(event) => setConfirmed(event.target.checked)}
+                      />{" "}
+                      Saya telah memeriksa preview dan mengonfirmasi{" "}
+                      {preview.validRows} baris valid. Baris error tidak
+                      diproses.
+                    </label>
+                    <button
+                      type="button"
+                      className="primary-button"
+                      disabled={busy || !confirmed}
+                      onClick={() => void run(true)}
+                    >
+                      {busy
+                        ? "Memproses…"
+                        : result
+                          ? "Coba Ulang Batch yang Sama"
+                          : "Konfirmasi dan Inisialisasi Saldo"}
+                    </button>
+                  </div>
+                )}
+                {preview.validRows === 0 && (
+                  <p>
+                    Tidak ada baris valid yang dapat diinisialisasi. Perbaiki
+                    file bila terdapat error lalu lakukan preview ulang.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </AdminFloatingWindow>
       )}
     </section>
   );
