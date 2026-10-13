@@ -699,3 +699,391 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Compact administration workspace; floating windows reveal secondary tasks. */
+.admin-interface .authenticated-sidebar {
+  background: #142b3c;
+  width: 220px;
+}
+.admin-interface .authenticated-workspace {
+  margin-left: 220px;
+}
+.admin-interface .authenticated-content {
+  padding: 28px 30px 40px;
+  max-width: 1440px;
+}
+.admin-interface .shell-topbar {
+  min-height: 64px;
+}
+.admin-interface .employee-page,
+.admin-interface .workflow-surface {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.admin-interface .employee-page-header h1,
+.admin-interface .workflow-heading h2 {
+  font-size: 26px;
+}
+.admin-interface .employee-page-header p,
+.admin-interface .workflow-heading-copy {
+  font-size: 13px;
+}
+.admin-interface .directory-summary,
+.admin-interface .balance-summary-grid {
+  display: flex;
+  gap: 0;
+  border: 1px solid #dbe3e9;
+  background: #fff;
+  border-radius: 8px;
+  margin: 20px 0;
+  overflow: hidden;
+}
+.admin-interface .directory-stat,
+.admin-interface .balance-summary-grid > article {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-right: 1px solid #e4e9ed;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  padding: 14px 18px;
+  min-height: 0;
+}
+.admin-interface .directory-stat:last-child,
+.admin-interface .balance-summary-grid > article:last-child {
+  border-right: 0;
+}
+.admin-interface .directory-stat strong,
+.admin-interface .balance-summary-grid > article strong {
+  font-size: 23px;
+}
+.admin-interface .directory-stat small,
+.admin-interface .balance-summary-grid > article small,
+.admin-interface .directory-stat-icon {
+  display: none;
+}
+.admin-interface .employee-list-surface,
+.admin-interface .request-list-panel {
+  border-radius: 8px;
+  box-shadow: none;
+  background: #fff;
+  border: 1px solid #dbe3e9;
+}
+.admin-interface .list-heading {
+  padding: 18px 20px;
+}
+.admin-interface .employee-filters {
+  padding: 16px 20px;
+}
+.admin-interface .employee-table td {
+  padding: 12px 16px;
+}
+.admin-interface .employee-table tbody tr:nth-child(even) {
+  background: #fff;
+}
+.admin-interface .employee-table tbody tr:hover {
+  background: #f5f7f9;
+}
+.admin-interface .directory-avatar,
+.admin-interface .balance-avatar {
+  border-radius: 6px;
+}
+.admin-interface .primary-button {
+  background: #235879;
+  border-radius: 6px;
+  box-shadow: none;
+}
+.admin-interface .secondary-button,
+.admin-interface .detail-button {
+  border-radius: 6px;
+  box-shadow: none;
+}
+.admin-interface .balance-employee-row {
+  padding: 14px 20px;
+}
+.admin-interface .balance-row-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.admin-interface .balance-person em {
+  margin-top: 5px;
+}
+.admin-interface .balance-filters {
+  padding: 14px 18px;
+  border-radius: 8px;
+}
+.admin-interface .workflow-grid {
+  display: block;
+}
+.admin-interface .request-list-heading {
+  padding: 16px 20px;
+}
+.admin-interface .request-list {
+  padding: 0;
+  max-height: none;
+}
+.admin-interface .request-card {
+  border: 0;
+  border-bottom: 1px solid #e6ebef;
+  border-radius: 0;
+  padding: 16px 20px;
+  background: #fff;
+  box-shadow: none;
+}
+.admin-interface .request-card:hover {
+  background: #f5f7f9;
+}
+.admin-interface .request-card-reason {
+  display: none;
+}
+.admin-interface .workflow-empty-state {
+  min-height: 150px;
+  padding: 28px;
+}
+.admin-interface .request-detail {
+  border: 0;
+  padding: 0;
+}
+.admin-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  color: #526475;
+  font-size: 12px;
+}
+.admin-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-pagination button {
+  background: #fff;
+  border: 1px solid #cdd7df;
+  border-radius: 5px;
+  color: #254e68;
+  width: 32px;
+  height: 30px;
+  cursor: pointer;
+}
+.admin-pagination button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.admin-floating-window {
+  width: min(820px, calc(100vw - 48px));
+  max-height: calc(100dvh - 64px);
+  padding: 0;
+  border: 1px solid #d0dae2;
+  border-radius: 10px;
+  box-shadow: 0 22px 90px #12243540;
+  background: #fff;
+  color: #22394b;
+  overflow: auto;
+}
+.admin-floating-window::backdrop {
+  background: rgb(19 32 43 / 0.35);
+}
+.floating-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f5f7f9;
+  border-bottom: 1px solid #dce3e9;
+  padding: 14px 20px;
+}
+.floating-titlebar h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+.floating-titlebar button {
+  border: 0;
+  background: transparent;
+  font-size: 25px;
+  width: 32px;
+  height: 32px;
+  color: #4b6070;
+  cursor: pointer;
+}
+.floating-window-body {
+  padding: 22px;
+}
+.admin-floating-window .employee-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: #fff;
+}
+.admin-floating-window .employee-form h2 {
+  display: none;
+}
+.admin-floating-window .employee-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  color: #4d6070;
+}
+.admin-floating-window .employee-form input,
+.admin-floating-window .employee-form select,
+.admin-floating-window .employee-form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd6df;
+  border-radius: 5px;
+  padding: 10px;
+  font: inherit;
+  background: #fff;
+}
+.admin-floating-window .employee-form textarea {
+  min-height: 80px;
+}
+.admin-floating-window .balance-import-content {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+.admin-floating-window .balance-import-content > h2 {
+  display: none;
+}
+.admin-floating-window .workflow-dialog-backdrop {
+  position: static;
+  background: transparent;
+  padding: 0;
+  display: block;
+}
+.admin-floating-window .workflow-dialog-scrim {
+  display: none;
+}
+.admin-floating-window .workflow-review-dialog {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.admin-floating-window .workflow-review-dialog > header {
+  display: none;
+}
+.admin-interface .employee-directory .management-panel,
+.admin-interface .balance-detail-panel {
+  position: fixed;
+  left: 50%;
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(820px, calc(100vw - 48px));
+  max-width: 820px;
+  height: auto;
+  max-height: calc(100dvh - 64px);
+  border: 1px solid #d0dae2;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 22px 90px #12243540;
+  overflow-y: auto;
+}
+.admin-interface .employee-directory .management-panel > header,
+.admin-interface .balance-detail-header {
+  padding: 16px 22px;
+  background: #f5f7f9;
+}
+.admin-interface .employee-directory .management-panel h2 {
+  font-size: 20px;
+}
+.admin-interface .modal-backdrop {
+  background: rgb(19 32 43 / 0.35);
+  backdrop-filter: none;
+}
+@media (max-width: 1024px) {
+  .admin-interface .authenticated-workspace {
+    margin-left: 0;
+  }
+  .admin-interface .authenticated-sidebar {
+    width: 250px;
+  }
+  .admin-interface .authenticated-content {
+    padding: 24px 20px;
+  }
+}
+@media (max-width: 600px) {
+  .admin-interface .authenticated-content {
+    padding: 18px 12px;
+  }
+  .admin-interface .directory-summary,
+  .admin-interface .balance-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-interface .directory-stat,
+  .admin-interface .balance-summary-grid > article {
+    padding: 12px;
+    border-bottom: 1px solid #e4e9ed;
+  }
+  .admin-interface .balance-row-action {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .admin-floating-window,
+  .admin-interface .employee-directory .management-panel,
+  .admin-interface .balance-detail-panel {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 8px;
+  }
+  .floating-window-body {
+    padding: 16px;
+  }
+  .admin-floating-window .employee-form {
+    grid-template-columns: 1fr;
+  }
+  .admin-pagination {
+    padding: 12px;
+    gap: 8px;
+    font-size: 11px;
+  }
+}
+.admin-floating-window .employee-form label:last-of-type {
+  grid-column: 1 / -1;
+}
+.floating-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #e1e7ed;
+  padding-top: 16px;
+}
+.floating-form-actions button {
+  min-height: 40px;
+  padding: 8px 22px;
+  border-radius: 5px;
+}
+.admin-interface #pejabat-cuti .employee-table-wrap {
+  background: #fff;
+  border: 1px solid #dbe3e9;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.admin-interface #pejabat-cuti .employee-table {
+  min-width: 640px;
+}
+.admin-interface #pejabat-cuti .employee-table button {
+  background: #fff;
+  border: 1px solid #cdd7df;
+  border-radius: 5px;
+  padding: 7px 12px;
+  color: #254e68;
+}
