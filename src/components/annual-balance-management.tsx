@@ -1,5 +1,9 @@
 "use client";
 
+import { useAdminPanelFocus } from "./use-admin-panel-focus";
+
+import { AdminPagination, useAdminPagination } from "./admin-pagination";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { AnnualBalanceAdministrationDetail } from "@/application/leave-balance/administration";
 import { AnnualBalanceImport } from "./annual-balance-import";
@@ -59,6 +63,8 @@ export function AnnualBalanceManagement() {
   const [readinessFilter, setReadinessFilter] =
     useState<ReadinessFilter>("all");
 
+  useAdminPanelFocus(Boolean(selected), ".balance-detail-panel");
+
   const summary = useMemo(
     () => ({
       total: items.length,
@@ -84,6 +90,11 @@ export function AnnualBalanceManagement() {
       );
     });
   }, [items, query, readinessFilter]);
+
+  const pagination = useAdminPagination(
+    visibleItems,
+    `${query}|${readinessFilter}|${year}`,
+  );
 
   async function load() {
     setLoading(true);
@@ -336,7 +347,7 @@ export function AnnualBalanceManagement() {
             </div>
 
             <div className="balance-employee-list">
-              {visibleItems.map((item) => (
+              {pagination.items.map((item) => (
                 <article key={item.employeeId} className="balance-employee-row">
                   <div className="balance-person">
                     <span className="balance-avatar" aria-hidden="true">
@@ -383,6 +394,7 @@ export function AnnualBalanceManagement() {
         </div>
       )}
 
+      {!loading && <AdminPagination {...pagination.controls} />}
       {selected && (
         <div className="modal-backdrop">
           <button

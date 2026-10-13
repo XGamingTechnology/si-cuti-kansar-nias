@@ -153,6 +153,235 @@ try {
   const admin = await actor("ADMIN_KEPEGAWAIAN");
   const employee = await actor("PEGAWAI");
   await scenario(
+    "employee pagination resets on filter and clamps after data shrink",
+    admin,
+    async (page) => {
+      const rows = Array.from({ length: 23 }, (_, i) => ({
+        ...fixture()[i % 8],
+        id: `page-${i}`,
+        nip: `TEST-${i}`,
+        fullName: `Pagination Uji ${i + 1}`,
+      }));
+      await routes(page, rows, { onCreate: () => rows.splice(0, 22) });
+      await open(page);
+      assert.equal(await page.locator(".employee-table tbody tr").count(), 10);
+      const paging = page.getByRole("navigation", {
+        name: "Navigasi halaman daftar",
+      });
+      await paging.getByRole("button", { name: "Halaman berikutnya" }).click();
+      await paging.getByRole("button", { name: "Halaman berikutnya" }).click();
+      assert.equal(await page.locator(".employee-table tbody tr").count(), 3);
+      assert.equal(
+        await paging
+          .getByRole("button", { name: "Halaman berikutnya" })
+          .isDisabled(),
+        true,
+      );
+      await page
+        .getByPlaceholder("Cari nama, NIP, jabatan, atau unit kerja")
+        .fill("Pagination Uji 23");
+      assert.equal(await page.locator(".employee-table tbody tr").count(), 1);
+      await paging.getByText("Halaman 1 / 1", { exact: true }).waitFor();
+      await page
+        .getByPlaceholder("Cari nama, NIP, jabatan, atau unit kerja")
+        .fill("");
+      await paging.getByText("Halaman 1 / 3", { exact: true }).waitFor();
+      await snapshot(page, "admin-paginated");
+      await paging.getByRole("button", { name: "Halaman berikutnya" }).click();
+      await paging.getByRole("button", { name: "Halaman berikutnya" }).click();
+      await page
+        .getByRole("button", { name: "Tambah Pegawai", exact: true })
+        .click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel("NIP", { exact: true }).fill("PAGE-NEW");
+      await dialog
+        .getByLabel("Nama lengkap", { exact: true })
+        .fill("Pagination Baru");
+      await dialog.getByLabel("Jabatan", { exact: true }).fill("Jabatan Uji");
+      await dialog.getByLabel("Unit kerja", { exact: true }).fill("Unit Uji");
+      await dialog
+        .getByRole("button", { name: "Tambah Pegawai", exact: true })
+        .click();
+      await dialog.waitFor({ state: "detached" });
+      await paging.getByText("Halaman 1 / 1", { exact: true }).waitFor();
+      assert.equal(await page.locator(".employee-table tbody tr").count(), 2);
+    },
+  );
+  await scenario(
+    "official assignment opens a floating form and preserves save payload",
+    admin,
+    async (page) => {
+      const assignments = Array.from({ length: 12 }, (_, i) => ({
+        id: `official-${i}`,
+        fullName: `Pejabat Uji ${i + 1}`,
+        nip: `OFF-${i}`,
+        capacity: "DEFINITIVE",
+        effectiveFrom: "2099-01-01",
+        effectiveTo: null,
+        sourceReference: null,
+        notes: null,
+      }));
+      let payload;
+      await page.route(
+        "**/api/admin/leave-authorized-officials",
+        async (route) => {
+          if (route.request().method() === "POST") {
+            payload = route.request().postDataJSON();
+            return route.fulfill({ json: { assignment: assignments[0] } });
+          }
+          return route.fulfill({ json: { assignments } });
+        },
+      );
+      await page.goto("/admin/pejabat-cuti");
+      await page.waitForLoadState("networkidle");
+      assert.equal(await page.locator(".employee-table tbody tr").count(), 10);
+      assert.equal(await page.getByRole("dialog").count(), 0);
+      await page.getByRole("button", { name: "Halaman berikutnya" }).click();
+      assert.equal(await page.locator(".employee-table tbody tr").count(), 2);
+      const trigger = page.getByRole("button", { name: "Tambah penugasan" });
+      await trigger.click();
+      const dialog = page.getByRole("dialog");
+      await dialog
+        .getByLabel("Nama lengkap", { exact: true })
+        .fill("Pejabat Pengujian Baru");
+      await dialog.getByLabel("NIP", { exact: true }).fill("OFF-NEW");
+      await dialog.getByLabel("Mulai berlaku").fill("2099-01-01");
+      await snapshot(page, "admin-official-floating");
+      await dialog.getByRole("button", { name: "Simpan", exact: true }).click();
+      await dialog.waitFor({ state: "detached" });
+      assert.equal(payload.fullName, "Pejabat Pengujian Baru");
+      assert.equal(payload.effectiveTo, null);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await trigger.click();
+      const box = await dialog.boundingBox();
+      assert.ok(box.x >= 0 && box.x + box.width <= 390);
+      for (let i = 0; i < 12; i++) {
+        await page.keyboard.press("Tab");
+        assert.equal(
+          await dialog.evaluate((el) => el.contains(document.activeElement)),
+          true,
+        );
+      }
+      await snapshot(page, "admin-official-mobile-floating");
+      await page.keyboard.press("Escape");
+      await dialog.waitFor({ state: "detached" });
+      assert.equal(
+        await trigger.evaluate((el) => el === document.activeElement),
+        true,
+      );
+    },
+  );
+  await scenario(
+    "balance pagination and floating import preserve explicit confirmation",
+    admin,
+    async (page) => {
+      const balances = Array.from({ length: 14 }, (_, i) => ({
+        employeeId: `balance-${i}`,
+        nip: `BAL-${i}`,
+        fullName: `Saldo Uji ${i + 1}`,
+        readiness: "UNINITIALIZED",
+        isInitialized: false,
+        regularAvailableDays: 0,
+        history: [],
+        accounts: [],
+      }));
+      await page.route(/\/api\/admin\/annual-balances\?/, (route) =>
+        route.fulfill({ json: { balances } }),
+      );
+      await page.goto("/admin/saldo-cuti");
+      await page.waitForLoadState("networkidle");
+      assert.equal(await page.locator(".balance-employee-row").count(), 10);
+      await page.getByRole("button", { name: "Halaman berikutnya" }).click();
+      assert.equal(await page.locator(".balance-employee-row").count(), 4);
+      await page.getByPlaceholder("Cari nama atau NIP").fill("Saldo Uji 14");
+      assert.equal(await page.locator(".balance-employee-row").count(), 1);
+      await page.getByText("Halaman 1 / 1", { exact: true }).waitFor();
+      await page
+        .getByRole("button", { name: "Import Saldo", exact: true })
+        .click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByRole("heading", { name: /Impor Saldo Awal/ }).waitFor();
+      assert.equal(
+        await dialog
+          .getByRole("button", { name: /Konfirmasi dan Inisialisasi/ })
+          .count(),
+        0,
+      );
+      await snapshot(page, "admin-balance-import-floating");
+      await page.keyboard.press("Escape");
+      await dialog.waitFor({ state: "detached" });
+    },
+  );
+  await scenario(
+    "request pagination and nested review windows keep actions accessible",
+    admin,
+    async (page) => {
+      const requests = Array.from({ length: 13 }, (_, i) => ({
+        id: `request-${i}`,
+        status: "SUBMITTED",
+        employee: {
+          fullName: `Pengajuan Uji ${i + 1}`,
+          nip: `REQ-${i}`,
+          positionTitle: "Jabatan Uji",
+          workUnit: "Unit Uji",
+        },
+        currentRevisionNumber: 1,
+        currentRevision: {
+          id: `revision-${i}`,
+          leaveType: "SICK",
+          startDate: "2026-10-14",
+          endDate: "2026-10-15",
+          reason: "Alasan sintetis untuk pengujian",
+          submittedAt: null,
+        },
+      }));
+      await page.route("**/api/workflow/permission-types", (route) =>
+        route.fulfill({ json: { permissionTypes: [] } }),
+      );
+      await page.route("**/api/workflow/leave**", (route) => {
+        const path = new URL(route.request().url()).pathname;
+        if (path.endsWith("/revisions"))
+          return route.fulfill({ json: { revisions: [] } });
+        if (path.endsWith("/history"))
+          return route.fulfill({ json: { history: [] } });
+        if (path.endsWith("/documents"))
+          return route.fulfill({ json: { documents: [] } });
+        return route.fulfill({ json: { requests } });
+      });
+      await routes(page);
+      await open(page);
+      await page
+        .locator(".authenticated-sidebar")
+        .getByRole("link", { name: "Pengajuan", exact: true })
+        .click();
+      await page.waitForLoadState("networkidle");
+      assert.equal(await page.locator(".request-card").count(), 10);
+      assert.equal(await page.locator(".request-detail").count(), 0);
+      await page.getByRole("button", { name: "Halaman berikutnya" }).click();
+      assert.equal(await page.locator(".request-card").count(), 3);
+      await page.locator(".request-card").first().click();
+      const detail = page.getByRole("dialog", {
+        name: "Detail pengajuan",
+        exact: true,
+      });
+      await detail
+        .getByRole("button", { name: "Kembalikan", exact: true })
+        .click();
+      const review = page.locator("dialog").last();
+      await review.getByRole("textbox").fill("Catatan pengujian");
+      await snapshot(page, "admin-request-review-floating");
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(
+        () => document.querySelectorAll("dialog[open]").length === 1,
+      );
+      await detail
+        .getByRole("button", { name: "Kembalikan", exact: true })
+        .waitFor();
+      await page.keyboard.press("Escape");
+      await detail.waitFor({ state: "detached" });
+    },
+  );
+  await scenario(
     "actual counts, search/filter/reset and readable identity",
     admin,
     async (page) => {
