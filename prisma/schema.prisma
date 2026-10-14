@@ -59,6 +59,7 @@ enum LeaveType {
 enum LeaveDocumentType {
   SUBMISSION_PROOF
   APPROVED_FORM
+  RETURN_BASIS
 }
 
 enum LeaveAuthorizedOfficialCapacity {
@@ -83,20 +84,20 @@ model LeaveAuthorizedOfficialAssignment {
 }
 
 model Employee {
-  id                 String     @id @default(uuid()) @db.Uuid
-  nip                String     @unique @db.VarChar(32)
-  fullName           String     @db.VarChar(200)
-  positionTitle      String     @db.VarChar(200)
-  workUnit           String     @db.VarChar(200)
-  isActive           Boolean    @default(true)
-  directSupervisorId String?    @db.Uuid
+  id                  String    @id @default(uuid()) @db.Uuid
+  nip                 String    @unique @db.VarChar(32)
+  fullName            String    @db.VarChar(200)
+  positionTitle       String    @db.VarChar(200)
+  workUnit            String    @db.VarChar(200)
+  isActive            Boolean   @default(true)
+  directSupervisorId  String?   @db.Uuid
   employmentStartDate DateTime? @db.Date
-  createdAt          DateTime   @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime   @updatedAt @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
 
-  directSupervisor Employee?  @relation("EmployeeDirectSupervisor", fields: [directSupervisorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  directReports    Employee[] @relation("EmployeeDirectSupervisor")
-  user             User?
+  directSupervisor        Employee?                @relation("EmployeeDirectSupervisor", fields: [directSupervisorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  directReports           Employee[]               @relation("EmployeeDirectSupervisor")
+  user                    User?
   annualBalanceAccounts   AnnualBalanceAccount[]
   annualBalanceOperations AnnualBalanceOperation[]
   annualRolloverCommits   AnnualRolloverCommit[]
@@ -138,20 +139,21 @@ model AnnualBalanceOperation {
   id                     String                     @id @default(uuid()) @db.Uuid
   employeeId             String                     @db.Uuid
   entitlementYear        Int
-  bucket                  AnnualBalanceBucket
-  operationType           AnnualBalanceOperationType
-  days                    Int
-  occurredAt              DateTime                   @db.Timestamptz(3)
-  idempotencyKey          String                     @unique @db.VarChar(191)
-  referenceType           String?                    @db.VarChar(100)
-  referenceId             String?                    @db.VarChar(191)
-  compensatesOperationId  String?                    @db.Uuid
-  reason                  String?                    @db.Text
-  createdAt               DateTime                   @default(now()) @db.Timestamptz(3)
+  bucket                 AnnualBalanceBucket
+  operationType          AnnualBalanceOperationType
+  days                   Int
+  occurredAt             DateTime                   @db.Timestamptz(3)
+  idempotencyKey         String                     @unique @db.VarChar(191)
+  referenceType          String?                    @db.VarChar(100)
+  referenceId            String?                    @db.VarChar(191)
+  compensatesOperationId String?                    @db.Uuid
+  reason                 String?                    @db.Text
+  createdAt              DateTime                   @default(now()) @db.Timestamptz(3)
 
-  employee              Employee                  @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  compensatesOperation AnnualBalanceOperation?    @relation("AnnualBalanceCompensation", fields: [compensatesOperationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  compensatingOperations AnnualBalanceOperation[] @relation("AnnualBalanceCompensation")
+  employee               Employee                     @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  compensatesOperation   AnnualBalanceOperation?      @relation("AnnualBalanceCompensation", fields: [compensatesOperationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  compensatingOperations AnnualBalanceOperation[]     @relation("AnnualBalanceCompensation")
+  returnOperation        LeaveBalanceReturnOperation?
 
   @@index([employeeId, entitlementYear, bucket, occurredAt])
   @@index([compensatesOperationId])
@@ -171,14 +173,14 @@ model AnnualRolloverCommit {
 }
 
 model N2QualifyingPeriod {
-  id                    String   @id @default(uuid()) @db.Uuid
-  employeeId            String   @db.Uuid
-  firstZeroUsageYear    Int
-  secondZeroUsageYear   Int
-  creditedYear          Int
-  grantedDays           Int
-  consumedAt            DateTime @db.Timestamptz(3)
-  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  id                  String   @id @default(uuid()) @db.Uuid
+  employeeId          String   @db.Uuid
+  firstZeroUsageYear  Int
+  secondZeroUsageYear Int
+  creditedYear        Int
+  grantedDays         Int
+  consumedAt          DateTime @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
@@ -226,10 +228,11 @@ model User {
   updatedAt  DateTime        @updatedAt @db.Timestamptz(3)
 
   employee                     Employee                      @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  authenticationIdentities      AuthenticationIdentity[]
-  leaveRequestTransitions       LeaveRequestTransition[]
+  authenticationIdentities     AuthenticationIdentity[]
+  leaveRequestTransitions      LeaveRequestTransition[]
   permissionRequestTransitions PermissionRequestTransition[]
-  uploadedLeaveDocuments        LeaveDocument[]                @relation("LeaveDocumentUploader")
+  uploadedLeaveDocuments       LeaveDocument[]               @relation("LeaveDocumentUploader")
+  leaveBalanceReturns          LeaveBalanceReturn[]
 }
 
 model LeaveRequest {
@@ -240,39 +243,43 @@ model LeaveRequest {
   createdAt             DateTime              @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime              @updatedAt @db.Timestamptz(3)
 
-  employee    Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  revisions   LeaveRequestRevision[]
-  transitions LeaveRequestTransition[]
-  documents   LeaveDocument[]
+  employee         Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revisions        LeaveRequestRevision[]
+  transitions      LeaveRequestTransition[]
+  documents        LeaveDocument[]
+  decisionArchives LeaveDecisionArchive[]
+  balanceReturns   LeaveBalanceReturn[]
 
   @@index([employeeId, status])
   @@index([employeeId, createdAt])
 }
 
 model LeaveRequestRevision {
-  id                    String    @id @default(uuid()) @db.Uuid
-  leaveRequestId        String    @db.Uuid
-  revisionNumber        Int
-  leaveType             LeaveType
-  startDate             DateTime  @db.Date
-  endDate               DateTime  @db.Date
-  reason                String    @db.Text
-  formPlace             String?   @db.VarChar(100)
-  leaveAddress          String?   @db.Text
-  leavePhone            String?   @db.VarChar(32)
-  calculatedWorkingDays              Int?
-  submittedAt                        DateTime? @db.Timestamptz(3)
-  directSupervisorSnapshotCaptured   Boolean   @default(false)
-  directSupervisorIdSnapshot         String?   @db.Uuid
-  directSupervisorNipSnapshot        String?   @db.VarChar(32)
-  directSupervisorNameSnapshot       String?   @db.VarChar(200)
-  directSupervisorTitleSnapshot      String?   @db.VarChar(200)
-  createdAt                          DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+  id                               String    @id @default(uuid()) @db.Uuid
+  leaveRequestId                   String    @db.Uuid
+  revisionNumber                   Int
+  leaveType                        LeaveType
+  startDate                        DateTime  @db.Date
+  endDate                          DateTime  @db.Date
+  reason                           String    @db.Text
+  formPlace                        String?   @db.VarChar(100)
+  leaveAddress                     String?   @db.Text
+  leavePhone                       String?   @db.VarChar(32)
+  calculatedWorkingDays            Int?
+  submittedAt                      DateTime? @db.Timestamptz(3)
+  directSupervisorSnapshotCaptured Boolean   @default(false)
+  directSupervisorIdSnapshot       String?   @db.Uuid
+  directSupervisorNipSnapshot      String?   @db.VarChar(32)
+  directSupervisorNameSnapshot     String?   @db.VarChar(200)
+  directSupervisorTitleSnapshot    String?   @db.VarChar(200)
+  createdAt                        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt                        DateTime  @updatedAt @db.Timestamptz(3)
 
-  leaveRequest LeaveRequest             @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  transitions LeaveRequestTransition[]
-  documents   LeaveDocument[]
+  leaveRequest     LeaveRequest             @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  transitions      LeaveRequestTransition[]
+  documents        LeaveDocument[]
+  decisionArchives LeaveDecisionArchive[]
+  balanceReturns   LeaveBalanceReturn[]
 
   @@unique([leaveRequestId, revisionNumber])
   @@unique([id, leaveRequestId])
@@ -299,6 +306,10 @@ model LeaveDocument {
   revision     LeaveRequestRevision @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
   uploader     User?                @relation("LeaveDocumentUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
+  decisionArchives LeaveDecisionArchive[]
+  balanceReturns   LeaveBalanceReturn[]
+
+  @@unique([id, revisionId, leaveRequestId])
   @@unique([revisionId, documentType, version])
   @@index([leaveRequestId, generatedAt])
   @@index([uploadedByUserId, uploadedAt])
@@ -317,9 +328,12 @@ model LeaveRequestTransition {
   idempotencyKey    String                @unique @db.VarChar(191)
   createdAt         DateTime              @default(now()) @db.Timestamptz(3)
 
-  leaveRequest LeaveRequest         @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  revision     LeaveRequestRevision @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
-  actor        User                 @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leaveRequest         LeaveRequest          @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision             LeaveRequestRevision  @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+  actor                User                  @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  leaveDecisionArchive LeaveDecisionArchive?
+
+  @@unique([id, revisionId, leaveRequestId])
 }
 
 model PermissionType {
@@ -430,4 +444,67 @@ model Session {
 
   @@index([authenticationIdentityId, revokedAt])
   @@index([expiresAt])
+}
+
+model LeaveDecisionArchive {
+  id               String                 @id @default(uuid()) @db.Uuid
+  leaveRequestId   String                 @db.Uuid
+  revisionId       String                 @db.Uuid
+  transitionId     String                 @unique @db.Uuid
+  sourceDocumentId String?                @db.Uuid
+  snapshot         Json
+  createdAt        DateTime               @default(now()) @db.Timestamptz(3)
+  leaveRequest     LeaveRequest           @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision         LeaveRequestRevision   @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+  transition       LeaveRequestTransition @relation(fields: [transitionId, revisionId, leaveRequestId], references: [id, revisionId, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+  sourceDocument   LeaveDocument?         @relation(fields: [sourceDocumentId, revisionId, leaveRequestId], references: [id, revisionId, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+  artifact         LeaveDecisionArtifact?
+
+  @@unique([transitionId, revisionId, leaveRequestId])
+  @@index([leaveRequestId])
+}
+
+model LeaveDecisionArtifact {
+  id             String               @id @default(uuid()) @db.Uuid
+  archiveId      String               @unique @db.Uuid
+  storageKey     String               @unique @db.VarChar(191)
+  checksumSha256 String               @db.Char(64)
+  sizeBytes      Int
+  createdAt      DateTime             @default(now()) @db.Timestamptz(3)
+  archive        LeaveDecisionArchive @relation(fields: [archiveId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model LeaveBalanceReturn {
+  id                 String                        @id @db.Uuid
+  leaveRequestId     String                        @db.Uuid
+  revisionId         String                        @db.Uuid
+  entitlementYear    Int
+  restoredDays       Int
+  reason             String                        @db.Text
+  basisReference     String                        @db.VarChar(191)
+  basisDate          DateTime                      @db.Date
+  evidenceDocumentId String                        @db.Uuid
+  recordedByUserId   String                        @db.Uuid
+  recordedAt         DateTime                      @db.Timestamptz(3)
+  sourceIp           String?                       @db.VarChar(64)
+  idempotencyKey     String                        @unique @db.VarChar(140)
+  payloadHash        String                        @db.Char(64)
+  policyVersion      String                        @db.VarChar(100)
+  snapshot           Json
+  leaveRequest       LeaveRequest                  @relation(fields: [leaveRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision           LeaveRequestRevision          @relation(fields: [revisionId, leaveRequestId], references: [id, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+  evidenceDocument   LeaveDocument                 @relation(fields: [evidenceDocumentId, revisionId, leaveRequestId], references: [id, revisionId, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
+  recorder           User                          @relation(fields: [recordedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  operations         LeaveBalanceReturnOperation[]
+
+  @@index([leaveRequestId, recordedAt])
+}
+
+model LeaveBalanceReturnOperation {
+  returnId     String                 @db.Uuid
+  operationId  String                 @unique @db.Uuid
+  returnRecord LeaveBalanceReturn     @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  operation    AnnualBalanceOperation @relation(fields: [operationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([returnId, operationId])
 }

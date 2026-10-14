@@ -1,6 +1,6 @@
 # SI CUTI — Implementation Plan
 
-Status: **M1 technical foundation implemented and staging-verified; M2 COMPLETE and staging-verified**
+Status: core M1–M4 code implemented progressively; staging rollout verified through PR #103. Final-decision PDFs and annual-leave returns are implementation candidates in the Issue #104 PR, not yet deployed.
 
 ## 1. Guardrails
 
@@ -12,17 +12,17 @@ M2 must follow `docs/m2-baseline-decisions.md`. Do not use M2 implementation as 
 
 ## 2. Milestones
 
-| Milestone | Scope                                      | Gate                                                         |
-| --------- | ------------------------------------------ | ------------------------------------------------------------ |
-| M0        | Product/documentation foundation           | Complete                                                     |
-| **M1**    | Technical foundation only                  | Implemented; staging runtime verified                        |
-| **M2**    | Local auth, Employee, RBAC/resource policy | **COMPLETE — staging-verified**                              |
-| M3        | Leave Balance engine                       | **IN PROGRESS — Rule Alignment 2.1 required before Batch 3** |
-| M4        | Leave/permission workflow                  | WF-001–004, PERM-001/002, VAL-001                            |
-| M5        | Verification/document archive              | DOC-001/002/004, AUD-001                                     |
-| M6        | Dashboard/calendar/analytics               | CAL-001, RPT-002, relevant NOT/DATA                          |
-| M7        | Reporting/export                           | RPT-001, AUTH/AUD scope as applicable                        |
-| M8        | Notification, hardening, UAT/production    | NOT-001/002, DEP details, retention/DR                       |
+| Milestone | Scope                                      | Gate                                                                      |
+| --------- | ------------------------------------------ | ------------------------------------------------------------------------- |
+| M0        | Product/documentation foundation           | Complete                                                                  |
+| **M1**    | Technical foundation only                  | Implemented; staging runtime verified                                     |
+| **M2**    | Local auth, Employee, RBAC/resource policy | **COMPLETE — staging-verified**                                           |
+| M3        | Leave Balance engine                       | Engine/alignment 2.2 implemented; operational surfaces tracked separately |
+| M4        | Leave/permission workflow                  | WF-001–004, PERM-001/002, VAL-001                                         |
+| M5        | Verification/document archive              | DOC-001/002/004, AUD-001                                                  |
+| M6        | Dashboard/calendar/analytics               | CAL-001, RPT-002, relevant NOT/DATA                                       |
+| M7        | Reporting/export                           | RPT-001, AUTH/AUD scope as applicable                                     |
+| M8        | Notification, hardening, UAT/production    | NOT-001/002, DEP details, retention/DR                                    |
 
 ## 3. Approved technical baseline
 
@@ -69,3 +69,16 @@ retention/rotation/encryption, restore cadence, RPO/RTO, and DR runbook; same-VP
 complete DR.
 
 Release continues to promote the exact immutable version that passed staging/UAT. Production migration requires separate explicit approval; changing a Git branch alone does not authorize a production migration.
+
+## Issue #104: final decision PDFs and annual-leave returns
+
+Implementation baseline: `docs/leave-records-decisions.md`. A signed scan is pinned with an immutable
+approval/rejection snapshot; a separate status sheet plus original scan pages forms the generated
+private result PDF. Rejection without a scan produces a decision notice. Approved annual leave may
+receive an Admin-recorded, evidence-backed compensating reversal with preview, audit links and
+stable replay keys. LeaveRequest remains APPROVED.
+
+These features require a new forward migration and dependency update. They are not eligible for
+the app-only deployment procedure of PR #103. Staging/production acceptance remains a separate gate.
+Employee Joint Leave claims, dashboard/calendar, reporting, reminders, retention/DR and production
+hardening remain separately tracked. Existing source and tests alone do not prove production readiness.

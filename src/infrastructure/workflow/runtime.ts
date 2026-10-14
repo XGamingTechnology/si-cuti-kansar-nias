@@ -1,3 +1,6 @@
+import { LeaveRecordsService } from "@/application/leave-records/service";
+import { PrismaLeaveRecordsRepository } from "@/infrastructure/leave-records/prisma-repository";
+import { LocalPrivateStorage } from "@/infrastructure/storage/local-private-storage";
 import {
   LeaveWorkflowService,
   PermissionWorkflowService,
@@ -26,6 +29,10 @@ export function createWorkflowRuntime() {
   const services = createWorkflowServices(environment.DATABASE_URL);
   return {
     ...services,
+    records: new LeaveRecordsService({
+      repository: new PrismaLeaveRecordsRepository(services.database),
+      storage: new LocalPrivateStorage(environment.PRIVATE_STORAGE_PATH),
+    }),
     authentication: new AuthenticationService(
       new PrismaAuthRepository(services.database),
       environment.SESSION_TTL_SECONDS,

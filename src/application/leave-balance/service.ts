@@ -151,11 +151,14 @@ function sumByBucket(
     N1: 0,
     N: 0,
   };
-  for (const operation of operations) totals[operation.bucket] += operation.days;
+  for (const operation of operations)
+    totals[operation.bucket] += operation.days;
   return totals;
 }
 
-function totalDays(operations: readonly AnnualBalanceOperationRecord[]): number {
+function totalDays(
+  operations: readonly AnnualBalanceOperationRecord[],
+): number {
   return operations.reduce((total, operation) => total + operation.days, 0);
 }
 
@@ -305,7 +308,12 @@ export class AnnualBalanceMutationService {
           reference.referenceType,
           reference.referenceId,
         );
-        const commits = operationsByType(existing, "COMMIT");
+        const commits = [...operationsByType(existing, "COMMIT")].sort(
+          (a, b) =>
+            ANNUAL_BALANCE_BUCKET_PRIORITY.indexOf(a.bucket) -
+              ANNUAL_BALANCE_BUCKET_PRIORITY.indexOf(b.bucket) ||
+            a.id.localeCompare(b.id),
+        );
         if (commits.length === 0) {
           throw new BalanceMutationError(
             "NOT_FOUND",
@@ -352,12 +360,18 @@ export class AnnualBalanceMutationService {
           remainingCommits,
           input.restoreDays,
         );
-        const accounts = requireAllBuckets(transaction.accounts);
+        const accounts = new Map(requireAllBuckets(transaction.accounts));
         const created: AnnualBalanceOperationRecord[] = [];
 
         for (const instruction of instructions) {
           const account = accounts.get(instruction.bucket)!;
-          await persistAccountUpdate(transaction, account, 0, -instruction.days);
+          const updated = await persistAccountUpdate(
+            transaction,
+            account,
+            0,
+            -instruction.days,
+          );
+          accounts.set(instruction.bucket, updated);
           created.push(
             await transaction.append({
               employeeId,

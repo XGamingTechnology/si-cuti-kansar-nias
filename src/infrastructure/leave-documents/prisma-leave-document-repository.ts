@@ -31,14 +31,36 @@ export class PrismaLeaveDocumentRepository implements LeaveDocumentRepository {
   constructor(private readonly database: PrismaClient) {}
 
   async create(input: CreateLeaveDocumentInput) {
-    return record(
-      await this.database.leaveDocument.create({
-        data: {
-          ...input,
-          snapshot: input.snapshot as Prisma.InputJsonObject,
-        },
-      }),
-    );
+    return this.database.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<
+        { status: string; currentRevisionNumber: number }[]
+      >(
+        Prisma.sql`SELECT "status", "currentRevisionNumber" FROM "LeaveRequest" WHERE "id" = ${input.leaveRequestId}::uuid FOR UPDATE`,
+      );
+      const revision = await tx.leaveRequestRevision.findUnique({
+        where: { id: input.revisionId },
+      });
+      if (
+        input.uploadedByUserId &&
+        (!rows[0] ||
+          !revision ||
+          revision.leaveRequestId !== input.leaveRequestId ||
+          revision.revisionNumber !== rows[0].currentRevisionNumber ||
+          rows[0].status !==
+            (input.documentType === "RETURN_BASIS" ? "APPROVED" : "SUBMITTED"))
+      )
+        throw new Error(
+          "Pengajuan/revisi berubah sebelum unggahan diarsipkan.",
+        );
+      return record(
+        await tx.leaveDocument.create({
+          data: {
+            ...input,
+            snapshot: input.snapshot as Prisma.InputJsonObject,
+          },
+        }),
+      );
+    });
   }
 
   async findByRevisionAndType(

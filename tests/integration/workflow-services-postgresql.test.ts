@@ -119,6 +119,12 @@ run("M4 workflow services on PostgreSQL", () => {
     await database.annualBalanceOperation.deleteMany({
       where: { employeeId: { in: employees } },
     });
+    await database.leaveDecisionArtifact.deleteMany({
+      where: { archive: { leaveRequest: { employeeId: { in: employees } } } },
+    });
+    await database.leaveDecisionArchive.deleteMany({
+      where: { leaveRequest: { employeeId: { in: employees } } },
+    });
     await database.leaveRequestTransition.deleteMany({
       where: { leaveRequest: { employeeId: { in: employees } } },
     });

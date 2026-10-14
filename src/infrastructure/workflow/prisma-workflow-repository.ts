@@ -172,11 +172,93 @@ const permissionInclude = {
   revisions: { include: { permissionType: true } },
 } as const;
 
-class PrismaWorkflowTransaction implements WorkflowTransaction {
+export class PrismaWorkflowTransaction implements WorkflowTransaction {
   readonly annualBalanceRepository;
   constructor(private readonly db: Prisma.TransactionClient) {
     this.annualBalanceRepository =
       PrismaAnnualBalanceRepository.inTransaction(db);
+  }
+  async resolveDecisionSource(
+    request: LeaveRequestRecord,
+    status: WorkflowStatus,
+    documentId?: string,
+  ) {
+    const documents = await this.db.leaveDocument.findMany({
+      where: {
+        leaveRequestId: request.id,
+        revisionId: request.currentRevision.id,
+        documentType: "APPROVED_FORM",
+        ...(documentId ? { id: documentId } : {}),
+      },
+      orderBy: [{ version: "desc" }, { id: "asc" }],
+    });
+    if (documentId && documents.length !== 1)
+      throw new WorkflowError(
+        "VALIDATION",
+        "Scan terpilih tidak sesuai pengajuan/revisi.",
+      );
+    if (status === "APPROVED" && documents.length === 0)
+      throw new WorkflowError(
+        "ILLEGAL_TRANSITION",
+        "Scan bertanda tangan belum tersedia.",
+      );
+    if (status === "APPROVED" && !documentId && documents.length > 1)
+      throw new WorkflowError(
+        "VALIDATION",
+        "Pilih versi scan yang telah diverifikasi sebelum persetujuan.",
+      );
+    const source = documents[0];
+    return source
+      ? {
+          id: source.id,
+          version: source.version,
+          checksumSha256: source.checksumSha256,
+        }
+      : null;
+  }
+  async decisionSourceId(transitionId: string) {
+    return (
+      (
+        await this.db.leaveDecisionArchive.findUnique({
+          where: { transitionId },
+        })
+      )?.sourceDocumentId ?? null
+    );
+  }
+  async recordDecision(
+    request: LeaveRequestRecord,
+    transition: TransitionRecord,
+    actorName: string,
+    source: { id: string; version: number; checksumSha256: string } | null,
+  ) {
+    await this.db.leaveDecisionArchive.create({
+      data: {
+        leaveRequestId: request.id,
+        revisionId: request.currentRevision.id,
+        transitionId: transition.id,
+        sourceDocumentId: source?.id ?? null,
+        createdAt: transition.occurredAt,
+        snapshot: {
+          status: transition.toStatus,
+          requestId: request.id,
+          revisionId: request.currentRevision.id,
+          revisionNumber: request.currentRevision.revisionNumber,
+          employeeId: request.employeeId,
+          employeeName: request.employee.fullName,
+          employeeNip: request.employee.nip,
+          startDate: request.currentRevision.startDate,
+          endDate: request.currentRevision.endDate,
+          leaveType: request.currentRevision.leaveType,
+          actorUserId: transition.actorUserId,
+          actorName,
+          occurredAt: transition.occurredAt.toISOString(),
+          reason: transition.reason,
+          evidenceReference: transition.evidenceReference,
+          sourceDocumentVersion: source?.version ?? null,
+          sourceChecksumSha256: source?.checksumSha256 ?? null,
+        },
+      },
+    });
   }
   async lockLeaveRequest(id: string) {
     const rows = await this.db.$queryRaw<{ id: string }[]>(

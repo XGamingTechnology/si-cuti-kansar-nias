@@ -140,10 +140,23 @@ export async function actionInput(request: Request) {
   const action = text(body.action);
   if (!["SUBMIT", "CANCEL", "RETURN", "REJECT", "APPROVE"].includes(action))
     throw new WorkflowError("VALIDATION", "Tindakan tidak valid.");
+  if (
+    body.idempotencyKey !== undefined &&
+    (typeof body.idempotencyKey !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        body.idempotencyKey,
+      ))
+  )
+    throw new WorkflowError("VALIDATION", "Idempotency key tidak valid.");
   return {
     action: action as "SUBMIT" | "CANCEL" | "RETURN" | "REJECT" | "APPROVE",
     reason: text(body.reason),
     evidenceReference: text(body.evidenceReference),
-    idempotencyKey: randomUUID(),
+    documentId: text(body.documentId) || undefined,
+    idempotencyKey:
+      typeof body.idempotencyKey === "string" &&
+      /^[0-9a-f-]{36}$/i.test(body.idempotencyKey)
+        ? body.idempotencyKey
+        : randomUUID(),
   };
 }

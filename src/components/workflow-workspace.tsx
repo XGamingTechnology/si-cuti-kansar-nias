@@ -1,9 +1,16 @@
 "use client";
 
+import { LeaveOutcomePanel } from "./leave-outcome-panel";
 import { AdminFloatingWindow } from "./admin-floating-window";
 import { AdminPagination, useAdminPagination } from "./admin-pagination";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import type { LeaveType, WorkflowStatus } from "@/application/workflow/types";
 
 type Kind = "leave" | "permission";
@@ -65,7 +72,7 @@ type Detail = {
   documents: Array<{
     id: string;
     revisionId: string;
-    documentType: "SUBMISSION_PROOF" | "APPROVED_FORM";
+    documentType: "SUBMISSION_PROOF" | "APPROVED_FORM" | "RETURN_BASIS";
     version: number;
     checksumSha256: string;
     sizeBytes: number;
@@ -308,32 +315,49 @@ export function WorkflowWorkspace({
     }
   }
 
+  const [reviewDocumentId, setReviewDocumentId] = useState("");
+  const reviewKey = useRef<{ payload: string; key: string } | null>(null);
+
   async function performAction(
     action: WorkflowAction,
-    payload?: { reason?: string; evidenceReference?: string },
+    payload?: {
+      reason?: string;
+      evidenceReference?: string;
+      documentId?: string;
+    },
   ) {
     if (!selected) return;
     const requestId = selected.id;
     setActing(true);
     try {
-      await api(`/api/workflow/${kind}/${requestId}/actions`, {
+      const command = JSON.stringify({ action, ...payload });
+      if (reviewKey.current?.payload !== command)
+        reviewKey.current = { payload: command, key: crypto.randomUUID() };
+      const result = await api(`/api/workflow/${kind}/${requestId}/actions`, {
         method: "POST",
-        body: JSON.stringify({ action, ...payload }),
+        body: JSON.stringify({
+          action,
+          ...payload,
+          idempotencyKey: reviewKey.current.key,
+        }),
       });
+
       setReviewAction(null);
       setReviewValue("");
       setEditing(false);
       await refreshSelected(requestId);
       setMessage(
-        action === "SUBMIT"
-          ? "Pengajuan berhasil dikirim."
-          : action === "APPROVE"
-            ? "Pengajuan berhasil disetujui."
-            : action === "RETURN"
-              ? "Pengajuan dikembalikan untuk diperbaiki."
-              : action === "REJECT"
-                ? "Pengajuan ditolak."
-                : "Pengajuan dibatalkan.",
+        result.decisionDocumentReady === false
+          ? "Keputusan tersimpan. PDF hasil belum berhasil dibuat dan dapat dicoba lagi dari Arsip Hasil Keputusan."
+          : action === "SUBMIT"
+            ? "Pengajuan berhasil dikirim."
+            : action === "APPROVE"
+              ? "Pengajuan berhasil disetujui."
+              : action === "RETURN"
+                ? "Pengajuan dikembalikan untuk diperbaiki."
+                : action === "REJECT"
+                  ? "Pengajuan ditolak."
+                  : "Pengajuan dibatalkan.",
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Tindakan gagal.");
@@ -345,6 +369,14 @@ export function WorkflowWorkspace({
   function openReview(action: ReviewAction) {
     setReviewAction(action);
     setReviewValue("");
+    reviewKey.current = null;
+    setReviewDocumentId(
+      detail?.documents.find(
+        (d) =>
+          d.documentType === "APPROVED_FORM" &&
+          d.revisionId === selected?.currentRevision.id,
+      )?.id ?? "",
+    );
   }
 
   async function uploadSignedDocument(event: FormEvent<HTMLFormElement>) {
@@ -418,10 +450,20 @@ export function WorkflowWorkspace({
     const value = reviewValue.trim();
     if (!value) return;
     if (reviewAction === "APPROVE") {
-      await performAction(reviewAction, { evidenceReference: value });
+      await performAction(reviewAction, {
+        evidenceReference: value,
+        documentId:
+          kind === "leave" ? reviewDocumentId || undefined : undefined,
+      });
       return;
     }
-    await performAction(reviewAction, { reason: value });
+    await performAction(reviewAction, {
+      reason: value,
+      documentId:
+        kind === "leave" && reviewAction === "REJECT"
+          ? reviewDocumentId || undefined
+          : undefined,
+    });
   }
 
   function requestName(item: RequestRecord) {
@@ -956,6 +998,24 @@ export function WorkflowWorkspace({
                       )}
                   </div>
 
+                  {kind === "leave" &&
+                    ["APPROVED", "REJECTED"].includes(selected.status) && (
+                      <LeaveOutcomePanel
+                        key={selected.id + selected.status}
+                        requestId={selected.id}
+                        status={selected.status}
+                        admin={role === "ADMIN_KEPEGAWAIAN"}
+                        annual={selected.currentRevision.leaveType === "ANNUAL"}
+                        signedDocuments={
+                          detail?.documents.filter(
+                            (d) =>
+                              d.documentType === "APPROVED_FORM" &&
+                              d.revisionId === selected.currentRevision.id,
+                          ) ?? []
+                        }
+                      />
+                    )}
+
                   {kind === "leave" && selected.currentRevision.submittedAt && (
                     <section className="workflow-document-panel">
                       <div className="workflow-document-generated">
@@ -994,7 +1054,7 @@ export function WorkflowWorkspace({
                       <div className="workflow-signed-archive">
                         <div className="workflow-section-title">
                           <p className="eyebrow">ARSIP RESMI</p>
-                          <h3>PDF Bertanda Tangan</h3>
+                          <h3>Dokumen Asli Bertanda Tangan</h3>
                         </div>
 
                         {role === "PEGAWAI" &&
@@ -1254,6 +1314,39 @@ export function WorkflowWorkspace({
               <p className="workflow-review-description">
                 {reviewCopy[reviewAction].description}
               </p>
+
+              {kind === "leave" &&
+                (reviewAction === "APPROVE" || reviewAction === "REJECT") && (
+                  <label>
+                    <span>Scan sumber untuk hasil keputusan</span>
+                    <select
+                      value={reviewDocumentId}
+                      required={reviewAction === "APPROVE"}
+                      disabled={acting}
+                      onChange={(event) =>
+                        setReviewDocumentId(event.target.value)
+                      }
+                    >
+                      <option value="">
+                        {reviewAction === "APPROVE"
+                          ? "Pilih scan yang diverifikasi"
+                          : "Tanpa scan sumber"}
+                      </option>
+                      {detail?.documents
+                        .filter(
+                          (d) =>
+                            d.documentType === "APPROVED_FORM" &&
+                            d.revisionId === selected.currentRevision.id,
+                        )
+                        .map((d) => (
+                          <option value={d.id} key={d.id}>
+                            Versi {d.version} ·{" "}
+                            {d.originalFileName ?? "PDF bertanda tangan"}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                )}
 
               <label>
                 <span>{reviewCopy[reviewAction].fieldLabel}</span>

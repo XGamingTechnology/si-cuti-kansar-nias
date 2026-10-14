@@ -142,23 +142,56 @@ export function createActionHandler(
           );
           break;
         case "REJECT":
-          transition = await service.reject(
-            actor,
-            id,
-            input.reason,
-            input.idempotencyKey,
-          );
+          transition =
+            kind === "leave" && input.documentId
+              ? await runtime.leave.reject(
+                  actor,
+                  id,
+                  input.reason,
+                  input.idempotencyKey,
+                  new Date(),
+                  input.documentId,
+                )
+              : await service.reject(
+                  actor,
+                  id,
+                  input.reason,
+                  input.idempotencyKey,
+                );
           break;
         case "APPROVE":
-          transition = await service.approve(
-            actor,
-            id,
-            input.evidenceReference,
-            input.idempotencyKey,
-          );
+          transition =
+            kind === "leave" && input.documentId
+              ? await runtime.leave.approve(
+                  actor,
+                  id,
+                  input.evidenceReference,
+                  input.idempotencyKey,
+                  new Date(),
+                  input.documentId,
+                )
+              : await service.approve(
+                  actor,
+                  id,
+                  input.evidenceReference,
+                  input.idempotencyKey,
+                );
           break;
       }
-      return Response.json({ transition });
+      let decisionDocumentReady: boolean | undefined;
+      if (
+        kind === "leave" &&
+        (input.action === "APPROVE" || input.action === "REJECT") &&
+        runtime.records
+      ) {
+        try {
+          await runtime.records.decisionDocument(actor, id);
+          decisionDocumentReady = true;
+        } catch {
+          decisionDocumentReady = false;
+        }
+      }
+      return Response.json({ transition, decisionDocumentReady });
     })(request);
 }
 
