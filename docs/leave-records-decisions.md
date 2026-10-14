@@ -88,8 +88,11 @@ by this candidate. Use synthetic data for browser scenarios.
   intercepted API responses. These do not validate the real database/API end-to-end.
 - Approved/rejected sample PDFs were rendered and visually inspected; source-page orientation and
   Unicode rejection text are covered by automated tests.
-- PostgreSQL integration tests and the forward migration have **not** been executed in this local
-  environment. The CI PostgreSQL job is prepared but has not run. Staging UAT remains pending.
+- GitHub Quality Gate run #44 passed: all migrations applied on disposable PostgreSQL 18,
+  92 integration tests passed across 15 files, and production build passed. The job uses a
+  non-superuser test role; this is not staging migration/UAT verification.
+  [CI verification](https://github.com/XGamingTechnology/si-cuti-kansar-nias/actions/runs/38518532477).
+- Staging UAT remains pending. PostgreSQL tests were run by CI, not in the local workspace.
 - Published for review in PR #105. No deployment has been performed.
 
 Browser test command (with an installed Playwright/Chromium runtime):
