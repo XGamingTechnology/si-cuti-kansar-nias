@@ -11,10 +11,11 @@ import {
   WorkflowError,
   type WorkflowActor,
 } from "@/application/workflow/types";
-import { generateDecisionPdf } from "./decision-pdf";
+import { generateDecisionPdf, validateDecisionPlacement } from "./decision-pdf";
 import type { DocumentStorage } from "@/application/ports/document-storage";
 import type {
   LeaveRecordsDependencies,
+  DecisionPlacement,
   ReturnInput,
   ReturnState,
   ReturnTransaction,
@@ -239,10 +240,152 @@ export class LeaveRecordsService {
       transitionId: record.transitionId,
       sourceDocumentId: record.sourceDocumentId,
       snapshot: record.snapshot,
-      ready: record.artifact !== null,
+      ready: record.artifact !== null || !!record.editions?.length,
+      editions: (record.editions ?? []).map((e) => ({
+        id: e.id,
+        version: e.version,
+        placement: e.placement,
+        createdAt: e.createdAt,
+      })),
     };
   }
-  async decisionDocument(actor: WorkflowActor, requestId: string) {
+  private async editionSource(actor: WorkflowActor, requestId: string) {
+    requireWorkflowAdmin(actor);
+    const record = await this.dependencies.repository.decision(requestId);
+    if (!record || !record.sourceStorageKey)
+      throw new WorkflowError(
+        "CONFLICT",
+        "Arsip dengan scan sumber belum tersedia.",
+      );
+    const scan = await this.dependencies.storage.read(record.sourceStorageKey);
+    if (
+      createHash("sha256").update(scan).digest("hex") !==
+      record.snapshot.sourceChecksumSha256
+    )
+      throw new WorkflowError("CONFLICT", "Checksum scan sumber tidak sesuai.");
+    return { record, scan };
+  }
+  async previewDecisionEdition(
+    actor: WorkflowActor,
+    requestId: string,
+    raw: unknown,
+    sourceChecksum: string,
+  ) {
+    const { record, scan } = await this.editionSource(actor, requestId);
+    if (sourceChecksum !== record.snapshot.sourceChecksumSha256)
+      throw new WorkflowError(
+        "CONFLICT",
+        "Scan sumber berubah. Muat ulang arsip.",
+      );
+    let placement: DecisionPlacement, content: Uint8Array;
+    try {
+      placement = validateDecisionPlacement(raw);
+      content = await generateDecisionPdf(
+        record.id,
+        record.snapshot,
+        scan,
+        placement,
+      );
+    } catch (e) {
+      throw new WorkflowError(
+        "VALIDATION",
+        e instanceof Error ? e.message : "Preview gagal.",
+      );
+    }
+    return {
+      content,
+      fingerprint: hash({
+        archiveId: record.id,
+        placement,
+        sourceChecksum,
+        actorUserId: actor.userId,
+        renderer: "form-stamp-v1",
+      }),
+    };
+  }
+  async saveDecisionEdition(
+    actor: WorkflowActor,
+    requestId: string,
+    raw: unknown,
+    sourceChecksum: string,
+    key: string,
+    confirmed: boolean,
+    fingerprint: string,
+  ) {
+    requireWorkflowAdmin(actor);
+    if (!confirmed)
+      throw new WorkflowError(
+        "VALIDATION",
+        "Verifikasi identitas, periode, dan posisi penanda pada preview.",
+      );
+    let placement: DecisionPlacement;
+    try {
+      placement = validateDecisionPlacement(raw);
+    } catch (e) {
+      throw new WorkflowError("VALIDATION", (e as Error).message);
+    }
+    const record = await this.dependencies.repository.decision(requestId);
+    if (!record)
+      throw new WorkflowError("CONFLICT", "Arsip keputusan belum tersedia.");
+    const payloadHash = hash({
+      archiveId: record.id,
+      placement,
+      sourceChecksum,
+      actorUserId: actor.userId,
+      renderer: "form-stamp-v1",
+    });
+    if (
+      payloadHash !== fingerprint ||
+      sourceChecksum !== record.snapshot.sourceChecksumSha256
+    )
+      throw new WorkflowError(
+        "CONFLICT",
+        "Preview tidak sesuai. Buat preview baru.",
+      );
+    const retry = record.editions?.find((e) => e.idempotencyKey === key);
+    if (retry) {
+      if (
+        retry.payloadHash !== payloadHash ||
+        retry.createdByUserId !== actor.userId
+      )
+        throw new WorkflowError(
+          "CONFLICT",
+          "Kunci penyimpanan digunakan untuk data berbeda.",
+        );
+      return { id: retry.id, version: retry.version };
+    }
+    const preview = await this.previewDecisionEdition(
+      actor,
+      requestId,
+      placement,
+      sourceChecksum,
+    );
+    const stored = await this.dependencies.storage.put(preview.content);
+    try {
+      const result = await this.dependencies.repository.saveEdition({
+        ...stored,
+        id: randomUUID(),
+        archiveId: record.id,
+        placement,
+        sourceChecksumSha256: sourceChecksum,
+        createdByUserId: actor.userId,
+        createdAt: new Date(),
+        idempotencyKey: key,
+        payloadHash,
+      });
+      if (result.key !== stored.key)
+        await this.dependencies.storage.delete(stored.key);
+      return { id: result.id, version: result.version };
+    } catch (e) {
+      await this.dependencies.storage.delete(stored.key).catch(() => undefined);
+      throw e;
+    }
+  }
+  async decisionDocument(
+    actor: WorkflowActor,
+    requestId: string,
+    editionId?: string,
+  ) {
     const { repository, storage } = this.dependencies;
     const record = await repository.decision(requestId);
     if (!record)
@@ -251,6 +394,22 @@ export class LeaveRecordsService {
         "Arsip keputusan belum tersedia. Pengajuan lama memerlukan verifikasi versi sumber.",
       );
     assertReadable(actor, record.snapshot.employeeId);
+    const edition = editionId
+      ? record.editions?.find((e) => e.id === editionId)
+      : record.editions?.[0];
+    if (editionId && !edition)
+      throw new WorkflowError("NOT_FOUND", "Edisi arsip tidak ditemukan.");
+    if (edition) {
+      const content = await storage.read(edition.key);
+      if (
+        createHash("sha256").update(content).digest("hex") !== edition.checksum
+      )
+        throw new WorkflowError(
+          "CONFLICT",
+          "Checksum edisi arsip tidak sesuai.",
+        );
+      return { id: record.id, status: record.snapshot.status, content };
+    }
     if (record.artifact) {
       const content = await storage.read(record.artifact.key);
       if (

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
   createDecisionDocumentHandler,
+  createDecisionEditionHandlers,
+  createDecisionEditionPreviewHandler,
   createDecisionHandler,
   createReturnHandlers,
   createReturnPreviewHandler,
@@ -32,6 +34,11 @@ function fixture(principal: Principal | null = admin) {
       })),
     },
     records: {
+      previewDecisionEdition: vi.fn(async () => ({
+        content: new Uint8Array([37, 80, 68, 70]),
+        fingerprint: "preview-bound",
+      })),
+      saveDecisionEdition: vi.fn(async () => ({ id: "edition", version: 1 })),
       decision: vi.fn(async () => ({
         id: "archive",
         snapshot: { status: "APPROVED" },
@@ -90,6 +97,7 @@ describe("leave records HTTP authorization and replay boundary", () => {
   it.each([
     createDecisionHandler,
     createDecisionDocumentHandler,
+    createDecisionEditionPreviewHandler,
     createReturnPreviewHandler,
     createReturnEvidenceHandler,
   ])(
@@ -190,5 +198,71 @@ describe("leave records HTTP authorization and replay boundary", () => {
       new WorkflowError("CONFLICT", "Verifikasi arsip lama diperlukan"),
     );
     expect((await handler(request(), context)).status).toBe(409);
+  });
+});
+
+describe("decision edition delivery", () => {
+  it("denies owner mutation and anonymous preview", async () => {
+    const f = fixture(owner);
+    expect(
+      (
+        await createDecisionEditionPreviewHandler(f.factory)(
+          request("POST", {}),
+          context,
+        )
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await createDecisionEditionHandlers(f.factory).POST(
+          request("POST", {}),
+          context,
+        )
+      ).status,
+    ).toBe(403);
+    const anon = fixture(null);
+    expect(
+      (
+        await createDecisionEditionPreviewHandler(anon.factory)(
+          request("POST", {}),
+          context,
+        )
+      ).status,
+    ).toBe(401);
+  });
+  it("returns private preview bytes and binds save input without client decision authority", async () => {
+    const f = fixture();
+    const data = {
+      placement: { page: 1, left: 0.1, top: 0.7, width: 0.3, height: 0.1 },
+      sourceChecksum: "test",
+      confirmed: true,
+      idempotencyKey: randomUUID(),
+      previewFingerprint: "preview-bound",
+      status: "REJECTED",
+      reason: "forged",
+    };
+    const r = await createDecisionEditionPreviewHandler(f.factory)(
+      request("POST", data),
+      context,
+    );
+    expect(r.headers.get("cache-control")).toBe("private, no-store");
+    expect(r.headers.get("x-si-cuti-preview")).toBe("preview-bound");
+    expect(
+      (
+        await createDecisionEditionHandlers(f.factory).POST(
+          request("POST", data),
+          context,
+        )
+      ).status,
+    ).toBe(201);
+    expect(f.value.records.saveDecisionEdition).toHaveBeenCalledWith(
+      admin,
+      id,
+      data.placement,
+      "test",
+      data.idempotencyKey,
+      true,
+      "preview-bound",
+    );
   });
 });

@@ -49,6 +49,9 @@ run("decision archives and leave returns on disposable PostgreSQL", () => {
     await database.leaveDecisionArtifact.deleteMany({
       where: { archive: where },
     });
+    await database.leaveDecisionEdition.deleteMany({
+      where: { archive: where },
+    });
     await database.leaveDecisionArchive.deleteMany({ where });
     await database.leaveBalanceReturnOperation.deleteMany({
       where: { returnRecord: where },
@@ -237,6 +240,76 @@ run("decision archives and leave returns on disposable PostgreSQL", () => {
       }),
     ).toBe(1);
     expect(await database.leaveDecisionArtifact.count()).toBeGreaterThan(0);
+    const sourceChecksum = decision!.snapshot.sourceChecksumSha256!;
+    const placement = {
+      page: 1,
+      left: 0.05,
+      top: 0.7,
+      width: 0.3,
+      height: 0.12,
+    };
+    const preview = await records.previewDecisionEdition(
+      f.admin,
+      f.request.id,
+      placement,
+      sourceChecksum,
+    );
+    expect(await database.leaveDecisionEdition.count()).toBe(0);
+    const editionKey = randomUUID();
+    const [edition, same] = await Promise.all(
+      [1, 2].map(() =>
+        records.saveDecisionEdition(
+          f.admin,
+          f.request.id,
+          placement,
+          sourceChecksum,
+          editionKey,
+          true,
+          preview.fingerprint,
+        ),
+      ),
+    );
+    expect(same).toEqual(edition);
+    expect(await database.leaveDecisionEdition.count()).toBe(1);
+    const frozen = JSON.stringify(decision!.snapshot);
+    const nextPlacement = { ...placement, left: 0.35 };
+    const secondPreview = await records.previewDecisionEdition(
+      f.admin,
+      f.request.id,
+      nextPlacement,
+      sourceChecksum,
+    );
+    const secondEdition = await records.saveDecisionEdition(
+      f.admin,
+      f.request.id,
+      nextPlacement,
+      sourceChecksum,
+      randomUUID(),
+      true,
+      secondPreview.fingerprint,
+    );
+    expect(secondEdition.version).toBe(2);
+    expect(
+      (await records.decision(f.owner, f.request.id))!.editions,
+    ).toHaveLength(2);
+    expect(
+      JSON.stringify((await records.decision(f.owner, f.request.id))!.snapshot),
+    ).toBe(frozen);
+    const old = await records.decisionDocument(
+      f.owner,
+      f.request.id,
+      edition.id,
+    );
+    const latest = await records.decisionDocument(f.owner, f.request.id);
+    expect(Buffer.from(old.content)).not.toEqual(Buffer.from(latest.content));
+    expect(await database.leaveDecisionArtifact.count()).toBe(1);
+    const saved = await database.leaveDecisionEdition.findUniqueOrThrow({
+      where: { id: edition.id },
+    });
+    expect(saved.createdByUserId).toBe(f.admin.userId);
+    expect(saved.sourceVerified).toBe(true);
+    expect(saved.sourceChecksumSha256).toBe(sourceChecksum);
+
     await expect(
       records.decisionDocument(await actor(), f.request.id),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -438,6 +511,7 @@ run("decision archives and leave returns on disposable PostgreSQL", () => {
       input = await evidence(f),
       p = await records.preview(f.admin, f.request.id, input);
     const failing: LeaveRecordsRepository = {
+      saveEdition: repository.saveEdition.bind(repository),
       verifyLegacyDecision: repository.verifyLegacyDecision.bind(repository),
       decision: repository.decision.bind(repository),
       createArtifact: repository.createArtifact.bind(repository),

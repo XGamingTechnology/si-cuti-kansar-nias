@@ -162,6 +162,7 @@ function fixture() {
       }),
   };
   const repository: LeaveRecordsRepository = {
+    saveEdition: vi.fn(),
     verifyLegacyDecision: vi.fn(async () => undefined),
     decision: vi.fn(async () => null),
     createArtifact: vi.fn(),

@@ -255,7 +255,14 @@ export function WorkflowWorkspace({
     void load();
   }, [load]);
 
+  const selectedIdRef = useRef<string | null>(null);
+  const detailSequence = useRef(0);
   async function open(item: RequestRecord) {
+    const sequence = ++detailSequence.current;
+    selectedIdRef.current = item.id;
+    setMessage("");
+    setReviewAction(null);
+    setReviewValue("");
     setCreating(false);
     setEditing(false);
     setSelected(item);
@@ -268,15 +275,24 @@ export function WorkflowWorkspace({
           ? api(`/api/workflow/leave/${item.id}/documents`)
           : Promise.resolve({ documents: [] }),
       ]);
+      if (
+        sequence !== detailSequence.current ||
+        selectedIdRef.current !== item.id
+      )
+        return;
       setDetail({
         revisions: revisionData.revisions,
         history: historyData.history,
         documents: documentData.documents,
       });
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Gagal memuat detail.",
-      );
+      if (
+        sequence === detailSequence.current &&
+        selectedIdRef.current === item.id
+      )
+        setMessage(
+          error instanceof Error ? error.message : "Gagal memuat detail.",
+        );
     }
   }
 
@@ -288,6 +304,7 @@ export function WorkflowWorkspace({
     const latest =
       values.find((item) => item.id === requestId) ??
       (request as RequestRecord);
+    if (selectedIdRef.current !== requestId) return;
     await open(latest);
   }
 
@@ -307,6 +324,7 @@ export function WorkflowWorkspace({
       setEditing(false);
       const requestId = (result.request as RequestRecord).id;
       await refreshSelected(requestId);
+      if (selectedIdRef.current !== requestId) return;
       setMessage(
         editingId ? "Perubahan draf tersimpan." : "Draf pengajuan tersimpan.",
       );
@@ -342,10 +360,12 @@ export function WorkflowWorkspace({
         }),
       });
 
+      if (selectedIdRef.current !== requestId) return;
       setReviewAction(null);
       setReviewValue("");
       setEditing(false);
       await refreshSelected(requestId);
+      if (selectedIdRef.current !== requestId) return;
       setMessage(
         result.decisionDocumentReady === false
           ? "Keputusan tersimpan. PDF hasil belum berhasil dibuat dan dapat dicoba lagi dari Arsip Hasil Keputusan."
@@ -360,7 +380,8 @@ export function WorkflowWorkspace({
                   : "Pengajuan dibatalkan.",
       );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Tindakan gagal.");
+      if (selectedIdRef.current === requestId)
+        setMessage(error instanceof Error ? error.message : "Tindakan gagal.");
     } finally {
       setActing(false);
     }
@@ -492,6 +513,8 @@ export function WorkflowWorkspace({
 
   function switchKind(next: Kind) {
     setKind(next);
+    selectedIdRef.current = null;
+    detailSequence.current++;
     setSelected(null);
     setDetail(null);
     setCreating(false);
@@ -571,6 +594,8 @@ export function WorkflowWorkspace({
                 onClick={() => {
                   setCreating(true);
                   setEditing(false);
+                  selectedIdRef.current = null;
+                  detailSequence.current++;
                   setSelected(null);
                   setDetail(null);
                 }}
@@ -637,6 +662,8 @@ export function WorkflowWorkspace({
           <AdminRequestDetailWindow
             floating={role === "ADMIN_KEPEGAWAIAN"}
             onClose={() => {
+              selectedIdRef.current = null;
+              detailSequence.current++;
               setSelected(null);
               setDetail(null);
             }}

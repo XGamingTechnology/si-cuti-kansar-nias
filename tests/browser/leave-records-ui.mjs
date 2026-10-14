@@ -17,12 +17,13 @@ const bundled = await build({
     contents: `
     import React from "react";
     import {createRoot} from "react-dom/client";
+    import {WorkflowWorkspace} from "./src/components/workflow-workspace";
     import {LeaveOutcomePanel} from "./src/components/leave-outcome-panel";
     const query=new URLSearchParams(location.search);
-    createRoot(document.getElementById("root")!).render(<div className="admin-interface"><LeaveOutcomePanel
+    createRoot(document.getElementById("root")!).render(<div className="admin-interface">{query.has("workspace") ? <WorkflowWorkspace role="ADMIN_KEPEGAWAIAN"/> : <LeaveOutcomePanel
       requestId="00000000-0000-4000-8000-000000000001" status={query.get("status")||"APPROVED"}
       admin={query.get("role")!=="PEGAWAI"} annual={query.get("status")!=="REJECTED"}
-      signedDocuments={[{id:"00000000-0000-4000-8000-000000000002",version:1,originalFileName:"scan-sintetis.pdf"}]}/></div>);
+      signedDocuments={[{id:"00000000-0000-4000-8000-000000000002",version:1,originalFileName:"scan-sintetis.pdf"}]}/>}</div>);
   `,
   },
   bundle: true,
@@ -86,16 +87,30 @@ async function pageFixture({
           actorName: "Admin Uji",
           occurredAt: "2099-01-11T01:02:03Z",
           sourceDocumentVersion: 1,
+          sourceChecksumSha256: "synthetic-checksum",
           reason: status === "REJECTED" ? "Dasar tidak lengkap" : null,
         },
       };
   const history = [],
     applies = [];
+  const editions = [];
   let previews = 0,
     evidenceUploads = 0;
   await page.route("**/api/workflow/leave/**", async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const method = route.request().method();
+    if (pathname.endsWith("/decision/editions/preview"))
+      return route.fulfill({
+        contentType: "application/pdf",
+        headers: { "x-si-cuti-preview": "stamp-preview" },
+        body: pdf,
+      });
+    if (pathname.endsWith("/decision/editions")) {
+      editions.push(route.request().postDataJSON());
+      return route.fulfill({
+        json: { edition: { id: "edition", version: 1 } },
+      });
+    }
     if (pathname.endsWith("/decision/document"))
       return route.fulfill({
         contentType: "application/pdf",
@@ -113,6 +128,7 @@ async function pageFixture({
             actorName: "Admin sumber keputusan",
             occurredAt: "2099-01-11T01:02:03Z",
             sourceDocumentVersion: 1,
+            sourceChecksumSha256: "synthetic-checksum",
           },
         };
       return route.fulfill({ json: { decision } });
@@ -187,7 +203,7 @@ async function pageFixture({
   await page
     .getByText("Memuat arsip keputusan…")
     .waitFor({ state: "detached" });
-  return { page, errors, history, applies, previews: () => previews };
+  return { page, errors, history, applies, editions, previews: () => previews };
 }
 async function fillReturn(page) {
   await page.getByRole("button", { name: "Catat Pengembalian Cuti" }).click();
@@ -401,6 +417,151 @@ try {
       await f.page.getByRole("button", { name: "Unduh PDF Final" }).waitFor();
       assert.equal(f.applies.length, 0);
       await f.page.close();
+    },
+  );
+
+  await scenario(
+    "stamp preview, verification and edit invalidation",
+    async () => {
+      const f = await pageFixture();
+      await f.page
+        .getByRole("button", { name: "Atur Penanda pada Formulir" })
+        .click();
+      const d = f.page.getByRole("dialog", {
+        name: "Penanda Keputusan pada Formulir",
+      });
+      const save = d.getByRole("button", { name: "Simpan Edisi Final" });
+      assert.equal(await save.isDisabled(), true);
+      await d.getByRole("button", { name: "Lihat Preview PDF" }).click();
+      await d.getByRole("link", { name: "Buka preview di tab baru" }).waitFor();
+      assert.equal(f.editions.length, 0);
+      await d.getByRole("checkbox").check();
+      assert.equal(await save.isEnabled(), true);
+      await d.getByLabel("Posisi dari kiri (%)").fill("10");
+      assert.equal(await save.isDisabled(), true);
+      assert.equal(await d.locator("iframe").count(), 0);
+      await d.getByRole("button", { name: "Lihat Preview PDF" }).click();
+      await d.getByRole("link", { name: "Buka preview di tab baru" }).waitFor();
+      await d.getByRole("checkbox").check();
+      await save.click();
+      await d.waitFor({ state: "detached" });
+      assert.equal(f.editions.length, 1);
+      assert.equal(f.editions[0].placement.left, 0.1);
+      assert.equal(f.editions[0].previewFingerprint, "stamp-preview");
+      assert.equal(f.editions[0].confirmed, true);
+      assert.deepEqual(f.errors, []);
+      await f.page.close();
+    },
+  );
+  async function workspaceFixture(slow = false) {
+    const page = await browser.newPage();
+    const records = ["A", "B"].map((name, i) => ({
+      id: `00000000-0000-4000-8000-00000000000${i + 1}`,
+      employeeId: `employee-${name}`,
+      employee: {
+        id: `employee-${name}`,
+        nip: `UJI-${name}`,
+        fullName: `Pegawai ${name}`,
+        positionTitle: "Staf",
+        workUnit: "Unit Uji",
+        employmentStartDate: null,
+        directSupervisor: null,
+      },
+      status: i ? "APPROVED" : "SUBMITTED",
+      currentRevisionNumber: 1,
+      currentRevision: {
+        id: `revision-${name}`,
+        leaveType: "ANNUAL",
+        startDate: "2099-01-05",
+        endDate: "2099-01-09",
+        reason: `Alasan ${name}`,
+        calculatedWorkingDays: 5,
+        submittedAt: "2099-01-04T00:00:00Z",
+      },
+    }));
+    await page.route("**/api/workflow/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("permission-types"))
+        return route.fulfill({ json: { permissionTypes: [] } });
+      if (path === "/api/workflow/leave")
+        return route.fulfill({ json: { requests: records } });
+      const record = records.find((r) => path.includes(r.id));
+      if (!record)
+        return route.fulfill({
+          json: { error: "Fixture missing" },
+          status: 404,
+        });
+      if (path.endsWith("/actions")) {
+        record.status = "REJECTED";
+        return route.fulfill({ json: { request: record } });
+      }
+      if (path.endsWith("/revisions")) {
+        if (slow && record === records[0])
+          await new Promise((resolve) => setTimeout(resolve, 600));
+        return route.fulfill({
+          json: {
+            revisions: [{ ...record.currentRevision, revisionNumber: 1 }],
+          },
+        });
+      }
+      if (path.endsWith("/history"))
+        return route.fulfill({ json: { history: [] } });
+      if (path.endsWith("/documents"))
+        return route.fulfill({ json: { documents: [] } });
+      if (path.endsWith("/decision"))
+        return route.fulfill({ json: { decision: null } });
+      if (path.endsWith("/returns"))
+        return route.fulfill({ json: { returns: [] } });
+      return route.fulfill({ json: { request: record } });
+    });
+    await page.goto(base + "/?workspace=1");
+    await page.locator(".request-card").first().waitFor();
+    return page;
+  }
+  await scenario(
+    "rejection message clears when another request opens",
+    async () => {
+      const p = await workspaceFixture();
+      await p.locator(".request-card").filter({ hasText: "Pegawai A" }).click();
+      const detail = p.getByRole("dialog", { name: "Detail pengajuan" });
+      await detail.getByRole("button", { name: "Tolak", exact: true }).click();
+      const review = p.getByRole("dialog", { name: "Tolak pengajuan ini" });
+      await review.getByLabel("Alasan penolakan").fill("Alasan uji");
+      await review
+        .getByRole("button", { name: "Tolak Pengajuan", exact: true })
+        .click();
+      await detail.getByText("Pengajuan ditolak.", { exact: true }).waitFor();
+      await detail.getByRole("button", { name: "Tutup jendela" }).click();
+      await p.locator(".request-card").filter({ hasText: "Pegawai B" }).click();
+      await detail.getByText("Pegawai B", { exact: true }).waitFor();
+      assert.equal(
+        await detail.getByText("Pengajuan ditolak.", { exact: true }).count(),
+        0,
+      );
+      await p.close();
+    },
+  );
+  await scenario(
+    "late detail response cannot replace a newer request",
+    async () => {
+      const p = await workspaceFixture(true);
+      await p.locator(".request-card").filter({ hasText: "Pegawai A" }).click();
+      const d = p.getByRole("dialog", { name: "Detail pengajuan" });
+      await d.getByRole("button", { name: "Tutup jendela" }).click();
+      await p.locator(".request-card").filter({ hasText: "Pegawai B" }).click();
+      await d
+        .locator(".revision-card")
+        .getByText("Alasan B", { exact: true })
+        .waitFor();
+      await p.waitForTimeout(750);
+      assert.equal(
+        await d
+          .locator(".revision-card")
+          .getByText("Alasan A", { exact: true })
+          .count(),
+        0,
+      );
+      await p.close();
     },
   );
   console.log(`BROWSER_SCENARIOS_PASSED=${passed}`);
