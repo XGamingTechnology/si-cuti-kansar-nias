@@ -58,5 +58,9 @@ from rejection to another request and late detail responses. Approved/rejected s
 rendered and visually checked using synthetic data. These browser scenarios are not database E2E.
 
 The PostgreSQL suite adds real concurrent edition creation, stable replay/version history, stored
-verification/checksums and unchanged decision metadata/original artifact. CI result is tracked on
-the PR. Staging UAT remains pending.
+verification/checksums and unchanged decision metadata/original artifact. PR #106 Quality Gate
+passed with 377 unit/HTTP and 92 PostgreSQL integration tests. The merge was deployed to staging
+on 15 October 2026 WIB, including the new migration, healthy app and internal live/ready HTTP 200.
+The user then reported the result was okay. This is scoped feedback, not evidence that every
+browser/authorization/rotation/mobile UAT case was executed. Public HTTPS checks remain unreported.
+See `docs/staging-checkpoint-20261015.md` for exact deployment provenance and remaining checks.

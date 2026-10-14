@@ -1,6 +1,6 @@
 # SI CUTI - User Flows
 
-Status: **Baseline flows derived from proposal; exact approval states require confirmation**
+Status: proposal-derived target flows, with LeaveRequest/PermissionRequest states approved by `docs/m4-workflow-decisions.md`. Not every target flow below is implemented. Current delivered scope is recorded in `docs/implementation-plan.md`; Joint Leave claims are tracked in Issue #107.
 
 ## 1. Pegawai - Login dan dashboard
 
@@ -25,24 +25,27 @@ Login
 Dashboard Pegawai
   -> Pengajuan Cuti
   -> Pilih jenis cuti
+  -> Buat/Edit Draf milik sendiri
   -> Isi tanggal dan data permohonan
-  -> Sistem menghitung/menampilkan kebutuhan hari sesuai rule final
-  -> Sistem memvalidasi saldo dan requirement
-  -> Ajukan (opsi draft belum dikonfirmasi)
-  -> Status pengajuan tercatat
+  -> Sistem menghitung hari kerja dan memvalidasi saldo sesuai BAL-003
+  -> Ajukan: revisi immutable + RESERVE saldo
   -> Cetak form
   -> Tanda tangan Atasan Langsung dan Kepala Kantor (digambarkan sebagai proses fisik)
-  -> Serahkan ke Admin untuk diperiksa dan diunggah
-  -> Admin memvalidasi kelengkapan
-     -> belum lengkap: kembalikan ke Pegawai untuk diperbaiki
-     -> lengkap: arsipkan dan catat dalam riwayat
-  -> Dokumen persetujuan final dapat diarsipkan
-  -> Pegawai dapat melihat status/riwayat dan mengunduh dokumen yang berhak diakses
+  -> Pegawai unggah scan PDF bertanda tangan ke arsip privat
+  -> Admin memverifikasi berkas/scan versi terpilih
+     -> perbaikan: RETURNED_FOR_CORRECTION + RELEASE; Pegawai perbaiki dan submit revisi baru
+     -> ditolak: REJECTED + RELEASE, alasan dan arsip hasil keputusan
+     -> disetujui: APPROVED + COMMIT, arsip keputusan dengan source scan terpilih
+  -> Admin dapat preview/verifikasi/simpan penanda pada edisi PDF turunan
+  -> Pegawai melihat status/riwayat dan mengunduh arsip yang berhak diakses
 ```
 
-Catatan: flowchart menempatkan pengurangan saldo Cuti Tahunan setelah validasi kelengkapan oleh
-Admin, tetapi titik komit transaksi/status final dan mekanisme koreksinya belum cukup rinci dan harus
-dikonfirmasi. Opsi draft adalah rekomendasi produk, bukan requirement PDF.
+Alur aktual mengikuti WF-001–004, BAL-002/003, `docs/leave-records-decisions.md` dan
+`docs/decision-form-stamps.md`. Dokumen asli tidak ditimpa; penanda sistem bukan tanda tangan
+elektronik/cap resmi baru. REJECTED terminal: pengajuan ulang memerlukan ID baru; perbaikan pada
+ID yang sama memakai RETURNED_FOR_CORRECTION sebelum keputusan final. Setelah APPROVED,
+pengembalian hari tidak digunakan dicatat oleh Admin sebagai kompensasi terpisah dengan dasar,
+bukti dan attestation, bukan membuka ulang/membatalkan pengajuan asli.
 
 ## 3. Pegawai - Klaim Cuti Bersama
 
@@ -135,6 +138,11 @@ Scheduled check
 
 ## 10. Flows requiring stakeholder confirmation
 
+The original proposal ambiguities below are historical inputs. WF-001–004, BAL-001–005,
+PERM-001/002 and VAL-001 have approved baselines; do not treat all their flows as still blocked.
+Changing those baselines, detailed Joint Leave claim behavior (#107), reporting/calendar/reminder
+scope and production policy still require the applicable decisions.
+
 - approval formal Kepala Kantor dan representasinya di sistem;
 - siapa yang berhak reject/cancel/edit setelah submit;
 - kapan saldo dipotong;
@@ -154,12 +162,12 @@ Scheduled check
 
 Flow di atas adalah baseline interpretasi, bukan state machine final. Gunakan `docs/decision-log.md`:
 
-| Flow | Decision IDs |
-|---|---|
-| Pengajuan Cuti Tahunan dan perubahan saldo | BAL-001, BAL-002, BAL-003, WF-001, WF-002, WF-003, WF-004 |
-| Klaim Cuti Bersama | BAL-005, WF-004, DOC-003 |
-| Izin non-cuti | PERM-001, PERM-002, WF-002, WF-003, DOC-001 |
-| Cetak, tanda tangan, registrasi, dan arsip final | WF-001, WF-002, DOC-001, DOC-002, DOC-003, DOC-004 |
-| Search/report/download | AUD-001, RPT-001, AUTH-002 |
-| Reminder kembali aktif | BAL-003, NOT-001, NOT-002, DATA-001 |
-| Validasi dokumen/jenis cuti | VAL-001 |
+| Flow                                             | Decision IDs                                              |
+| ------------------------------------------------ | --------------------------------------------------------- |
+| Pengajuan Cuti Tahunan dan perubahan saldo       | BAL-001, BAL-002, BAL-003, WF-001, WF-002, WF-003, WF-004 |
+| Klaim Cuti Bersama                               | BAL-005, WF-004, DOC-003                                  |
+| Izin non-cuti                                    | PERM-001, PERM-002, WF-002, WF-003, DOC-001               |
+| Cetak, tanda tangan, registrasi, dan arsip final | WF-001, WF-002, DOC-001, DOC-002, DOC-003, DOC-004        |
+| Search/report/download                           | AUD-001, RPT-001, AUTH-002                                |
+| Reminder kembali aktif                           | BAL-003, NOT-001, NOT-002, DATA-001                       |
+| Validasi dokumen/jenis cuti                      | VAL-001                                                   |

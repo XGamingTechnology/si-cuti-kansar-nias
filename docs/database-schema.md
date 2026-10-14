@@ -1,8 +1,8 @@
 # SI CUTI - Conceptual Database Schema
 
-Status: **Conceptual model aligned to PostgreSQL 18; physical schema waits for M1 stack approval**
+Status: historical conceptual model; the physical implemented schema is `prisma/schema.prisma` and its forward migrations. See `docs/implementation-plan.md` for delivered versus deferred modules.
 
-Tujuan dokumen ini menjaga struktur data sebelum schema fisik dibuat. PostgreSQL 18 telah diajukan dan Prisma 7 adalah ORM rekomendasi; belum ada migration.
+Tujuan dokumen ini menjaga rancangan konseptual. PostgreSQL 18 dan Prisma 7 digunakan pada implementasi. Candidate fields di bawah bukan pengganti schema fisik atau keputusan bisnis yang disahkan.
 
 ## 1. Core entities
 
@@ -308,6 +308,7 @@ menentukan identitas dan tidak dicetak pada formulir historis. Pergantian
 pejabat selalu dibuat sebagai penugasan baru. PostgreSQL melindungi periode
 dengan `CHECK` urutan tanggal serta exclusion constraint `daterange` agar write
 konkuren tidak dapat menghasilkan periode yang bertumpang tindih.
+
 - Test memakai PostgreSQL nyata, bukan SQLite, untuk constraint/isolation/locking.
 - M1 tidak memfinalkan entitas/kolom BAL/WF/NOT unresolved.
 
@@ -328,13 +329,13 @@ konkuren tidak dapat menghasilkan periode yang bertumpang tindih.
 Candidate field/entity di atas belum mengesahkan policy. Detail schema harus menunggu register
 `docs/decision-log.md` berikut.
 
-| Schema area | Decision IDs | Consequence |
-|---|---|---|
-| Balance bucket/ledger/reservation/reversal | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005 | Menentukan transaction types, effective dates, constraints, dan annual snapshots. |
-| Application/status/approval/revision | WF-001, WF-002, WF-003, WF-004 | Menentukan state history, revision, approver/delegation, dan transition constraints. |
-| Document/registration | DOC-001, DOC-002, DOC-003, DOC-004 | Menentukan version/provenance, retention/legal hold, storage metadata, dan numbering sequence. |
-| Permission/validation | PERM-001, PERM-002, VAL-001 | Menentukan apakah data hanya dicatat, dihitung, atau diintegrasikan. |
-| Calendar/notification | CAL-001, NOT-001, NOT-002 | Menentukan event source, hierarchy reference, delivery, dan idempotency key. |
-| Audit/reporting | AUD-001, RPT-001, RPT-002 | Menentukan event coverage, retention/access, snapshots, dan safe export views. |
-| User/role/employee organization | AUTH-001 (resolved), AUTH-002, DATA-001 | AUTH-001 menetapkan model identity provider-neutral dan LOCAL sebagai provider awal; scope/delegation, hierarchy, effective dates, serta detail keamanan lokal masih perlu ditetapkan. |
-| Deployment/storage/backup | DEP-001 (resolved), DEP-002 (baseline M1 resolved), DEP-003 | Schema harus kompatibel dengan Ubuntu VPS, storage privat, serta backup cron untuk DB+dokumen yang dapat disalin keluar lokasi data utama; metadata retensi/enkripsi/restore menunggu gate production. |
+| Schema area                                | Decision IDs                                                | Consequence                                                                                                                                                                                            |
+| ------------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Balance bucket/ledger/reservation/reversal | BAL-001, BAL-002, BAL-003, BAL-004, BAL-005                 | Menentukan transaction types, effective dates, constraints, dan annual snapshots.                                                                                                                      |
+| Application/status/approval/revision       | WF-001, WF-002, WF-003, WF-004                              | Menentukan state history, revision, approver/delegation, dan transition constraints.                                                                                                                   |
+| Document/registration                      | DOC-001, DOC-002, DOC-003, DOC-004                          | Menentukan version/provenance, retention/legal hold, storage metadata, dan numbering sequence.                                                                                                         |
+| Permission/validation                      | PERM-001, PERM-002, VAL-001                                 | Menentukan apakah data hanya dicatat, dihitung, atau diintegrasikan.                                                                                                                                   |
+| Calendar/notification                      | CAL-001, NOT-001, NOT-002                                   | Menentukan event source, hierarchy reference, delivery, dan idempotency key.                                                                                                                           |
+| Audit/reporting                            | AUD-001, RPT-001, RPT-002                                   | Menentukan event coverage, retention/access, snapshots, dan safe export views.                                                                                                                         |
+| User/role/employee organization            | AUTH-001 (resolved), AUTH-002, DATA-001                     | AUTH-001 menetapkan model identity provider-neutral dan LOCAL sebagai provider awal; scope/delegation, hierarchy, effective dates, serta detail keamanan lokal masih perlu ditetapkan.                 |
+| Deployment/storage/backup                  | DEP-001 (resolved), DEP-002 (baseline M1 resolved), DEP-003 | Schema harus kompatibel dengan Ubuntu VPS, storage privat, serta backup cron untuk DB+dokumen yang dapat disalin keluar lokasi data utama; metadata retensi/enkripsi/restore menunggu gate production. |
