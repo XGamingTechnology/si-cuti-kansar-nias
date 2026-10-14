@@ -72,17 +72,16 @@ export class LeaveDocumentService {
     );
   }
 
-  async uploadApprovedForm(input: {
-    leaveRequestId: string;
-    revisionId: string;
-    uploadedByUserId: string;
-    originalFileName: string;
-    mimeType: string;
-    sourceIp: string | null;
-    content: Uint8Array;
-    snapshot: DocumentSnapshot;
-    now?: Date;
-  }) {
+  async uploadApprovedForm(input: SignedDocumentUpload) {
+    return this.upload(input, "APPROVED_FORM");
+  }
+  async uploadReturnEvidence(input: SignedDocumentUpload) {
+    return this.upload(input, "RETURN_BASIS");
+  }
+  private async upload(
+    input: SignedDocumentUpload,
+    documentType: "APPROVED_FORM" | "RETURN_BASIS",
+  ) {
     if (!input.content.byteLength)
       throw new LeaveDocumentError("VALIDATION", "File PDF wajib diunggah.");
     if (input.content.byteLength > SIGNED_LEAVE_DOCUMENT_MAX_BYTES)
@@ -97,10 +96,7 @@ export class LeaveDocumentService {
       "application/octet-stream",
       "binary/octet-stream",
     ]);
-    if (
-      !acceptedPdfMimeTypes.has(declaredMimeType) ||
-      !isPdf(input.content)
-    )
+    if (!acceptedPdfMimeTypes.has(declaredMimeType) || !isPdf(input.content))
       throw new LeaveDocumentError(
         "VALIDATION",
         "Dokumen bertanda tangan harus berupa PDF yang valid.",
@@ -108,7 +104,7 @@ export class LeaveDocumentService {
 
     const version = await this.repository.nextVersion(
       input.revisionId,
-      "APPROVED_FORM",
+      documentType,
     );
     const stored = await this.storage.put(input.content);
     const uploadedAt = input.now ?? new Date();
@@ -118,7 +114,7 @@ export class LeaveDocumentService {
         await this.repository.create({
           leaveRequestId: input.leaveRequestId,
           revisionId: input.revisionId,
-          documentType: "APPROVED_FORM",
+          documentType,
           version,
           storageKey: stored.key,
           checksumSha256: stored.checksum,
@@ -151,3 +147,15 @@ export class LeaveDocumentService {
     };
   }
 }
+
+export type SignedDocumentUpload = {
+  leaveRequestId: string;
+  revisionId: string;
+  uploadedByUserId: string;
+  originalFileName: string;
+  mimeType: string;
+  sourceIp: string | null;
+  content: Uint8Array;
+  snapshot: DocumentSnapshot;
+  now?: Date;
+};

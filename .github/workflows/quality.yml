@@ -85,3 +85,47 @@ jobs:
 
       - name: Unit and HTTP tests
         run: npm test
+
+  integration:
+    name: disposable PostgreSQL integration and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18.1-bookworm
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_admin_only
+          POSTGRES_DB: si_cuti_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d si_cuti_ci"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      SI_CUTI_DISPOSABLE_TEST_DB: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Create disposable non-superuser database owner
+        env:
+          PGPASSWORD: ci_admin_only
+        run: |
+          psql -h 127.0.0.1 -U postgres -d si_cuti_ci -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE si_cuti_ci LOGIN PASSWORD 'si_cuti_ci' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+          GRANT CONNECT, CREATE ON DATABASE si_cuti_ci TO si_cuti_ci;
+          GRANT USAGE, CREATE ON SCHEMA public TO si_cuti_ci;
+          SQL
+      - name: Apply migrations to disposable database
+        run: npm run db:migrate
+      - run: npm run db:generate
+      - name: PostgreSQL integration tests
+        run: npm run test:integration
+      - name: Production build
+        env:
+          NODE_ENV: production
+        run: npm run build

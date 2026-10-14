@@ -95,3 +95,15 @@ fondasi harus membuktikan storage tidak publik, anonymous/direct-object access d
 isolation ditegakkan server-side, dan rancangan backup mencakup database+dokumen serta dapat
 menyalin hasil keluar lokasi data utama. Detail DR/retensi/enkripsi/restore/RPO/RTO ditelusuri pada
 gate M8/production.
+
+## Issue #104 implementation traceability
+
+| Requirement                              | Implementation                                                       | Verification                                                       |
+| ---------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| BAL-002 authorized unused committed days | LeaveRecordsService + original revision reference + REVERSAL links   | partial/full/retry/atomic rollback/concurrency tests               |
+| WF-003 immutable approved request        | Separate LeaveBalanceReturn records                                  | unchanged status/revision/COMMIT                                   |
+| Final approval/rejection result PDF      | LeaveDecisionArchive + artifact + selected scan + immutable snapshot | page fidelity/private access/checksum/rejection-without-scan tests |
+| Exact approved evidence version          | Source document pinned inside request transaction                    | multi-version selection/replay/upload-after-final tests            |
+| Rollover consistency                     | Employee lock shared with rollover; downstream cases unsupported     | PostgreSQL guard/race tests                                        |
+
+Candidate code is not a staging deployment or UAT acceptance record. See `docs/leave-records-decisions.md`.

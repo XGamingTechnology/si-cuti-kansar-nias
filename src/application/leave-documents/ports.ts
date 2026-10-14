@@ -1,6 +1,7 @@
 export const LEAVE_DOCUMENT_TYPES = [
   "SUBMISSION_PROOF",
   "APPROVED_FORM",
+  "RETURN_BASIS",
 ] as const;
 
 export type LeaveDocumentType = (typeof LEAVE_DOCUMENT_TYPES)[number];

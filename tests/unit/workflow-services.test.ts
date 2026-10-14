@@ -125,6 +125,13 @@ describe("workflow application policy", () => {
       currentRevision: { ...leave.currentRevision, [field]: " " },
     };
     const transaction = {
+      resolveDecisionSource: vi.fn(async () => ({
+        id: "scan-1",
+        version: 1,
+        checksumSha256: "a".repeat(64),
+      })),
+      decisionSourceId: vi.fn(async () => "scan-1"),
+      recordDecision: vi.fn(async () => undefined),
       lockLeaveRequest: vi.fn(async () => invalid),
       findLeaveTransitionByKey: vi.fn(async () => null),
     } as unknown as WorkflowTransaction;
@@ -155,6 +162,13 @@ describe("workflow application policy", () => {
       ...input,
     }));
     const transaction = {
+      resolveDecisionSource: vi.fn(async () => ({
+        id: "scan-1",
+        version: 1,
+        checksumSha256: "a".repeat(64),
+      })),
+      decisionSourceId: vi.fn(async () => "scan-1"),
+      recordDecision: vi.fn(async () => undefined),
       lockLeaveRequest: vi.fn(async () => supervised),
       findLeaveTransitionByKey: vi.fn(async () => null),
       submitLeaveRevision,
@@ -244,6 +258,13 @@ describe("workflow application policy", () => {
       ...input,
     }));
     const transaction = {
+      resolveDecisionSource: vi.fn(async () => ({
+        id: "scan-1",
+        version: 1,
+        checksumSha256: "a".repeat(64),
+      })),
+      decisionSourceId: vi.fn(async () => "scan-1"),
+      recordDecision: vi.fn(async () => undefined),
       lockLeaveRequest: vi.fn(async () => submitted),
       findLeaveTransitionByKey: vi.fn(async () => null),
       setLeaveStatus: vi.fn(async () => undefined),
@@ -282,6 +303,13 @@ describe("workflow application policy", () => {
       ...input,
     }));
     const transaction = {
+      resolveDecisionSource: vi.fn(async () => ({
+        id: "scan-1",
+        version: 1,
+        checksumSha256: "a".repeat(64),
+      })),
+      decisionSourceId: vi.fn(async () => "scan-1"),
+      recordDecision: vi.fn(async () => undefined),
       lockPermissionRequest: vi.fn(async () => permission),
       findPermissionTransitionByKey: vi.fn(async () => null),
       permissionTypeIsActive: vi.fn(async () => true),
@@ -306,6 +334,13 @@ describe("workflow application policy", () => {
 
   it("rejects an inactive PermissionType at the submission boundary", async () => {
     const transaction = {
+      resolveDecisionSource: vi.fn(async () => ({
+        id: "scan-1",
+        version: 1,
+        checksumSha256: "a".repeat(64),
+      })),
+      decisionSourceId: vi.fn(async () => "scan-1"),
+      recordDecision: vi.fn(async () => undefined),
       lockPermissionRequest: vi.fn(async () => permission),
       findPermissionTransitionByKey: vi.fn(async () => null),
       permissionTypeIsActive: vi.fn(async () => false),

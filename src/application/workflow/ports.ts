@@ -78,6 +78,18 @@ export type PermissionTypeRecord = Readonly<{
 }>;
 
 export interface WorkflowTransaction {
+  resolveDecisionSource(
+    request: LeaveRequestRecord,
+    status: WorkflowStatus,
+    documentId?: string,
+  ): Promise<{ id: string; version: number; checksumSha256: string } | null>;
+  decisionSourceId(transitionId: string): Promise<string | null>;
+  recordDecision(
+    request: LeaveRequestRecord,
+    transition: TransitionRecord,
+    actorName: string,
+    source: { id: string; version: number; checksumSha256: string } | null,
+  ): Promise<void>;
   readonly annualBalanceRepository: AnnualBalanceMutationRepository;
   lockLeaveRequest(id: string): Promise<LeaveRequestRecord | null>;
   lockPermissionRequest(id: string): Promise<PermissionRequestRecord | null>;

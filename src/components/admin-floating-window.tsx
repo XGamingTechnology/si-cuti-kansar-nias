@@ -31,6 +31,49 @@ export function AdminFloatingWindow({
       ref={dialog}
       className="admin-floating-window"
       aria-label={title}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (
+          event.key !== "Tab" ||
+          event.defaultPrevented ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.altKey
+        )
+          return;
+        const element = event.currentTarget;
+        // An inner modal owns its own keyboard loop; the outer dialog must not intercept it.
+        if (
+          event.target instanceof Element &&
+          event.target.closest("dialog") !== element
+        )
+          return;
+        const controls = Array.from(
+          element.querySelectorAll<HTMLElement>(
+            "button, input, select, textarea, a[href], [tabindex]",
+          ),
+        ).filter(
+          (control) =>
+            control.tabIndex >= 0 &&
+            !control.matches(":disabled") &&
+            control.getClientRects().length > 0,
+        );
+        const first = controls[0],
+          last = controls.at(-1);
+        if (!first) {
+          event.preventDefault();
+          element.focus();
+          return;
+        }
+        if (
+          document.activeElement === element ||
+          (event.shiftKey && document.activeElement === first) ||
+          (!event.shiftKey && document.activeElement === last)
+        ) {
+          event.preventDefault();
+          (event.shiftKey ? last : first)?.focus();
+        }
+      }}
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) onClose();

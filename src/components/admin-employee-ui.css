@@ -1087,3 +1087,62 @@
   padding: 7px 12px;
   color: #254e68;
 }
+
+/* Decision archives and compensating annual-leave returns. */
+.leave-outcome-panel {
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px solid #dbe3e9;
+  border-radius: 8px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+.leave-decision-label {
+  font-weight: 700;
+  color: #235879;
+}
+.leave-return-history {
+  border-top: 1px solid #dbe3e9;
+  padding: 10px 0;
+}
+.leave-return-form fieldset {
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.leave-return-form label {
+  display: grid;
+  gap: 6px;
+}
+.leave-return-form input:not([type="checkbox"]),
+.leave-return-form textarea,
+.leave-return-form select {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px;
+  border: 1px solid #cbd6df;
+  border-radius: 5px;
+  font: inherit;
+}
+.leave-return-form input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+.leave-return-form textarea {
+  min-height: 90px;
+}
+.leave-return-form button {
+  margin-top: 14px;
+  margin-right: 10px;
+}
+.leave-return-preview {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+.leave-return-preview th,
+.leave-return-preview td {
+  padding: 8px;
+  text-align: left;
+}

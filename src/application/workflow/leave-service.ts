@@ -165,6 +165,7 @@ export class LeaveWorkflowService {
     reason: string,
     idempotencyKey: string,
     now = new Date(),
+    sourceDocumentId?: string,
   ) {
     return this.transition(
       actor,
@@ -174,6 +175,7 @@ export class LeaveWorkflowService {
       requireNonEmpty(reason, "Alasan penolakan", 10_000),
       null,
       now,
+      sourceDocumentId,
     );
   }
   async approve(
@@ -182,6 +184,7 @@ export class LeaveWorkflowService {
     evidenceReference: string,
     idempotencyKey: string,
     now = new Date(),
+    sourceDocumentId?: string,
   ) {
     requireWorkflowAdmin(actor);
     const reference = requireNonEmpty(evidenceReference, "Referensi bukti");
@@ -204,6 +207,7 @@ export class LeaveWorkflowService {
       null,
       reference,
       now,
+      sourceDocumentId,
     );
   }
   cancel(
@@ -231,6 +235,7 @@ export class LeaveWorkflowService {
     reason: string | null,
     evidenceReference: string | null,
     now: Date,
+    sourceDocumentId?: string,
   ) {
     // M3 appends a bucket suffix, so keep the base within its established limit.
     const idempotencyKey = requireNonEmpty(rawKey, "Idempotency key", 140);
@@ -259,6 +264,14 @@ export class LeaveWorkflowService {
           throw new WorkflowError(
             "CONFLICT",
             "Idempotency key telah digunakan untuk operasi berbeda.",
+          );
+        if (
+          sourceDocumentId &&
+          (await tx.decisionSourceId(retry.id)) !== sourceDocumentId
+        )
+          throw new WorkflowError(
+            "CONFLICT",
+            "Versi scan berbeda dari keputusan sebelumnya.",
           );
         return retry;
       }
@@ -306,6 +319,10 @@ export class LeaveWorkflowService {
       }
 
       const revision = request.currentRevision;
+      const decisionSource =
+        target === "APPROVED" || target === "REJECTED"
+          ? await tx.resolveDecisionSource(request, target, sourceDocumentId)
+          : null;
       const annual = revision.leaveType === "ANNUAL";
       const balance = new AnnualBalanceMutationService(
         tx.annualBalanceRepository,
@@ -364,6 +381,13 @@ export class LeaveWorkflowService {
         ...expected,
         occurredAt: now,
       });
+      if (target === "APPROVED" || target === "REJECTED")
+        await tx.recordDecision(
+          request,
+          transition,
+          actor.fullName,
+          decisionSource,
+        );
       if (target === "RETURNED_FOR_CORRECTION")
         await tx.createLeaveCorrection(request);
       return transition;
