@@ -67,7 +67,10 @@ remaining-ceiling/rollover validation, so a successful historical command can st
 
 Run lint/typecheck/unit+HTTP/build, plus PostgreSQL integration with
 SI_CUTI_DISPOSABLE_TEST_DB=1 against a disposable database. CI supplies PostgreSQL 18 and a
-non-superuser test role. Do not point integration fixtures at staging or production.
+non-superuser test role. Integration files run serially because the existing Admin-recovery
+fixtures temporarily change the global Admin population. Concurrent return/rollover scenarios
+still run simultaneous commands inside each test. Do not point integration fixtures at staging
+or production.
 
 Migration `20261014120000_leave_decision_archives_and_returns` only adds entities, indexes,
 constraints and RETURN_BASIS; deployed migrations are immutable. Before rollout, review the SQL,
@@ -87,7 +90,7 @@ by this candidate. Use synthetic data for browser scenarios.
   Unicode rejection text are covered by automated tests.
 - PostgreSQL integration tests and the forward migration have **not** been executed in this local
   environment. The CI PostgreSQL job is prepared but has not run. Staging UAT remains pending.
-- No feature branch or PR has been published and no deployment has been performed.
+- Published for review in PR #105. No deployment has been performed.
 
 Browser test command (with an installed Playwright/Chromium runtime):
 

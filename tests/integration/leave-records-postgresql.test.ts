@@ -229,7 +229,7 @@ run("decision archives and leave returns on disposable PostgreSQL", () => {
     expect(decision?.sourceDocumentId).toBe(f.doc.id);
     const first = await records.decisionDocument(f.owner, f.request.id),
       retry = await records.decisionDocument(f.owner, f.request.id);
-    expect(first.content).toEqual(retry.content);
+    expect(Buffer.from(first.content)).toEqual(Buffer.from(retry.content));
     expect((await PDFDocument.load(first.content)).getPageCount()).toBe(2);
     expect(
       await database.leaveDecisionArchive.count({

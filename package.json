@@ -17,8 +17,8 @@
     "format:check": "prettier --check .",
     "typecheck": "prisma generate && tsc --noEmit",
     "test": "vitest run tests/unit tests/http",
-    "test:integration": "vitest run tests/integration",
-    "test:all": "vitest run",
+    "test:integration": "vitest run tests/integration --no-file-parallelism",
+    "test:all": "vitest run --no-file-parallelism",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
     "db:migrate": "prisma migrate deploy"
