@@ -11,6 +11,8 @@ import type { AnnualBalanceAccountState } from "@/application/leave-balance/port
 import type { StoredDocument } from "@/application/ports/document-storage";
 import type {
   DecisionSnapshot,
+  DecisionEdition,
+  DecisionPlacement,
   LeaveRecordsRepository,
   ReturnRecord,
   ReturnSnapshot,
@@ -32,6 +34,63 @@ const available = (
 });
 export class PrismaLeaveRecordsRepository implements LeaveRecordsRepository {
   constructor(private readonly db: PrismaClient) {}
+  async saveEdition(record: Omit<DecisionEdition, "version">) {
+    return this.db
+      .$transaction(async (db) => {
+        await db.$queryRaw(
+          Prisma.sql`SELECT "id" FROM "LeaveDecisionArchive" WHERE "id" = ${record.archiveId}::uuid FOR UPDATE`,
+        );
+        const retry = await db.leaveDecisionEdition.findUnique({
+          where: { idempotencyKey: record.idempotencyKey },
+        });
+        const map = (e: typeof retry) => ({
+          ...e!,
+          placement: e!.placement as unknown as DecisionPlacement,
+          key: e!.storageKey,
+          checksum: e!.checksumSha256,
+          size: e!.sizeBytes,
+        });
+        if (retry) {
+          if (
+            retry.payloadHash !== record.payloadHash ||
+            retry.archiveId !== record.archiveId ||
+            retry.createdByUserId !== record.createdByUserId
+          )
+            throw new WorkflowError(
+              "CONFLICT",
+              "Kunci penyimpanan sudah dipakai untuk data berbeda.",
+            );
+          return map(retry);
+        }
+        const last = await db.leaveDecisionEdition.findFirst({
+          where: { archiveId: record.archiveId },
+          orderBy: { version: "desc" },
+        });
+        const { key, checksum, size, ...data } = record;
+        const made = await db.leaveDecisionEdition.create({
+          data: {
+            ...data,
+            placement: record.placement as unknown as Prisma.InputJsonObject,
+            storageKey: key,
+            checksumSha256: checksum,
+            sizeBytes: size,
+            version: (last?.version ?? 0) + 1,
+          },
+        });
+        return map(made);
+      })
+      .catch((error) => {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        )
+          throw new WorkflowError(
+            "CONFLICT",
+            "Kunci penyimpanan atau versi edisi sudah digunakan. Muat ulang arsip.",
+          );
+        throw error;
+      });
+  }
   async verifyLegacyDecision(
     requestId: string,
     documentId: string | null,
@@ -140,7 +199,11 @@ export class PrismaLeaveRecordsRepository implements LeaveRecordsRepository {
   async decision(requestId: string) {
     const d = await this.db.leaveDecisionArchive.findFirst({
       where: { leaveRequestId: requestId },
-      include: { artifact: true, sourceDocument: true },
+      include: {
+        artifact: true,
+        sourceDocument: true,
+        editions: { orderBy: { version: "desc" } },
+      },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     });
     if (!d) return null;
@@ -151,6 +214,13 @@ export class PrismaLeaveRecordsRepository implements LeaveRecordsRepository {
       transitionId: d.transitionId,
       sourceDocumentId: d.sourceDocumentId,
       sourceStorageKey: d.sourceDocument?.storageKey ?? null,
+      editions: d.editions.map((e) => ({
+        ...e,
+        placement: e.placement as unknown as DecisionPlacement,
+        key: e.storageKey,
+        checksum: e.checksumSha256,
+        size: e.sizeBytes,
+      })),
       snapshot: d.snapshot as unknown as DecisionSnapshot,
       artifact: d.artifact
         ? {

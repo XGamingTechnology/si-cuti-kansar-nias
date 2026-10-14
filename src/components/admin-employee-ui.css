@@ -1146,3 +1146,25 @@
   padding: 8px;
   text-align: left;
 }
+
+.decision-stamp-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  border: 0;
+  padding: 12px 0;
+}
+.decision-stamp-controls label {
+  display: grid;
+  gap: 6px;
+}
+.decision-stamp-controls input {
+  width: 100%;
+  min-width: 0;
+}
+.decision-stamp-preview {
+  width: 100%;
+  height: 65vh;
+  border: 1px solid #d5dee5;
+  margin: 12px 0;
+}

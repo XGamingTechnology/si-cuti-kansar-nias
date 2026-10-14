@@ -29,6 +29,24 @@ export type DecisionSnapshot = {
   sourceDocumentVersion: number | null;
   sourceChecksumSha256: string | null;
 };
+export type DecisionPlacement = {
+  page: number;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+export type DecisionEdition = StoredDocument & {
+  id: string;
+  archiveId: string;
+  version: number;
+  placement: DecisionPlacement;
+  sourceChecksumSha256: string;
+  createdByUserId: string;
+  createdAt: Date;
+  idempotencyKey: string;
+  payloadHash: string;
+};
 export type DecisionArtifact = StoredDocument & { id: string };
 export type DecisionArchive = {
   id: string;
@@ -39,6 +57,7 @@ export type DecisionArchive = {
   sourceStorageKey: string | null;
   snapshot: DecisionSnapshot;
   artifact: DecisionArtifact | null;
+  editions?: readonly DecisionEdition[];
 };
 export type ReturnInput = {
   restoredDays: number;
@@ -104,6 +123,10 @@ export interface ReturnTransaction {
   freshAccounts(): Promise<readonly AnnualBalanceAccountState[]>;
 }
 export interface LeaveRecordsRepository {
+  saveEdition(
+    record: Omit<DecisionEdition, "version">,
+  ): Promise<DecisionEdition>;
+
   verifyLegacyDecision(
     requestId: string,
     documentId: string | null,

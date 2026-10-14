@@ -233,6 +233,7 @@ model User {
   permissionRequestTransitions PermissionRequestTransition[]
   uploadedLeaveDocuments       LeaveDocument[]               @relation("LeaveDocumentUploader")
   leaveBalanceReturns          LeaveBalanceReturn[]
+  decisionEditions             LeaveDecisionEdition[]
 }
 
 model LeaveRequest {
@@ -459,6 +460,7 @@ model LeaveDecisionArchive {
   transition       LeaveRequestTransition @relation(fields: [transitionId, revisionId, leaveRequestId], references: [id, revisionId, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
   sourceDocument   LeaveDocument?         @relation(fields: [sourceDocumentId, revisionId, leaveRequestId], references: [id, revisionId, leaveRequestId], onDelete: Restrict, onUpdate: Restrict)
   artifact         LeaveDecisionArtifact?
+  editions         LeaveDecisionEdition[]
 
   @@unique([transitionId, revisionId, leaveRequestId])
   @@index([leaveRequestId])
@@ -507,4 +509,25 @@ model LeaveBalanceReturnOperation {
   operation    AnnualBalanceOperation @relation(fields: [operationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@id([returnId, operationId])
+}
+
+model LeaveDecisionEdition {
+  id                   String               @id @default(uuid()) @db.Uuid
+  archiveId            String               @db.Uuid
+  version              Int
+  placement            Json
+  sourceVerified       Boolean              @default(true)
+  rendererVersion      String               @default("form-stamp-v1") @db.VarChar(50)
+  sourceChecksumSha256 String               @db.Char(64)
+  createdByUserId      String               @db.Uuid
+  createdAt            DateTime             @default(now()) @db.Timestamptz(3)
+  idempotencyKey       String               @unique @db.Uuid
+  payloadHash          String               @db.Char(64)
+  storageKey           String               @unique @db.VarChar(191)
+  checksumSha256       String               @db.Char(64)
+  sizeBytes            Int
+  archive              LeaveDecisionArchive @relation(fields: [archiveId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creator              User                 @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([archiveId, version])
 }

@@ -7,6 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { DecisionStampEditor } from "./decision-stamp-editor";
 import { AdminFloatingWindow } from "./admin-floating-window";
 import type {
   DecisionSnapshot,
@@ -18,6 +19,7 @@ type Decision = {
   sourceDocumentId: string | null;
   snapshot: DecisionSnapshot;
   ready: boolean;
+  editions?: { id: string; version: number; createdAt: string }[];
 };
 type History = {
   id: string;
@@ -83,6 +85,7 @@ export function LeaveOutcomePanel({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [stampOpen, setStampOpen] = useState(false);
   const [legacyDocumentId, setLegacyDocumentId] = useState("");
   const [legacyConfirmed, setLegacyConfirmed] = useState(false);
   const [legacyBusy, setLegacyBusy] = useState(false);
@@ -185,7 +188,41 @@ export function LeaveOutcomePanel({
               ? "FINAL · DISETUJUI DI SI CUTI"
               : "DITOLAK DI SI CUTI"}
           </p>
-          <p>ID arsip: {decision.id}</p>
+          <p>Referensi arsip: {decision.id}</p>
+          {decision.editions?.map((e) => (
+            <p key={e.id}>
+              <a
+                href={`/api/workflow/leave/${requestId}/decision/document?edition=${e.id}`}
+              >
+                Unduh edisi final {e.version}
+              </a>{" "}
+              ·{" "}
+              {new Date(e.createdAt).toLocaleString("id-ID", {
+                timeZone: "Asia/Jakarta",
+              })}{" "}
+              WIB
+            </p>
+          ))}
+          {admin && decision.sourceDocumentId && (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setStampOpen(true)}
+            >
+              Atur Penanda pada Formulir
+            </button>
+          )}
+          {stampOpen && (
+            <DecisionStampEditor
+              requestId={requestId}
+              decision={decision}
+              onClose={() => setStampOpen(false)}
+              onSaved={async () => {
+                await load();
+                setStampOpen(false);
+              }}
+            />
+          )}
           <p>
             Admin pencatat: {decision.snapshot.actorName} ·{" "}
             {new Date(decision.snapshot.occurredAt).toLocaleString("id-ID")}

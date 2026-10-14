@@ -184,8 +184,14 @@ export function createLegacyDecisionHandler(
 export function createDecisionDocumentHandler(
   factory: Factory = createLeaveDocumentRuntime,
 ) {
-  return run(async (runtime, actor, _request, id) => {
-    const result = await runtime.records.decisionDocument(actor, id);
+  return run(async (runtime, actor, request, id) => {
+    const editionId =
+      new URL(request.url).searchParams.get("edition") ?? undefined;
+    if (editionId && !/^[0-9a-f-]{36}$/i.test(editionId))
+      throw new WorkflowError("VALIDATION", "ID edisi tidak valid.");
+    const result = editionId
+      ? await runtime.records.decisionDocument(actor, id, editionId)
+      : await runtime.records.decisionDocument(actor, id);
     return new Response(Uint8Array.from(result.content).buffer, {
       headers: {
         "content-type": "application/pdf",
@@ -247,5 +253,66 @@ export function createReturnEvidenceHandler(
       },
     });
     return Response.json({ document }, { status: 201 });
+  }, factory);
+}
+
+export function createDecisionEditionHandlers(
+  factory: Factory = createLeaveDocumentRuntime,
+) {
+  return {
+    POST: run(async (runtime, actor, request, id) => {
+      requireWorkflowAdmin(actor);
+      const value = await body(request);
+      if (
+        typeof value.idempotencyKey !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          value.idempotencyKey,
+        )
+      )
+        throw new WorkflowError(
+          "VALIDATION",
+          "Kunci penyimpanan UUID wajib diisi.",
+        );
+      return Response.json(
+        {
+          edition: await runtime.records.saveDecisionEdition(
+            actor,
+            id,
+            value.placement,
+            typeof value.sourceChecksum === "string"
+              ? value.sourceChecksum
+              : "",
+            value.idempotencyKey,
+            value.confirmed === true,
+            typeof value.previewFingerprint === "string"
+              ? value.previewFingerprint
+              : "",
+          ),
+        },
+        { status: 201 },
+      );
+    }, factory),
+  };
+}
+export function createDecisionEditionPreviewHandler(
+  factory: Factory = createLeaveDocumentRuntime,
+) {
+  return run(async (runtime, actor, request, id) => {
+    requireWorkflowAdmin(actor);
+    const value = await body(request);
+    const result = await runtime.records.previewDecisionEdition(
+      actor,
+      id,
+      value.placement,
+      typeof value.sourceChecksum === "string" ? value.sourceChecksum : "",
+    );
+    return new Response(Uint8Array.from(result.content).buffer, {
+      headers: {
+        "content-type": "application/pdf",
+        "cache-control": "private, no-store",
+        "x-content-type-options": "nosniff",
+        "x-si-cuti-preview": result.fingerprint,
+      },
+    });
   }, factory);
 }
