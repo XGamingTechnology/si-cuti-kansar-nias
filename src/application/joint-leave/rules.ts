@@ -191,7 +191,7 @@ export async function validateEvidence(input: EvidenceInput) {
         throw Error();
       return;
     }
-    // Raster files are fully decoded by the PDF image parser, not trusted from filename/MIME alone.
+    // Parse image containers rather than trusting the filename or MIME label alone.
     if (input.mime === "image/png") {
       if (
         b.length < 33 ||

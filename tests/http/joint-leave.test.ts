@@ -42,6 +42,18 @@ function setup(principal: Principal | null = owner) {
 const url = "https://si-cuti.test/api/joint-leave";
 const context = { params: Promise.resolve({ id: randomUUID() }) };
 describe("Joint Leave HTTP boundary", () => {
+  it("bounds an upload stream even when Content-Length is absent", async () => {
+    const f = setup();
+    const r = await f.handler("claims")(
+      new Request(url, {
+        method: "POST",
+        headers: { "content-type": "multipart/form-data; boundary=test" },
+        body: new Uint8Array(11 * 1024 * 1024 + 1),
+      }),
+    );
+    expect(r.status).toBe(400);
+    expect(f.service.submit).not.toHaveBeenCalled();
+  });
   it.each([
     "claims",
     "policies",

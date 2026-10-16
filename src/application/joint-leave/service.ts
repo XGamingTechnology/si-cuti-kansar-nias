@@ -110,7 +110,15 @@ export class JointLeaveService {
   }
   async duplicates(actor: Principal, dates: string[]) {
     requireRole(actor, "PEGAWAI");
-    if (dates.length > 366 || dates.some((d) => !/^\d{4}-\d{2}-\d{2}$/.test(d)))
+    if (
+      dates.length > 366 ||
+      dates.some(
+        (d) =>
+          !/^\d{4}-\d{2}-\d{2}$/.test(d) ||
+          !Number.isFinite(Date.parse(d + "T00:00:00Z")) ||
+          new Date(d + "T00:00:00Z").toISOString().slice(0, 10) !== d,
+      )
+    )
       throw new JointLeaveError("VALIDATION", "Daftar tanggal tidak valid.");
     return this.repository.blockingDates(actor.employeeId, dates);
   }

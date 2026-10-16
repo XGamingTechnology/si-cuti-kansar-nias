@@ -354,13 +354,18 @@ function ClaimForm({
   const available = policies.filter(
     (p) => p.isActive && p.creditYear === localYear(),
   );
-  const [policyId, setPolicyId] = useState(
-      retry?.policyId ?? available[0]?.id ?? "",
-    ),
+  const initialPolicy =
+    available.find((p) => p.id === retry?.policyId) ?? available[0];
+  const [policyId, setPolicyId] = useState(initialPolicy?.id ?? ""),
     [selected, setSelected] = useState<string[]>(
       retry?.dates
         .filter((d) => d.status === "REJECTED")
-        .map((d) => d.eventId) ?? [],
+        .flatMap((d) => {
+          const event = initialPolicy?.eventDates.find(
+            (e) => e.date === d.eventDate,
+          );
+          return event ? [event.id] : [];
+        }) ?? [],
     ),
     [blocked, setBlocked] = useState<string[]>([]),
     [checking, setChecking] = useState(true);

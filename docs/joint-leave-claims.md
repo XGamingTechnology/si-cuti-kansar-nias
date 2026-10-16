@@ -15,7 +15,9 @@ proposals in Issue #107. No government holiday calendar or quota is inferred or 
 
 - Admin creates eligible dates and a source reference, credit year and cumulative annual per-employee
   ceiling. A new configuration is an immutable prospective version; existing claims retain its snapshot.
-  Older versions remain visible. There is no mutation/deletion or mass reclassification of old policy data.
+  Publishing retires the older version's active flag for new submissions under a year-scoped lock;
+  older versions remain visible and existing claims keep their original snapshot. Other policy content
+  is not edited/deleted or used to reclassify old decisions.
 - Every candidate date has a group: REGULAR requires event year = credit year; YEAR_END allows
   December immediately before credit year or January in credit year. Example: eligible Christmas
   December 2025 and New Year January 2026 credit to 2026. Admin verifies the actual official dates;

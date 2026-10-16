@@ -268,6 +268,14 @@ export class PrismaJointLeaveRepository implements JointLeaveRepository {
             );
           return policy(retry);
         }
+        await db.$queryRaw<
+          { locked: number }[]
+        >`SELECT 1::integer AS locked FROM (SELECT pg_advisory_xact_lock(107, ${input.creditYear})) AS annual_configuration_lock`;
+        // Publication selects the prospective version. Existing claims retain their own snapshot.
+        await db.jointLeavePolicy.updateMany({
+          where: { creditYear: input.creditYear, isActive: true },
+          data: { isActive: false },
+        });
         const p = await db.jointLeavePolicy.create({
           data: {
             name: input.name,

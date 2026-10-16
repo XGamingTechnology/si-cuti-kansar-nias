@@ -154,6 +154,20 @@ run("Joint Leave on disposable PostgreSQL", () => {
     const before = await db.jointLeaveClaim.findUniqueOrThrow({
       where: { id: c.id },
     });
+    const newer = await service().configure(
+      f.admin,
+      { ...f.input, name: "Prospektif " + randomUUID() },
+      randomUUID(),
+    );
+    policies.push(newer.id);
+    expect(
+      (
+        await db.jointLeavePolicy.findUniqueOrThrow({
+          where: { id: f.policy.id },
+        })
+      ).isActive,
+    ).toBe(false);
+    await expect(f.submit()).rejects.toMatchObject({ code: "UNSUPPORTED" });
     const input = await decision(f.admin, c.id, [
       c.dates[0].eventId,
       c.dates[1].eventId,
@@ -298,12 +312,15 @@ run("Joint Leave on disposable PostgreSQL", () => {
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     now = new Date("2099-04-10T00:00:00Z");
-    const other = await f.submit(f.inputFor([f.policy.eventDates[1].id]));
+    const other = await f.submit({
+      ...f.inputFor([newer.eventDates[1].id]),
+      policyId: newer.id,
+    });
     await expect(
       db.jointLeaveClaimDate.update({
         where: { id: other.dates[0].id },
         data: {
-          eventId: c.dates[0].eventId,
+          eventId: event.id,
           eventDate: new Date(c.dates[0].eventDate + "T00:00:00Z"),
         },
       }),
@@ -390,7 +407,9 @@ run("Joint Leave on disposable PostgreSQL", () => {
         where: { employeeId: f.owner.employeeId },
       }),
     ).toBe(0);
-    expect((await service().evidence(f.owner, c.id)).bytes).toEqual(bytes);
+    expect(
+      Buffer.from((await service().evidence(f.owner, c.id)).bytes),
+    ).toEqual(Buffer.from(bytes));
   });
   it("rolls back GRANT, counters and date decisions if the audit decision write fails", async () => {
     const f = await fixture(),

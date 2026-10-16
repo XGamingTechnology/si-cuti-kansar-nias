@@ -167,6 +167,13 @@ function review(): ReviewInput {
 }
 const file = () => ({ bytes, mime: "application/pdf" });
 describe("Joint Leave approved rules", () => {
+  it("rejects impossible dates in duplicate lookup before querying the repository", async () => {
+    const f = fixture();
+    await expect(
+      f.service.duplicates(owner, ["2026-02-30"]),
+    ).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(f.repo.blockingDates).not.toHaveBeenCalled();
+  });
   it("maps December and January to the explicitly selected credit year, never shifts January again", () => {
     const p = validatePolicy({
       name: "Natal/Tahun Baru",
