@@ -135,6 +135,24 @@ Rollover remains idempotent preview → Admin review → explicit commit. Correc
 - Example: `eventDate=2025-12-24`, submission in January 2026, one approved day, `creditYear=2026`.
 - Employee claim, per-date approval uniqueness, evidence, and workflow entities remain deferred to M4/M5.
 
+#### BAL-005 operational amendment, 16 October 2026
+
+The user supplied current-year claim rules and explicitly approved the subsequent three recommendations
+with “Gas lanjut”. Admin-selected eligible dates use an explicit creditYear; Natal in December of the
+previous year and New Year in January of the credit year may be grouped into that credit year, without
+automatically moving January to another year. Claim entitlement expires for use after its credit year;
+it does not carry forward. Historical accounts/ledger are preserved. New reservations cannot spend
+Claim from a year different from the server operation's WIB year.
+
+Assignment types are Siaga Khusus, Ops and Siaga Rutin. Sprin is a separate optional number;
+title/evidence are required and Admin checks completeness/correctness. Incomplete/invalid claims are
+rejected. Pending/approved dates block duplicates; rejected dates may be submitted in a new claim
+with corrected evidence within the permitted year. The old claim is never reopened/overwritten.
+
+Compatible multi-date/partial approval, quota-ceiling, claim-first priority and regular-cap rules above
+remain. Technical implementation/first-phase boundaries are recorded in `docs/joint-leave-claims.md`
+and Issue #107. This amendment is product direction, not verification of an external regulation.
+
 ## 3. Authoritative balance cap and consumption priority
 
 Only Cuti Tahunan reduces the annual-leave balance. Cuti Sakit, Cuti Besar, Cuti Melahirkan, Cuti Alasan Penting, and Cuti Luar Tanggungan / CLTN do not reduce it.
