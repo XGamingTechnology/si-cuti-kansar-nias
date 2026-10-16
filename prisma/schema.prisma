@@ -105,6 +105,9 @@ model Employee {
   leaveRequests           LeaveRequest[]
   permissionRequests      PermissionRequest[]
 
+  jointLeaveClaims JointLeaveClaim[]
+  jointLeaveClaimDates JointLeaveClaimDate[]
+
   @@index([directSupervisorId])
 }
 
@@ -154,6 +157,7 @@ model AnnualBalanceOperation {
   compensatesOperation   AnnualBalanceOperation?      @relation("AnnualBalanceCompensation", fields: [compensatesOperationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   compensatingOperations AnnualBalanceOperation[]     @relation("AnnualBalanceCompensation")
   returnOperation        LeaveBalanceReturnOperation?
+  jointLeaveDate JointLeaveClaimDate?
 
   @@index([employeeId, entitlementYear, bucket, occurredAt])
   @@index([compensatesOperationId])
@@ -203,6 +207,11 @@ model JointLeavePolicy {
   updatedAt       DateTime @updatedAt @db.Timestamptz(3)
 
   eventDates JointLeaveEvent[]
+  claims JointLeaveClaim[]
+  commandKey String? @unique @db.Uuid
+  payloadHash String? @db.Char(64)
+  createdByUserId String? @db.Uuid
+  createdBy User? @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([applicableYear, name])
 }
@@ -215,6 +224,10 @@ model JointLeaveEvent {
 
   policy JointLeavePolicy @relation(fields: [policyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
+  kind String @default("REGULAR") @db.VarChar(20)
+  claimDates JointLeaveClaimDate[]
+
+  @@unique([id, policyId])
   @@unique([policyId, eventDate])
   @@index([eventDate])
 }
@@ -234,6 +247,9 @@ model User {
   uploadedLeaveDocuments       LeaveDocument[]               @relation("LeaveDocumentUploader")
   leaveBalanceReturns          LeaveBalanceReturn[]
   decisionEditions             LeaveDecisionEdition[]
+  jointLeavePolicies JointLeavePolicy[]
+  submittedJointLeaveClaims JointLeaveClaim[] @relation("JointLeaveSubmitter")
+  reviewedJointLeaveClaims JointLeaveClaim[] @relation("JointLeaveReviewer")
 }
 
 model LeaveRequest {
@@ -530,4 +546,56 @@ model LeaveDecisionEdition {
   creator              User                 @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([archiveId, version])
+}
+
+model JointLeaveClaim {
+  id String @id @default(uuid()) @db.Uuid
+  employeeId String @db.Uuid
+  employeeNameSnapshot String @db.VarChar(200)
+  employeeNipSnapshot String @db.VarChar(32)
+  policyId String @db.Uuid
+  creditYear Int
+  policySnapshot Json
+  assignmentType String @db.VarChar(30)
+  title String @db.VarChar(300)
+  sprinNumber String? @db.VarChar(200)
+  status String @default("SUBMITTED") @db.VarChar(20)
+  submittedByUserId String @db.Uuid
+  submittedAt DateTime @default(now()) @db.Timestamptz(3)
+  idempotencyKey String @unique @db.Uuid
+  payloadHash String @db.Char(64)
+  evidenceKey String @unique @db.VarChar(191)
+  evidenceChecksum String @db.Char(64)
+  evidenceSize Int
+  evidenceMime String @db.VarChar(50)
+  reviewKey String? @unique @db.Uuid
+  reviewHash String? @db.Char(64)
+  reviewedByUserId String? @db.Uuid
+  reviewedAt DateTime? @db.Timestamptz(3)
+  reason String? @db.Text
+  reviewSnapshot Json?
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  policy JointLeavePolicy @relation(fields: [policyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  submitter User @relation("JointLeaveSubmitter", fields: [submittedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reviewer User? @relation("JointLeaveReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  dates JointLeaveClaimDate[]
+  @@unique([id, employeeId, policyId])
+  @@index([creditYear, status, submittedAt])
+  @@index([employeeId, creditYear, submittedAt])
+}
+model JointLeaveClaimDate {
+  id String @id @default(uuid()) @db.Uuid
+  claimId String @db.Uuid
+  employeeId String @db.Uuid
+  policyId String @db.Uuid
+  eventId String @db.Uuid
+  eventDate DateTime @db.Date
+  status String @default("PENDING") @db.VarChar(20)
+  operationId String? @unique @db.Uuid
+  claim JointLeaveClaim @relation(fields: [claimId, employeeId, policyId], references: [id, employeeId, policyId], onDelete: Restrict, onUpdate: Restrict)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  event JointLeaveEvent @relation(fields: [eventId, policyId], references: [id, policyId], onDelete: Restrict, onUpdate: Restrict)
+  operation AnnualBalanceOperation? @relation(fields: [operationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([claimId, eventId])
+  @@index([employeeId, eventDate, status])
 }

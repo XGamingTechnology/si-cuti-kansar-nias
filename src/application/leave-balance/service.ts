@@ -11,6 +11,7 @@ import type {
   AnnualBalanceOperationRecord,
   LockedAnnualBalanceTransaction,
 } from "./ports";
+import { toBusinessDate } from "@/domain/business-date";
 
 export type BalanceMutationErrorCode =
   | "VALIDATION"
@@ -236,9 +237,14 @@ export class AnnualBalanceMutationService {
         }
 
         const accounts = requireAllBuckets(transaction.accounts);
+        const available = { ...availableBuckets(accounts) };
+        // Claim is year-bound even for a retroactive/future leave submission. Keep old
+        // counters/ledger intact, but never spend a different year's Claim entitlement.
+        if (entitlementYear !== Number(toBusinessDate(occurredAt).slice(0, 4)))
+          available.JOINT_LEAVE_CLAIM = 0;
         const allocation = allocateAnnualBalance({
           requestedDays: input.requestedDays,
-          available: availableBuckets(accounts),
+          available,
         });
 
         const created: AnnualBalanceOperationRecord[] = [];

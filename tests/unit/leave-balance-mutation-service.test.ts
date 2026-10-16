@@ -48,7 +48,9 @@ class FakeRepository implements AnnualBalanceMutationRepository {
     const transaction: LockedAnnualBalanceTransaction = {
       accounts: buckets.map((bucket) => this.accounts.get(bucket)!),
       updateCounters: async (input: BalanceCounterUpdate) => {
-        const current = [...this.accounts.values()].find(({ id }) => id === input.accountId)!;
+        const current = [...this.accounts.values()].find(
+          ({ id }) => id === input.accountId,
+        )!;
         const updated: AnnualBalanceAccountState = {
           ...current,
           grantedDays: input.grantedDays,
@@ -61,7 +63,11 @@ class FakeRepository implements AnnualBalanceMutationRepository {
         return updated;
       },
       append: async (input: AppendBalanceOperation) => {
-        if (this.operations.some(({ idempotencyKey }) => idempotencyKey === input.idempotencyKey)) {
+        if (
+          this.operations.some(
+            ({ idempotencyKey }) => idempotencyKey === input.idempotencyKey,
+          )
+        ) {
           throw new Error("duplicate idempotency key");
         }
         const operation: AnnualBalanceOperationRecord = {
@@ -101,6 +107,35 @@ const baseInput = {
 };
 
 describe("AnnualBalanceMutationService", () => {
+  it("does not spend expired Claim in a retroactive reservation after the WIB year boundary", async () => {
+    const repository = new FakeRepository();
+    const service = new AnnualBalanceMutationService(repository);
+    const result = await service.reserveAnnualLeave({
+      ...baseInput,
+      occurredAt: new Date("2026-12-31T17:00:00Z"),
+      requestedDays: 2,
+      idempotencyKey: "expired-claim",
+    });
+    expect(result.operations.map((o) => [o.bucket, o.days])).toEqual([
+      ["N2", 2],
+    ]);
+    expect(repository.accounts.get("JOINT_LEAVE_CLAIM")?.grantedDays).toBe(2);
+    expect(repository.accounts.get("JOINT_LEAVE_CLAIM")?.reservedDays).toBe(0);
+  });
+  it("keeps Claim usable through the last millisecond of its WIB credit year", async () => {
+    const repository = new FakeRepository();
+    const result = await new AnnualBalanceMutationService(
+      repository,
+    ).reserveAnnualLeave({
+      ...baseInput,
+      occurredAt: new Date("2026-12-31T16:59:59.999Z"),
+      requestedDays: 2,
+      idempotencyKey: "last-claim",
+    });
+    expect(result.operations.map((o) => [o.bucket, o.days])).toEqual([
+      ["JOINT_LEAVE_CLAIM", 2],
+    ]);
+  });
   it("reserves atomically in Claim → N2 → N1 → N priority", async () => {
     const repository = new FakeRepository();
     const service = new AnnualBalanceMutationService(repository);
@@ -111,11 +146,13 @@ describe("AnnualBalanceMutationService", () => {
       idempotencyKey: "reserve-leave-1",
     });
 
-    expect(result.operations.map(({ bucket, days }) => [bucket, days])).toEqual([
-      ["JOINT_LEAVE_CLAIM", 2],
-      ["N2", 3],
-      ["N1", 2],
-    ]);
+    expect(result.operations.map(({ bucket, days }) => [bucket, days])).toEqual(
+      [
+        ["JOINT_LEAVE_CLAIM", 2],
+        ["N2", 3],
+        ["N1", 2],
+      ],
+    );
     expect(repository.accounts.get("JOINT_LEAVE_CLAIM")?.reservedDays).toBe(2);
     expect(repository.accounts.get("N2")?.reservedDays).toBe(3);
     expect(repository.accounts.get("N1")?.reservedDays).toBe(2);
@@ -134,7 +171,11 @@ describe("AnnualBalanceMutationService", () => {
     await service.reserveAnnualLeave(input);
     await service.reserveAnnualLeave(input);
 
-    expect(repository.operations.filter(({ operationType }) => operationType === "RESERVE")).toHaveLength(2);
+    expect(
+      repository.operations.filter(
+        ({ operationType }) => operationType === "RESERVE",
+      ),
+    ).toHaveLength(2);
     expect(repository.accounts.get("JOINT_LEAVE_CLAIM")?.reservedDays).toBe(2);
     expect(repository.accounts.get("N2")?.reservedDays).toBe(2);
   });
@@ -206,7 +247,9 @@ describe("AnnualBalanceMutationService", () => {
         idempotencyKey: "commit-leave-1",
       }),
     ).rejects.toThrowError(
-      expect.objectContaining<Partial<BalanceMutationError>>({ code: "CONFLICT" }),
+      expect.objectContaining<Partial<BalanceMutationError>>({
+        code: "CONFLICT",
+      }),
     );
   });
 
@@ -229,10 +272,12 @@ describe("AnnualBalanceMutationService", () => {
       idempotencyKey: "reverse-leave-1",
     });
 
-    expect(result.operations.map(({ bucket, days }) => [bucket, days])).toEqual([
-      ["N1", 2],
-      ["N2", 3],
-    ]);
+    expect(result.operations.map(({ bucket, days }) => [bucket, days])).toEqual(
+      [
+        ["N1", 2],
+        ["N2", 3],
+      ],
+    );
     expect(repository.accounts.get("N1")?.committedDays).toBe(0);
     expect(repository.accounts.get("N2")?.committedDays).toBe(0);
     expect(repository.accounts.get("JOINT_LEAVE_CLAIM")?.committedDays).toBe(2);

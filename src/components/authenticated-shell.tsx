@@ -8,6 +8,7 @@ import { EmployeeManagement } from "@/components/employee-management";
 import { BrandMark } from "@/components/login-preview";
 import { Icon } from "@/components/ui";
 import { WorkflowWorkspace } from "@/components/workflow-workspace";
+import { JointLeaveWorkspace } from "@/components/joint-leave-workspace";
 import { AnnualBalanceManagement } from "@/components/annual-balance-management";
 import { LeaveAuthorizedOfficialManagement } from "@/components/leave-authorized-official-management";
 import { isAdminPrincipal } from "@/application/authorization/policy";
@@ -26,11 +27,11 @@ export function AuthenticatedShell({
   initialAdminSurface = "pegawai",
 }: {
   principal: Principal;
-  initialAdminSurface?: "pegawai" | "saldo" | "pejabat" | "pengajuan";
+  initialAdminSurface?: "pegawai" | "saldo" | "pejabat" | "pengajuan" | "klaim";
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [adminSurface, setAdminSurface] = useState<
-    "pegawai" | "saldo" | "pejabat" | "pengajuan"
+    "pegawai" | "saldo" | "pejabat" | "pengajuan" | "klaim"
   >(initialAdminSurface);
   const isAdmin = isAdminPrincipal(principal);
   const role = isAdmin ? "Admin Kepegawaian" : "Pegawai";
@@ -88,7 +89,9 @@ export function AuthenticatedShell({
     window.location.assign("/");
   }
 
-  const employeeActive = !isAdmin || adminSurface === "pegawai";
+  const claimActive = adminSurface === "klaim";
+  const employeeActive =
+    !claimActive && (!isAdmin || adminSurface === "pegawai");
   const balanceActive = isAdmin && adminSurface === "saldo";
   const officialActive = isAdmin && adminSurface === "pejabat";
   const workflowActive = isAdmin && adminSurface === "pengajuan";
@@ -177,6 +180,18 @@ export function AuthenticatedShell({
             <Icon name="calendar" />
             <span>Pengajuan</span>
           </a>
+          <a
+            className={claimActive ? "active" : ""}
+            aria-current={claimActive ? "page" : undefined}
+            href="/klaim-cuti-bersama"
+            onClick={() => {
+              setAdminSurface("klaim");
+              setMenuOpen(false);
+            }}
+          >
+            <Icon name="calendar" />
+            <span>Klaim Cuti Bersama</span>
+          </a>
         </nav>
 
         <div className="sidebar-user">
@@ -246,7 +261,8 @@ export function AuthenticatedShell({
           {isAdmin && adminSurface === "pejabat" && (
             <LeaveAuthorizedOfficialManagement />
           )}
-          {!isAdmin && (
+          {claimActive && <JointLeaveWorkspace admin={isAdmin} />}
+          {!isAdmin && !claimActive && (
             <section className="profile-surface" id="profil">
               <p className="eyebrow">PROFIL SAYA</p>
               <h1>{principal.fullName}</h1>
@@ -262,7 +278,7 @@ export function AuthenticatedShell({
               </a>
             </section>
           )}
-          {(!isAdmin || adminSurface === "pengajuan") && (
+          {!claimActive && (!isAdmin || adminSurface === "pengajuan") && (
             <WorkflowWorkspace role={principal.role} />
           )}
         </main>

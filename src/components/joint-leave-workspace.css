@@ -1,0 +1,180 @@
+.joint-leave-workspace {
+  max-width: 1200px;
+  margin: auto;
+  display: grid;
+  gap: 1rem;
+}
+.joint-heading,
+.joint-filters,
+.joint-list article {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+}
+.joint-heading h1 {
+  margin: 0.3rem 0;
+}
+.joint-heading p {
+  max-width: 720px;
+}
+.joint-filters {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: end;
+}
+.joint-filters label,
+.joint-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.joint-filters input,
+.joint-filters select,
+.joint-form input:not([type="checkbox"]),
+.joint-form select,
+.joint-form textarea {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #c6d2df;
+  border-radius: 6px;
+  padding: 0.55rem;
+  color: #16334b;
+  background: white;
+}
+.joint-filters input {
+  max-width: 280px;
+}
+.joint-list {
+  display: grid;
+  gap: 0.6rem;
+}
+.joint-list article,
+.joint-policy {
+  background: white;
+  padding: 1rem;
+  border: 1px solid #dbe3eb;
+  border-radius: 8px;
+}
+.joint-list h3 {
+  margin: 0.5rem 0;
+}
+.joint-list p {
+  margin: 0.4rem 0;
+  font-size: 0.85rem;
+}
+.joint-list button {
+  flex-shrink: 0;
+}
+.joint-form,
+.joint-form > fieldset {
+  display: grid;
+  gap: 0.9rem;
+}
+.joint-form fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.joint-form fieldset fieldset {
+  padding: 0.8rem;
+  border: 1px solid #dbe3eb;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+}
+.joint-form small,
+.joint-check small {
+  display: block;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #4d6172;
+}
+.joint-form .joint-check,
+.joint-check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-weight: 400;
+  line-height: 1.5;
+  margin: 0.5rem 0;
+}
+.joint-check input {
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+}
+.joint-notice {
+  border: 1px solid #b9d7ed;
+  border-radius: 8px;
+  background: #edf7ff;
+  padding: 0.9rem;
+  line-height: 1.6;
+}
+.joint-rejection {
+  border-left: 4px solid #b44545;
+  background: #fff2f2;
+  padding: 0.8rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.joint-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #e7f2fc;
+  color: #174e7a;
+}
+.joint-approved {
+  background: #daf3e7;
+  color: #17543b;
+}
+.joint-rejected {
+  background: #fde7e7;
+  color: #8c2929;
+}
+.joint-detail {
+  display: grid;
+  gap: 0.8rem;
+}
+.joint-detail h2,
+.joint-detail h3 {
+  margin: 0.4rem 0;
+}
+.joint-detail dl {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 3fr;
+  gap: 0.6rem;
+}
+.joint-detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.joint-detail dt {
+  color: #4d6172;
+}
+.joint-detail li {
+  margin: 0.5rem 0;
+}
+@media (max-width: 640px) {
+  .joint-heading,
+  .joint-list article {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .joint-filters label {
+    width: 100%;
+  }
+  .joint-filters input {
+    max-width: none;
+  }
+  .joint-detail dl {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+  .joint-detail dd {
+    margin-bottom: 0.6rem;
+  }
+}
