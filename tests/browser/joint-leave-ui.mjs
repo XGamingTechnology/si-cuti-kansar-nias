@@ -87,6 +87,7 @@ async function fixture({
   status = "SUBMITTED",
   blocked = [],
   failSubmit = false,
+  reviewConflict = false,
   mobile = false,
 } = {}) {
   const page = await browser.newPage({
@@ -149,6 +150,11 @@ async function fixture({
     if (path.endsWith("/review")) {
       const input = q.postDataJSON();
       reviews.push(input);
+      if (reviewConflict && reviews.length === 1)
+        return route.fulfill({
+          status: 409,
+          json: { error: "Pratinjau berubah, periksa ulang" },
+        });
       c = {
         ...c,
         status: input.approvedEventIds.length ? "APPROVED" : "REJECTED",
@@ -209,13 +215,11 @@ try {
     assert.equal(await d.getByRole("checkbox").first().isDisabled(), true);
     await d.getByRole("checkbox").nth(1).check();
     await d.getByLabel("Judul penugasan").fill("Siaga uji baru");
-    await d
-      .locator('input[type="file"]')
-      .setInputFiles({
-        name: "bukti.pdf",
-        mimeType: "application/pdf",
-        buffer: bytes,
-      });
+    await d.locator('input[type="file"]').setInputFiles({
+      name: "bukti.pdf",
+      mimeType: "application/pdf",
+      buffer: bytes,
+    });
     await d.getByRole("button", { name: "Ajukan Klaim", exact: true }).click();
     await f.page
       .getByText("Klaim berhasil diajukan. Tunggu pemeriksaan Admin.")
@@ -272,13 +276,11 @@ try {
         .isDisabled(),
       true,
     );
-    await d
-      .locator('input[type="file"]')
-      .setInputFiles({
-        name: "bukti-baru.pdf",
-        mimeType: "application/pdf",
-        buffer: bytes,
-      });
+    await d.locator('input[type="file"]').setInputFiles({
+      name: "bukti-baru.pdf",
+      mimeType: "application/pdf",
+      buffer: bytes,
+    });
     await d.getByRole("button", { name: "Ajukan Klaim", exact: true }).click();
     await d.getByRole("alert").waitFor();
     await d.getByRole("button", { name: "Ajukan Klaim", exact: true }).click();
@@ -306,6 +308,7 @@ try {
       .fill(`${year - 1}-12-26`);
     await d.getByLabel("Nama/keterangan").fill("Natal Uji");
     await d.getByLabel("Kelompok").selectOption("YEAR_END");
+    await d.screenshot({ path: "/tmp/si-cuti-joint-policy-mobile.png" });
     const box = await d.boundingBox();
     assert.ok(box.width <= 390);
     await d.getByRole("button", { name: "Simpan Pengaturan" }).click();
@@ -322,6 +325,58 @@ try {
         .getByRole("button", { name: "Lihat Detail" })
         .evaluate((e) => e === document.activeElement),
       true,
+    );
+    await f.close();
+  }
+  {
+    const f = await fixture({
+      status: "REJECTED",
+      blocked: [p.eventDates[0].date],
+    });
+    await f.page.getByRole("button", { name: "Lihat Detail" }).click();
+    await f.page
+      .getByRole("button", { name: "Ajukan Ulang dengan Perbaikan" })
+      .click();
+    const d = f.page.getByRole("dialog");
+    await d
+      .getByText("Sudah ada klaim yang diperiksa/disetujui untuk tanggal ini.")
+      .waitFor();
+    assert.equal(await d.getByRole("checkbox").first().isDisabled(), true);
+    assert.equal(await d.getByRole("checkbox").nth(1).isChecked(), true);
+    await d
+      .locator('input[type="file"]')
+      .setInputFiles({
+        name: "bukti.pdf",
+        mimeType: "application/pdf",
+        buffer: bytes,
+      });
+    await d.getByRole("button", { name: "Ajukan Klaim", exact: true }).click();
+    await f.page
+      .getByText("Klaim berhasil diajukan. Tunggu pemeriksaan Admin.")
+      .waitFor();
+    assert.deepEqual(f.submits[0].eventIds, [id(3)]);
+    await f.close();
+  }
+  {
+    const f = await fixture({ admin: true, reviewConflict: true });
+    await f.page.getByRole("button", { name: "Lihat Detail" }).click();
+    const d = f.page.getByRole("dialog");
+    await d.getByLabel("Alasan/catatan pemeriksaan").fill("Bukti sesuai");
+    await d.getByRole("checkbox", { name: /Saya telah memeriksa/ }).check();
+    await d.getByRole("button", { name: "Pratinjau Keputusan" }).click();
+    await d.getByLabel("Saya mengonfirmasi hasil pemeriksaan di atas.").check();
+    await d.getByRole("button", { name: "Simpan Keputusan" }).click();
+    await d.getByRole("alert").waitFor();
+    assert.equal(
+      await d.getByRole("button", { name: "Simpan Keputusan" }).count(),
+      0,
+    );
+    await d.getByRole("button", { name: "Pratinjau Keputusan" }).click();
+    assert.equal(
+      await d
+        .getByLabel("Saya mengonfirmasi hasil pemeriksaan di atas.")
+        .isChecked(),
+      false,
     );
     await f.close();
   }

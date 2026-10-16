@@ -147,7 +147,13 @@ run("decision archives and leave returns on disposable PostgreSQL", () => {
       leaveAddress: "Alamat sintetis",
       leavePhone: "000000",
     });
-    await workflow.submit(owner, draft.id, randomUUID());
+    // This fixture intentionally exercises same-year Claim allocation in 2099.
+    await workflow.submit(
+      owner,
+      draft.id,
+      randomUUID(),
+      new Date("2099-01-10T00:00:00Z"),
+    );
     const request = await workflow.get(owner, draft.id);
     const content = await pdf();
     const upload = {

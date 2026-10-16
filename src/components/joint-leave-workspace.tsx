@@ -49,13 +49,21 @@ const dateLabel = (s: string) =>
   }).format(new Date(s));
 const timeLabel = (s: Date | string) =>
   new Date(s).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) + " WIB";
+class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 async function api(path: string, init?: RequestInit) {
   const r = await fetch("/api/joint-leave" + path, {
     cache: "no-store",
     ...init,
   });
   const j = await r.json();
-  if (!r.ok) throw Error(j.error ?? "Permintaan gagal.");
+  if (!r.ok) throw new ApiError(j.error ?? "Permintaan gagal.", r.status);
   return j;
 }
 export function JointLeaveWorkspace({ admin }: { admin: boolean }) {
@@ -86,6 +94,11 @@ export function JointLeaveWorkspace({ admin }: { admin: boolean }) {
     ])
       .then(([c, p]) => {
         if (!controller.signal.aborted) {
+          const lastPage = Math.max(1, Math.ceil(c.total / 10));
+          if (page > lastPage) {
+            setPage(lastPage);
+            return;
+          }
           setClaims(c.claims);
           setTotal(c.total);
           setPolicies(p.policies);
@@ -366,7 +379,18 @@ function ClaimForm({
       { signal: controller.signal },
     )
       .then((j) => {
-        if (!controller.signal.aborted) setBlocked(j.dates);
+        if (!controller.signal.aborted) {
+          setBlocked(j.dates);
+          setSelected((ids) =>
+            ids.filter(
+              (id) =>
+                !j.dates.includes(
+                  policy?.eventDates.find((e) => e.id === id)?.date,
+                ),
+            ),
+          );
+          key.current = crypto.randomUUID();
+        }
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -950,6 +974,10 @@ function ReviewForm({
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Pemeriksaan gagal.");
+      if (e instanceof ApiError && [400, 409, 422].includes(e.status)) {
+        setPreview(null);
+        setConfirmed(false);
+      }
     } finally {
       setBusy(false);
       onBusy(false);

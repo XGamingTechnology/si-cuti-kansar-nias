@@ -192,6 +192,13 @@ run("Joint Leave on disposable PostgreSQL", () => {
     expect(after.policySnapshot).toEqual(before.policySnapshot);
     expect(after.evidenceChecksum).toBe(before.evidenceChecksum);
     expect(after.submittedAt).toEqual(before.submittedAt);
+    await db.employee.update({
+      where: { id: f.owner.employeeId },
+      data: { fullName: "Nama sintetis diubah" },
+    });
+    expect((await service().get(f.owner, c.id)).employeeName).toBe(
+      c.employeeName,
+    );
     expect(after.reviewedByUserId).toBe(f.admin.userId);
     expect(after.reviewSnapshot).toMatchObject({
       approvedDays: 2,
@@ -265,6 +272,32 @@ run("Joint Leave on disposable PostgreSQL", () => {
     await expect(
       f.submit({ ...f.inputFor([event.id]), policyId: newer.id }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
+    const otherYear = await service().configure(
+      f.admin,
+      {
+        name: "Tahun lain " + randomUUID(),
+        creditYear: 2098,
+        quotaDays: 1,
+        sourceReference: "DASAR UJI",
+        events: [
+          {
+            date: c.dates[0].eventDate,
+            name: "Tanggal sama tahun lain",
+            kind: "REGULAR",
+          },
+        ],
+      },
+      randomUUID(),
+    );
+    policies.push(otherYear.id);
+    now = new Date("2098-12-28T00:00:00Z");
+    await expect(
+      f.submit({
+        ...f.inputFor([otherYear.eventDates[0].id]),
+        policyId: otherYear.id,
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    now = new Date("2099-04-10T00:00:00Z");
     const other = await f.submit(f.inputFor([f.policy.eventDates[1].id]));
     await expect(
       db.jointLeaveClaimDate.update({
@@ -515,5 +548,40 @@ run("Joint Leave on disposable PostgreSQL", () => {
     const c = await f.submit();
     expect(c).not.toHaveProperty("evidenceKey");
     expect(c).not.toHaveProperty("payloadHash");
+  });
+  it("approval waits for the shared Employee lock and observes a concurrently committed rollover", async () => {
+    const f = await fixture(),
+      c = await f.submit(),
+      input = await decision(
+        f.admin,
+        c.id,
+        c.dates.map((d) => d.eventId),
+      );
+    let acquired!: () => void, release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+        acquired = resolve;
+      }),
+      held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    const rollover = db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "Employee" WHERE "id"=${f.owner.employeeId}::uuid FOR UPDATE`;
+      acquired();
+      await held;
+      await tx.annualRolloverCommit.create({
+        data: {
+          employeeId: f.owner.employeeId,
+          targetYear: 2100,
+          idempotencyKey: randomUUID(),
+          committedAt: now,
+        },
+      });
+    });
+    await ready;
+    const approval = service().review(f.admin, c.id, input);
+    release();
+    await rollover;
+    await expect(approval).rejects.toMatchObject({ code: "UNSUPPORTED" });
+    expect(await credit(f.owner)).toBe(0);
   });
 });

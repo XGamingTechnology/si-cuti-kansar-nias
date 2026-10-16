@@ -250,7 +250,9 @@ export class PrismaJointLeaveRepository implements JointLeaveRepository {
     try {
       return await this.db.$transaction(async (db) => {
         // Serialize configuration commands with identical keys, including commands for different years.
-        await db.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 107))`;
+        await db.$queryRaw<
+          { locked: number }[]
+        >`SELECT 1::integer AS locked FROM (SELECT pg_advisory_xact_lock(hashtextextended(${key}, 107))) AS advisory_lock_call`;
         const retry = await db.jointLeavePolicy.findUnique({
           where: { commandKey: key },
           include: { eventDates: true },
