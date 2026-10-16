@@ -1,6 +1,6 @@
 # SI CUTI — Implementation Plan
 
-Status: core M1–M4 code implemented progressively; staging rollout verified through PR #103. Final-decision PDFs and annual-leave returns are implementation candidates in the Issue #104 PR, not yet deployed.
+Status: core M1–M4 implemented progressively; final-decision archives, annual-leave returns and marked PDF editions deployed to staging through PR #106 on 15 October 2026 WIB. Operator rollout evidence and user feedback are recorded in `docs/staging-checkpoint-20261015.md`. This does not close every M5 or production gate.
 
 ## 1. Guardrails
 
@@ -60,17 +60,19 @@ The `atasanLangsung` relationship may exist as optional master data, but it does
 
 M2 is complete: authentication, session handling, employee lifecycle, two-role RBAC, owner isolation, Admin employee/account administration, Excel import validation, migration, and staging runtime verification passed without secrets or real employee data in staging. The immutable artifacts and verification outcomes are recorded in `docs/m2-verification-record.md`.
 
-M3 is in progress under `docs/m3-balance-decisions.md` and is not complete. M3 Rule Alignment 2.1
-is required before Batch 3: it removes WORKING_DAY_OVERRIDE, finalizes N-2 qualifying-period
-consumption, replaces the old BAL-005 assumption, and adds the deferral-restoration foundation.
-M4/M5 remain blocked
-by workflow/document authority decisions. Before production, M8 must decide off-VPS destination,
+M3 balance mutation/rollover and Rule Alignment 2.2 are implemented. Single and batch opening-balance
+administration are implemented; employee Joint Leave claims remain a separate missing workflow.
+M4 LeaveRequest/PermissionRequest follows approved WF-001–004, PERM-001/002 and VAL-001; these
+flows are no longer globally blocked by the original decision register. M5 includes private signed
+scans, immutable submission proofs, final-decision archives and marked PDF editions. Official
+numbering, document retention and comprehensive audit/production acceptance remain separate gates.
+Before production, M8 must decide off-VPS destination,
 retention/rotation/encryption, restore cadence, RPO/RTO, and DR runbook; same-VPS backup is not
 complete DR.
 
 Release continues to promote the exact immutable version that passed staging/UAT. Production migration requires separate explicit approval; changing a Git branch alone does not authorize a production migration.
 
-## Issue #104: final decision PDFs and annual-leave returns
+## Issue #104: final decision PDFs and annual-leave returns, delivered
 
 Implementation baseline: `docs/leave-records-decisions.md`. A signed scan is pinned with an immutable
 approval/rejection snapshot; a separate status sheet plus original scan pages forms the generated
@@ -78,7 +80,28 @@ private result PDF. Rejection without a scan produces a decision notice. Approve
 receive an Admin-recorded, evidence-backed compensating reversal with preview, audit links and
 stable replay keys. LeaveRequest remains APPROVED.
 
-These features require a new forward migration and dependency update. They are not eligible for
-the app-only deployment procedure of PR #103. Staging/production acceptance remains a separate gate.
-Employee Joint Leave claims, dashboard/calendar, reporting, reminders, retention/DR and production
-hardening remain separately tracked. Existing source and tests alone do not prove production readiness.
+PR #105 merged as `193be89ab91fe2fb4b082d8fe0f08152c5e85dcf` and was deployed with migration
+`20261014120000_leave_decision_archives_and_returns`. PR #106 merged as
+`f6be359adddac8e518dea95e20841e42a8cccd0e` and adds previewed markers on source forms, readable
+decision appendices, immutable edition history and request-scoped feedback. Its migration
+`20261015100000_leave_decision_editions` was applied during the verified staging rollout.
+
+The original signed scan remains unchanged. Admin must preview, verify and save a marked edition;
+merge or deployment does not automatically stamp every existing archive. See `docs/decision-form-stamps.md`.
+The user reported the result was okay after rollout; this is scoped feedback, not exhaustive UAT.
+Public HTTPS health output for this rollout was requested but has not yet been supplied.
+
+## Next work
+
+1. Klaim Cuti Bersama: [Issue #107](https://github.com/XGamingTechnology/si-cuti-kansar-nias/issues/107).
+   BAL-005 foundations exist; claim persistence/services/API/UI do not. The issue separates approved
+   rules from outstanding quota/lifecycle/window/credit-readiness/policy-change decisions. Do not
+   enable dependent approval/credit behavior before those decisions are recorded.
+2. Existing operational correction: [Issue #91](https://github.com/XGamingTechnology/si-cuti-kansar-nias/issues/91),
+   emergency correction of Pejabat Cuti with immutable before/after audit and preserved documents.
+3. Dashboard/calendar, then reporting, then reminders and production hardening. Their original
+   decision gates remain applicable; no readiness or absence classification is inferred.
+
+The issue audit and concrete residuals are recorded in `docs/backlog-20261015.md`. Implemented,
+merged, deployed and accepted are distinct states. Existing source/tests and same-VPS backup alone
+do not prove production readiness or complete disaster recovery.

@@ -106,4 +106,17 @@ gate M8/production.
 | Exact approved evidence version          | Source document pinned inside request transaction                    | multi-version selection/replay/upload-after-final tests            |
 | Rollover consistency                     | Employee lock shared with rollover; downstream cases unsupported     | PostgreSQL guard/race tests                                        |
 
-Candidate code is not a staging deployment or UAT acceptance record. See `docs/leave-records-decisions.md`.
+PR #105 delivered this scope and was deployed to staging. PR #106 adds previewed source-form
+markers, private append-only PDF editions and request-scoped UI feedback. Its deployed merge is
+`f6be359adddac8e518dea95e20841e42a8cccd0e`; see `docs/staging-checkpoint-20261015.md` for operator
+evidence, user feedback and unreported public/exhaustive-UAT checks.
+
+## Next claim workflow traceability
+
+[Issue #107](https://github.com/XGamingTechnology/si-cuti-kansar-nias/issues/107) tracks the employee
+Klaim Cuti Bersama workflow. Policy/event models are foundations only; claim/review/evidence/credit
+services and delivery are not implemented at this checkpoint. BAL-005 supplies configured eligible
+dates, partial approval, no duplicate employee/date credit, quota ceiling, separate creditYear and
+the Claim bucket outside the regular cap. Annual/event quota scope, claim lifecycle, window boundary,
+account/rollover readiness and policy amendment behavior still require explicit decisions. The issue
+does not treat a recommendation as an approved mutation rule.

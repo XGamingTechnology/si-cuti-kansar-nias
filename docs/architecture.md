@@ -1,8 +1,8 @@
 # SI CUTI - Architecture Baseline
 
-Status: **M1 TypeScript/Next.js proposal — requires stack approval before implementation**
+Status: historical architecture baseline; the TypeScript/Next.js modular monolith is implemented. Current delivered scope and remaining gates are recorded in `docs/implementation-plan.md`.
 
-> Detail executable, version matrix, ORM comparison, security, commands, dan acceptance criteria ada di `docs/technical-baseline.md`. Belum ada source aplikasi atau kebutuhan migrasi aplikasi.
+> Detail executable, version matrix, ORM comparison, security, commands, dan acceptance criteria ada di `docs/technical-baseline.md`. Source aplikasi dan forward migrations tersedia; tidak ada migrasi aplikasi Laravel/legacy ke stack ini.
 
 ## 1. Architecture goals
 
@@ -38,7 +38,7 @@ Relational Database                  Document Storage
 Audit / Reporting / Analytics
 ```
 
-Implementasi fisiknya adalah **modular monolith**, bukan microservices. Next.js 16 pada Node.js 24 adalah delivery framework, bukan lokasi seluruh business logic. PostgreSQL 18 adalah relational store dan Prisma 7 direkomendasikan setelah approval M1.
+Implementasi fisiknya adalah **modular monolith**, bukan microservices. Next.js 16 pada Node.js 24 adalah delivery framework, bukan lokasi seluruh business logic. PostgreSQL 18 adalah relational store dan Prisma 7 digunakan pada implementasi.
 
 ## 3. Layer responsibilities
 
