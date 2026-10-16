@@ -564,7 +564,10 @@ run("Joint Leave on disposable PostgreSQL", () => {
     await expect(
       service().configure(f.admin, { ...input, quotaDays: 2 }, key),
     ).rejects.toMatchObject({ code: "CONFLICT" });
-    const c = await f.submit();
+    const c = await f.submit({
+      ...f.inputFor(a.eventDates.map((e) => e.id)),
+      policyId: a.id,
+    });
     expect(c).not.toHaveProperty("evidenceKey");
     expect(c).not.toHaveProperty("payloadHash");
   });

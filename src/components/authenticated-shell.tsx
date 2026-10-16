@@ -128,7 +128,7 @@ export function AuthenticatedShell({
           <a
             className={employeeActive ? "active" : ""}
             aria-current={employeeActive ? "page" : undefined}
-            href={isAdmin ? "/#pegawai" : "#profil"}
+            href={isAdmin ? "/#pegawai" : claimActive ? "/#profil" : "#profil"}
             onClick={() => {
               if (isAdmin) setAdminSurface("pegawai");
               setMenuOpen(false);
@@ -171,7 +171,7 @@ export function AuthenticatedShell({
           <a
             className={workflowActive ? "active" : ""}
             aria-current={workflowActive ? "page" : undefined}
-            href={isAdmin ? "/#pengajuan" : "#pengajuan"}
+            href={isAdmin || claimActive ? "/#pengajuan" : "#pengajuan"}
             onClick={() => {
               if (isAdmin) setAdminSurface("pengajuan");
               setMenuOpen(false);

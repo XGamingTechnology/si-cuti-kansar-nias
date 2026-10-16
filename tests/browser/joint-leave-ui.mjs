@@ -13,7 +13,7 @@ const result = await build({
   stdin: {
     resolveDir: process.cwd(),
     loader: "tsx",
-    contents: `import React from "react";import {createRoot} from "react-dom/client";import {JointLeaveWorkspace} from "./src/components/joint-leave-workspace";createRoot(document.getElementById("root")!).render(<div className="admin-interface"><JointLeaveWorkspace admin={new URLSearchParams(location.search).has("admin")}/></div>);`,
+    contents: `import React from "react";import {createRoot} from "react-dom/client";import {JointLeaveWorkspace} from "./src/components/joint-leave-workspace";import {AuthenticatedShell} from "./src/components/authenticated-shell";const q=new URLSearchParams(location.search);createRoot(document.getElementById("root")!).render(q.has("shell")?<AuthenticatedShell principal={{userId:"synthetic",employeeId:"synthetic",fullName:"Pegawai Sintetis",role:"PEGAWAI"}} initialAdminSurface="klaim"/>:<div className="admin-interface"><JointLeaveWorkspace admin={q.has("admin")}/></div>);`,
   },
   bundle: true,
   write: false,
@@ -84,6 +84,7 @@ const bytes = Buffer.from(await pdf.save());
 let passed = 0;
 async function fixture({
   admin = false,
+  shell = false,
   status = "SUBMITTED",
   blocked = [],
   failSubmit = false,
@@ -187,7 +188,7 @@ async function fixture({
     }
     return route.fulfill({ json: { claims: [c], total: 1 } });
   });
-  await page.goto(base + (admin ? "?admin=1" : ""));
+  await page.goto(base + (shell ? "?shell=1" : admin ? "?admin=1" : ""));
   await page.getByRole("button", { name: "Lihat Detail" }).waitFor();
   return {
     page,
@@ -343,13 +344,11 @@ try {
       .waitFor();
     assert.equal(await d.getByRole("checkbox").first().isDisabled(), true);
     assert.equal(await d.getByRole("checkbox").nth(1).isChecked(), true);
-    await d
-      .locator('input[type="file"]')
-      .setInputFiles({
-        name: "bukti.pdf",
-        mimeType: "application/pdf",
-        buffer: bytes,
-      });
+    await d.locator('input[type="file"]').setInputFiles({
+      name: "bukti.pdf",
+      mimeType: "application/pdf",
+      buffer: bytes,
+    });
     await d.getByRole("button", { name: "Ajukan Klaim", exact: true }).click();
     await f.page
       .getByText("Klaim berhasil diajukan. Tunggu pemeriksaan Admin.")
@@ -377,6 +376,27 @@ try {
         .getByLabel("Saya mengonfirmasi hasil pemeriksaan di atas.")
         .isChecked(),
       false,
+    );
+    await f.close();
+  }
+  {
+    const f = await fixture({ shell: true });
+    const nav = f.page.getByRole("navigation", { name: "Navigasi utama" });
+    assert.equal(
+      await nav.getByRole("link", { name: "Profil Saya" }).getAttribute("href"),
+      "/#profil",
+    );
+    assert.equal(
+      await nav
+        .getByRole("link", { name: "Pengajuan", exact: true })
+        .getAttribute("href"),
+      "/#pengajuan",
+    );
+    assert.equal(
+      await nav
+        .getByRole("link", { name: "Klaim Cuti Bersama" })
+        .getAttribute("aria-current"),
+      "page",
     );
     await f.close();
   }
