@@ -7,6 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { formatDate, formatDateTime } from "./indonesian-date";
 import { AdminFloatingWindow } from "./admin-floating-window";
 import { AdminPagination } from "./admin-pagination";
 import type {
@@ -40,15 +41,9 @@ const localYear = () =>
       year: "numeric",
     }).format(new Date()),
   );
-const dateLabel = (s: string) =>
-  new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Jakarta",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(s));
+const dateLabel = formatDate;
 const timeLabel = (s: Date | string) =>
-  new Date(s).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) + " WIB";
+  formatDateTime(new Date(s).toISOString());
 class ApiError extends Error {
   constructor(
     message: string,

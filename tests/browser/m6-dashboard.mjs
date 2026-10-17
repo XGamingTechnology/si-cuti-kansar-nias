@@ -226,7 +226,7 @@ try {
     async (page, context) => {
       await page.goto("/dashboard");
       await page
-        .getByRole("heading", { name: "Ringkasan saya", exact: true })
+        .getByRole("heading", { name: "Beranda saya", exact: true })
         .waitFor();
       const saldo = page.getByRole("region", {
         name: "Saldo saya",
@@ -235,7 +235,7 @@ try {
       await saldo.getByText("12 hari", { exact: true }).waitFor();
       assert.equal(
         await page
-          .getByRole("button", { name: "Kelola overlay resmi" })
+          .getByRole("button", { name: "Kelola kalender hari libur" })
           .count(),
         0,
       );
@@ -307,7 +307,9 @@ try {
         )
       ).rows[0].count;
       await page.goto("/dashboard");
-      await page.getByRole("button", { name: "Kelola overlay resmi" }).click();
+      await page
+        .getByRole("button", { name: "Kelola kalender hari libur" })
+        .click();
       const dialog = page.getByRole("dialog", {
         name: `Overlay resmi tahun ${year}`,
         exact: true,
@@ -384,7 +386,9 @@ try {
     admin,
     async (page, context) => {
       await page.goto("/dashboard");
-      await page.getByRole("button", { name: "Kelola overlay resmi" }).click();
+      await page
+        .getByRole("button", { name: "Kelola kalender hari libur" })
+        .click();
       const dialog = page.getByRole("dialog");
       await dialog
         .getByLabel("Referensi dokumen/SK resmi")
@@ -446,7 +450,9 @@ try {
     admin,
     async (page) => {
       await page.goto("/dashboard");
-      await page.getByRole("button", { name: "Kelola overlay resmi" }).click();
+      await page
+        .getByRole("button", { name: "Kelola kalender hari libur" })
+        .click();
       const dialog = page.getByRole("dialog");
       const input = dialog.getByLabel("Impor JSON resmi tervalidasi");
       await input.setInputFiles({

@@ -61,7 +61,7 @@ The `atasanLangsung` relationship may exist as optional master data, but it does
 M2 is complete: authentication, session handling, employee lifecycle, two-role RBAC, owner isolation, Admin employee/account administration, Excel import validation, migration, and staging runtime verification passed without secrets or real employee data in staging. The immutable artifacts and verification outcomes are recorded in `docs/m2-verification-record.md`.
 
 M3 balance mutation/rollover and Rule Alignment 2.2 are implemented. Single and batch opening-balance
-administration are implemented; employee Joint Leave claims remain a separate missing workflow.
+administration are implemented. Employee Joint Leave claims are implemented and merged through PR #109; business UAT remains pending.
 M4 LeaveRequest/PermissionRequest follows approved WF-001–004, PERM-001/002 and VAL-001; these
 flows are no longer globally blocked by the original decision register. M5 includes private signed
 scans, immutable submission proofs, final-decision archives and marked PDF editions. Official
@@ -91,17 +91,28 @@ merge or deployment does not automatically stamp every existing archive. See `do
 The user reported the result was okay after rollout; this is scoped feedback, not exhaustive UAT.
 Public HTTPS health output for this rollout was requested but has not yet been supplied.
 
+## Current delivery checkpoint — 17 October 2026 WIB
+
+Verified on GitHub and `origin/staging` at `4fdda0ec2bc2ce92bc9c5cbc93fa4bc8ca488a4b`:
+
+| Scope                             | Implemented / merged evidence                                                      | Deployment                                                                                         | Business UAT |
+| --------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------ |
+| Klaim Cuti Bersama                | PR #109, merge `f38ebe5224decae9754ea050c090a6bfd2b3ca14`                          | User reports staging `cdc180952982caa5f2aedc28685d5fd5578ccd74`, internal/public health successful | Pending      |
+| Emergency Pejabat Cuti correction | PR #110, merge `ca27193335849f0c53c06a0acda40089256138a9`                          | Latest operator rollout output not supplied in this task                                           | Pending      |
+| M6 dashboard/calendar             | PR #112, merge `82fb264c5b9c7584272880a1308743d3a7d3b8fe`; design #111 also merged | Latest operator rollout output not supplied in this task                                           | Pending      |
+| Employee UI refinement            | Current feature branch; see `employee-ui-refinement.md`                            | Not deployed by this task                                                                          | Pending      |
+
+Merged, implemented, deployed, health-checked and UAT accepted are separate states. This checkpoint
+records repository evidence and explicitly attributed user reports; it does not certify a new rollout
+or mark all milestones complete. No staging/production database was accessed.
+
 ## Next work
 
-1. Klaim Cuti Bersama: [Issue #107](https://github.com/XGamingTechnology/si-cuti-kansar-nias/issues/107).
-   BAL-005 foundations exist; claim persistence/services/API/UI do not. The issue separates approved
-   rules from outstanding quota/lifecycle/window/credit-readiness/policy-change decisions. Do not
-   enable dependent approval/credit behavior before those decisions are recorded.
-2. Existing operational correction: [Issue #91](https://github.com/XGamingTechnology/si-cuti-kansar-nias/issues/91),
-   emergency correction of Pejabat Cuti with immutable before/after audit and preserved documents.
-3. Dashboard/calendar, then reporting, then reminders and production hardening. Their original
-   decision gates remain applicable; no readiness or absence classification is inferred.
+1. Business UAT for claims, official corrections, dashboard/calendar and the employee UI.
+2. **M7 PDF/Excel reporting**: determine approved fields, period/status semantics, export authorization
+   and audit. Not implemented in the employee UI PR.
+3. Remaining supervisor/legacy/provenance operational corrections, scoped individually.
+4. Reminders and production hardening: original NOT/DEP/retention/DR decisions still apply.
 
-The issue audit and concrete residuals are recorded in `docs/backlog-20261015.md`. Implemented,
-merged, deployed and accepted are distinct states. Existing source/tests and same-VPS backup alone
-do not prove production readiness or complete disaster recovery.
+The historical issue audit is `docs/backlog-20261015.md`, updated with the current checkpoint below
+its original audit. Source/tests and same-VPS backup alone do not prove production readiness.

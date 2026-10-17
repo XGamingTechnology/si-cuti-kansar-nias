@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { formatDate, formatMonth, formatDateTime } from "./indonesian-date";
 import { toBusinessDate } from "@/domain/business-date";
 import { AdminFloatingWindow } from "./admin-floating-window";
 import { useDashboardJSON } from "./use-dashboard-json";
@@ -394,6 +395,8 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
       </p>
     </div>
   );
+  const Distribution = admin ? "section" : "details";
+  const DistributionTitle = admin ? "h2" : "summary";
   const gridStart = new Date(`${month}-01T00:00:00Z`).getUTCDay();
   const offset = (gridStart + 6) % 7;
   return (
@@ -401,7 +404,7 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
       <header className="m6-page-heading">
         <div>
           <p className="eyebrow">DASHBOARD & KALENDER</p>
-          <h1>{admin ? "Ringkasan administrasi" : "Ringkasan saya"}</h1>
+          <h1>{admin ? "Ringkasan administrasi" : "Beranda saya"}</h1>
           <p>
             Periode pengajuan, bukan catatan kehadiran atau penggunaan aktual.
           </p>
@@ -410,71 +413,28 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           Perbarui tampilan
         </button>
       </header>
-      <section className="m6-panel" aria-label="Ringkasan tetap">
-        <ResourceState
-          loading={fixedSummary.loading}
-          error={fixedSummary.error}
-          retry={fixedSummary.reload}
-        >
-          {fixedSummary.data && (
-            <>
-              <div className="m6-stats">
-                {admin ? (
-                  <>
-                    <div>
-                      <span>Menunggu tinjauan — Cuti</span>
-                      <strong>{fixedSummary.data.fixed.pendingLeave}</strong>
-                      <small>Semua periode · Semua pegawai</small>
-                    </div>
-                    <div>
-                      <span>Menunggu tinjauan — Izin</span>
-                      <strong>
-                        {fixedSummary.data.fixed.pendingPermission}
-                      </strong>
-                      <small>Semua periode · Semua pegawai</small>
-                    </div>
-                    <div>
-                      <span>Pegawai dalam periode cuti disetujui hari ini</span>
-                      <strong>
-                        {fixedSummary.data.fixed.approvedTodayEmployees}
-                      </strong>
-                      <small>
-                        {fixedSummary.data.businessDate} · WIB · Pegawai unik
-                      </small>
-                    </div>
-                  </>
-                ) : (
-                  (["leave", "permission"] as const).map((k) => (
-                    <div key={k}>
-                      <span>Pengajuan saya — {kindLabel[k]}</span>
-                      {["DRAFT", "SUBMITTED", "RETURNED_FOR_CORRECTION"].map(
-                        (s) => (
-                          <p key={s}>
-                            {statusLabels[s]}{" "}
-                            <b>
-                              {(k === "leave"
-                                ? fixedSummary.data!.fixed.ownLeave
-                                : fixedSummary.data!.fixed.ownPermission)?.[
-                                s
-                              ] ?? 0}
-                            </b>
-                          </p>
-                        ),
-                      )}
-                      <small>Semua periode · Milik sendiri</small>
-                    </div>
-                  ))
-                )}
-              </div>
-              <p className="m6-caption">
-                Pengembalian saldo tidak menentukan tanggal penggunaan. Periode
-                APPROVED tetap dihitung, termasuk yang memiliki pengembalian.
-                “Menunggu tinjauan” belum memastikan kelengkapan bukti.
-              </p>
-            </>
-          )}
-        </ResourceState>
-      </section>
+      {!admin && (
+        <nav className="employee-quick-actions" aria-label="Aksi utama">
+          <a
+            className="primary-button button-link"
+            href="/pengajuan?kind=leave&new=1"
+          >
+            Ajukan Cuti
+          </a>
+          <a
+            className="secondary-button button-link"
+            href="/pengajuan?kind=permission&new=1"
+          >
+            Ajukan Izin
+          </a>
+          <a
+            className="secondary-button button-link"
+            href="/klaim-cuti-bersama"
+          >
+            Klaim Cuti Bersama
+          </a>
+        </nav>
+      )}
       {!admin && (
         <section className="m6-panel" aria-label="Saldo saya">
           <h2>Saldo Cuti Tahunan tersedia</h2>
@@ -486,14 +446,14 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
             {balance.data && (
               <>
                 <p>
-                  Tahun saldo {balance.data.year} · Saat dibaca, tidak mengikuti
-                  bulan kalender
+                  Tahun saldo {balance.data.year} · Tidak mengikuti filter
+                  kalender
                 </p>
                 {balance.data.readiness !== "INITIALIZED" ? (
                   <p>
                     {balance.data.readiness === "PARTIAL"
-                      ? "Perlu diperiksa"
-                      : "Belum disiapkan"}
+                      ? "Saldo perlu diperiksa Admin; jumlah tersedia belum dapat ditampilkan."
+                      : "Saldo belum disiapkan Admin; jumlah tersedia belum dapat ditampilkan."}
                   </p>
                 ) : (
                   <div>
@@ -527,6 +487,81 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           </ResourceState>
         </section>
       )}
+      <section className="m6-panel" aria-label="Ringkasan tetap">
+        <ResourceState
+          loading={fixedSummary.loading}
+          error={fixedSummary.error}
+          retry={fixedSummary.reload}
+        >
+          {fixedSummary.data && (
+            <>
+              <div className="m6-stats">
+                {admin ? (
+                  <>
+                    <div>
+                      <span>Menunggu tinjauan — Cuti</span>
+                      <strong>{fixedSummary.data.fixed.pendingLeave}</strong>
+                      <small>Semua periode · Semua pegawai</small>
+                    </div>
+                    <div>
+                      <span>Menunggu tinjauan — Izin</span>
+                      <strong>
+                        {fixedSummary.data.fixed.pendingPermission}
+                      </strong>
+                      <small>Semua periode · Semua pegawai</small>
+                    </div>
+                    <div>
+                      <span>Pegawai dalam periode cuti disetujui hari ini</span>
+                      <strong>
+                        {fixedSummary.data.fixed.approvedTodayEmployees}
+                      </strong>
+                      <small>
+                        {formatDate(fixedSummary.data.businessDate)} · WIB ·
+                        Pegawai unik
+                      </small>
+                    </div>
+                  </>
+                ) : (
+                  (["leave", "permission"] as const).map((k) => (
+                    <div key={k}>
+                      <span>Pengajuan saya — {kindLabel[k]}</span>
+                      {["DRAFT", "SUBMITTED", "RETURNED_FOR_CORRECTION"].map(
+                        (s) => (
+                          <p key={s}>
+                            <a href={`/pengajuan?kind=${k}`}>
+                              {s === "SUBMITTED" ? "Diajukan" : statusLabels[s]}
+                            </a>{" "}
+                            <b>
+                              {(k === "leave"
+                                ? fixedSummary.data!.fixed.ownLeave
+                                : fixedSummary.data!.fixed.ownPermission)?.[
+                                s
+                              ] ?? 0}
+                            </b>
+                          </p>
+                        ),
+                      )}
+                      <small>Semua periode · Milik sendiri</small>
+                      <details className="employee-action-hint">
+                        <summary>Langkah selanjutnya</summary>
+                        <p>
+                          Draf: lengkapi dan ajukan. Perlu diperbaiki: buka
+                          catatan Admin. Diajukan: periksa formulir dan
+                          kelengkapan berkas.
+                        </p>
+                      </details>
+                    </div>
+                  ))
+                )}
+              </div>
+              <p className="m6-caption">
+                Periode disetujui tetap dihitung meskipun ada pengembalian
+                saldo. Status diajukan belum memastikan kelengkapan bukti.
+              </p>
+            </>
+          )}
+        </ResourceState>
+      </section>
       <div className="m6-tabs" role="group" aria-label="Kategori pengajuan">
         {(["leave", "permission"] as const).map((k) => (
           <button
@@ -572,10 +607,11 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           </button>
         </AdminFloatingWindow>
       )}
-      <section className="m6-panel">
-        <h2>
-          Distribusi {kindLabel[kind]} — {range.from} sampai {range.to}
-        </h2>
+      <Distribution className="m6-panel employee-distribution">
+        <DistributionTitle>
+          Distribusi {kindLabel[kind]} — {formatDate(range.from)} sampai{" "}
+          {formatDate(range.to)}
+        </DistributionTitle>
         <p className="m6-caption">
           Jumlah pengajuan yang periodenya beririsan, status saat dibaca. Satu
           pengajuan dihitung sekali.
@@ -610,10 +646,12 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
             <p>Tidak ada pengajuan pada filter ini.</p>
           )}
         </ResourceState>
-      </section>
+      </Distribution>
       <section className="m6-panel">
         <header className="m6-calendar-header">
-          <h2>Kalender periode {kindLabel[kind]}</h2>
+          <h2>
+            Kalender {kindLabel[kind]} · {formatMonth(month)}
+          </h2>
           <div>
             <button
               type="button"
@@ -684,7 +722,7 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
               type="button"
               onClick={() => setOverlayOpen(true)}
             >
-              Kelola overlay resmi
+              Kelola kalender hari libur
             </button>
           )}
         </div>
@@ -698,12 +736,9 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
               Input Admin berdasarkan dokumen resmi · Versi{" "}
               {overlay.data.dataset.version} ·{" "}
               {overlay.data.dataset.sourceReference} (
-              {overlay.data.dataset.sourcePublishedOn}) · Terbit{" "}
-              {new Date(overlay.data.dataset.publishedAt).toLocaleString(
-                "id-ID",
-                { timeZone: "Asia/Jakarta" },
-              )}{" "}
-              WIB. Tidak tersinkronisasi otomatis.
+              {formatDate(overlay.data.dataset.sourcePublishedOn)}) · Terbit{" "}
+              {formatDateTime(overlay.data.dataset.publishedAt)}. Tidak
+              tersinkronisasi otomatis.
               {overlay.data.dataset.sourceUrl && (
                 <>
                   {" "}
@@ -744,7 +779,10 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
             error={calendar.error}
             retry={calendar.reload}
           >
-            <div className="m6-month-grid" aria-label={`Kalender ${month}`}>
+            <div
+              className="m6-month-grid"
+              aria-label={`Kalender ${formatMonth(month)}`}
+            >
               {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((v) => (
                 <span className="m6-weekday" key={v}>
                   {v}
@@ -760,7 +798,7 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
                     className={`${v.date === day ? "today" : ""} ${v.date === selectedDay ? "selected" : ""}`}
                     key={v.date}
                     type="button"
-                    aria-label={`${v.date}, ${v.requestCount} pengajuan${events.length ? `, ${events.map((e) => e.name).join(", ")}` : ""}`}
+                    aria-label={`${formatDate(v.date)}, ${v.requestCount} pengajuan${events.length ? `, ${events.map((e) => e.name).join(", ")}` : ""}`}
                     onClick={() => {
                       setSelectedDay(v.date);
                       setCursor(null);
@@ -798,7 +836,9 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
         <header className="m6-calendar-header">
           <h2>
             Agenda {kindLabel[kind]}{" "}
-            {selectedDay ? `tanggal ${selectedDay}` : "periode terpilih"}
+            {selectedDay
+              ? `tanggal ${formatDate(selectedDay)}`
+              : "periode terpilih"}
           </h2>
           {selectedDay && (
             <button type="button" onClick={resetPages}>
@@ -815,7 +855,9 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
             <>
               <p>
                 {agenda.data.total} pengajuan · {statusLabels[status]} ·{" "}
-                {selectedDay || `${range.from} sampai ${range.to}`}
+                {selectedDay
+                  ? formatDate(selectedDay)
+                  : `${formatDate(range.from)} sampai ${formatDate(range.to)}`}
               </p>
               {agenda.data.items.length ? (
                 agenda.data.items.map((v) => (
@@ -827,18 +869,21 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
                         {statusLabels[v.status]}
                       </p>
                       <p>
-                        {v.startDate} — {v.endDate}
+                        {formatDate(v.startDate)} — {formatDate(v.endDate)}
                         {v.startDate < (selectedDay || range.from) ||
                         v.endDate > (selectedDay || range.to)
                           ? " · Berlanjut di luar tampilan"
                           : ""}
                       </p>
                       {v.hasBalanceReturn && (
-                        <p className="m6-return">
-                          Ada pengembalian saldo; periode persetujuan tetap
-                          ditampilkan. Tanggal penggunaan aktual tidak
-                          ditentukan.
-                        </p>
+                        <details className="m6-return">
+                          <summary>Ada pengembalian saldo</summary>
+                          <p>
+                            Periode persetujuan tetap ditampilkan. Tanggal
+                            penggunaan aktual belum ditentukan dari jumlah hari
+                            pengembalian.
+                          </p>
+                        </details>
                       )}
                     </div>
                     <a
@@ -879,8 +924,8 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           )}
         </ResourceState>
       </section>
-      <section className="m6-panel" aria-label="Agenda overlay">
-        <h2>Libur Nasional / Cuti Bersama — {month}</h2>
+      <section className="m6-panel" aria-label="Kalender hari libur">
+        <h2>Kalender hari libur · {formatMonth(month)}</h2>
         <ResourceState
           loading={overlay.loading}
           error={overlay.error}
@@ -890,7 +935,7 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
             .filter((v) => v.date.startsWith(month))
             .map((v) => (
               <p key={`${v.date}-${v.category}`}>
-                {v.date} ·{" "}
+                {formatDate(v.date)} ·{" "}
                 {v.category === "PUBLIC_HOLIDAY"
                   ? "Libur Nasional"
                   : "Cuti Bersama"}{" "}
@@ -900,13 +945,13 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           {!overlayEvents.some((v) => v.date.startsWith(month)) && (
             <p>
               {overlay.data?.dataset
-                ? "Tidak ada event pada lapisan yang dipilih di bulan ini; bukan bukti kelengkapan kalender kerja."
-                : "Dataset tahun ini belum tersedia."}
+                ? "Tidak ada tanggal pada kategori yang dipilih bulan ini; bukan bukti kelengkapan kalender kerja."
+                : "Data tahun ini belum tersedia."}
             </p>
           )}
           <p className="m6-caption">
-            Overlay tidak mengubah saldo, hari kerja, approval, atau eligibility
-            klaim; bukan bukti pegawai sedang cuti.
+            Kalender hari libur tidak mengubah saldo, perhitungan hari kerja,
+            persetujuan atau syarat klaim; bukan bukti pegawai sedang cuti.
           </p>
         </ResourceState>
       </section>

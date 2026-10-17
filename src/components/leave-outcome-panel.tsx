@@ -7,6 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { formatDateTime } from "./indonesian-date";
 import { DecisionStampEditor } from "./decision-stamp-editor";
 import { AdminFloatingWindow } from "./admin-floating-window";
 import type {
@@ -194,13 +195,9 @@ export function LeaveOutcomePanel({
               <a
                 href={`/api/workflow/leave/${requestId}/decision/document?edition=${e.id}`}
               >
-                Unduh edisi final {e.version}
+                Unduh PDF Keputusan Final · edisi {e.version}
               </a>{" "}
-              ·{" "}
-              {new Date(e.createdAt).toLocaleString("id-ID", {
-                timeZone: "Asia/Jakarta",
-              })}{" "}
-              WIB
+              · {formatDateTime(e.createdAt)}
             </p>
           ))}
           {admin && decision.sourceDocumentId && (
@@ -225,7 +222,7 @@ export function LeaveOutcomePanel({
           )}
           <p>
             Admin pencatat: {decision.snapshot.actorName} ·{" "}
-            {new Date(decision.snapshot.occurredAt).toLocaleString("id-ID")}
+            {formatDateTime(decision.snapshot.occurredAt)}
           </p>
           {decision.snapshot.sourceDocumentVersion !== null && (
             <p>Scan sumber: versi {decision.snapshot.sourceDocumentVersion}</p>
@@ -244,20 +241,22 @@ export function LeaveOutcomePanel({
               </a>
             </p>
           )}
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={() => void download()}
-          >
-            {status === "APPROVED"
-              ? "Unduh PDF Final"
-              : "Unduh Hasil Penolakan"}
-          </button>
+          {(admin || decision.ready) && (
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => void download()}
+            >
+              {status === "APPROVED"
+                ? "Unduh PDF Keputusan Final"
+                : "Unduh Hasil Penolakan"}
+            </button>
+          )}
           {!decision.ready && (
             <p>
-              PDF akan dibuat dari rekaman keputusan dan scan sumber saat
-              diunduh. Jika gagal, keputusan tetap tersimpan dan pembuatan PDF
-              dapat diulang.
+              {admin
+                ? "PDF akan dibuat dari rekaman keputusan dan scan sumber saat diunduh. Jika gagal, keputusan tetap tersimpan dan pembuatan PDF dapat diulang."
+                : "PDF Keputusan Final belum tersedia. Hubungi Admin; rekaman keputusan tetap tersimpan."}
             </p>
           )}
         </>
@@ -322,8 +321,7 @@ export function LeaveOutcomePanel({
           {history.map((item) => (
             <article key={item.id} className="leave-return-history">
               <p>
-                {item.restoredDays} hari ·{" "}
-                {new Date(item.recordedAt).toLocaleString("id-ID")}
+                {item.restoredDays} hari · {formatDateTime(item.recordedAt)}
               </p>
               <p>{item.reason}</p>
               <p>Dasar: {item.basisReference}</p>
