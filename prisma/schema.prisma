@@ -69,6 +69,8 @@ enum LeaveAuthorizedOfficialCapacity {
 }
 
 model LeaveAuthorizedOfficialAssignment {
+  revision Int @default(0)
+  corrections LeaveAuthorizedOfficialCorrection[]
   id              String                          @id @default(uuid()) @db.Uuid
   fullName        String                          @db.VarChar(200)
   nip             String                          @db.VarChar(32)
@@ -233,6 +235,7 @@ model JointLeaveEvent {
 }
 
 model User {
+  officialCorrections LeaveAuthorizedOfficialCorrection[]
   id         String          @id @default(uuid()) @db.Uuid
   employeeId String          @unique @db.Uuid
   role       ApplicationRole
@@ -598,4 +601,23 @@ model JointLeaveClaimDate {
   operation AnnualBalanceOperation? @relation(fields: [operationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   @@unique([claimId, eventId])
   @@index([employeeId, eventDate, status])
+}
+
+model LeaveAuthorizedOfficialCorrection {
+  id String @id @default(uuid()) @db.Uuid
+  assignmentId String @db.Uuid
+  actorUserId String @db.Uuid
+  correctedAt DateTime @default(now()) @db.Timestamptz(3)
+  reason String @db.VarChar(1000)
+  sourceReference String @db.VarChar(500)
+  fields String[]
+  before Json
+  after Json
+  revision Int
+  idempotencyKey String @unique @db.Uuid
+  payloadHash String @db.Char(64)
+  assignment LeaveAuthorizedOfficialAssignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([assignmentId, revision])
+  @@index([assignmentId, correctedAt])
 }
