@@ -29,6 +29,10 @@ export async function authorizedOfficialInput(
 export function authorizedOfficialErrorResponse(error: unknown) {
   if (!(error instanceof LeaveAuthorizedOfficialError)) return null;
   const status =
-    error.code === "NOT_FOUND" ? 404 : error.code === "OVERLAP" ? 409 : 422;
+    error.code === "NOT_FOUND"
+      ? 404
+      : error.code === "OVERLAP" || error.code === "CONFLICT"
+        ? 409
+        : 422;
   return Response.json({ error: error.message, code: error.code }, { status });
 }
