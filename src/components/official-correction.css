@@ -1,0 +1,53 @@
+.admin-interface #pejabat-cuti .employee-table-wrap {
+  display: block;
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.admin-interface #pejabat-cuti .employee-table td:last-child button {
+  margin: 3px;
+  white-space: nowrap;
+}
+.official-correction-content {
+  overflow-wrap: anywhere;
+}
+.official-correction-content > p {
+  margin: 0 0 16px;
+}
+.official-correction-content fieldset.employee-form {
+  margin: 20px 0;
+  border: 0;
+  min-width: 0;
+}
+.official-correction-content legend {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.official-correction-content section {
+  margin-top: 24px;
+}
+.official-correction-content section article {
+  border-top: 1px solid #dce3e9;
+  padding: 12px 0;
+}
+.official-correction-content dl > div {
+  border-left: 2px solid #c8d9e5;
+  padding: 5px 12px;
+  margin: 8px 0;
+}
+.official-correction-content dt {
+  font-weight: 600;
+}
+.official-correction-content dd {
+  margin: 4px 0;
+}
+.official-correction-content input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+.official-correction-content h3 {
+  font-size: 16px;
+}

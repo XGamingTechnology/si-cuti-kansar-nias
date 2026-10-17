@@ -1,5 +1,9 @@
 "use client";
 
+import "./official-correction.css";
+
+import { OfficialEmergencyCorrection } from "./official-emergency-correction";
+
 import { AdminFloatingWindow } from "./admin-floating-window";
 import { AdminPagination, useAdminPagination } from "./admin-pagination";
 
@@ -22,6 +26,8 @@ const emptyForm = {
 };
 
 export function LeaveAuthorizedOfficialManagement() {
+  const [correction, setCorrection] =
+    useState<LeaveAuthorizedOfficialAssignment | null>(null);
   const [items, setItems] = useState<
     readonly LeaveAuthorizedOfficialAssignment[]
   >([]);
@@ -288,7 +294,12 @@ export function LeaveAuthorizedOfficialManagement() {
       ) : items.length === 0 ? (
         <p>Belum ada penugasan pejabat cuti.</p>
       ) : (
-        <div className="employee-table-wrap">
+        <div
+          className="employee-table-wrap"
+          role="region"
+          aria-label="Daftar penugasan pejabat cuti"
+          tabIndex={0}
+        >
           <table className="employee-table">
             <thead>
               <tr>
@@ -316,12 +327,24 @@ export function LeaveAuthorizedOfficialManagement() {
                     <button type="button" onClick={() => beginEdit(item)}>
                       Ubah
                     </button>
+                    <button type="button" onClick={() => setCorrection(item)}>
+                      {authorizedOfficialStatus(item) === "Akan Datang"
+                        ? "Riwayat koreksi"
+                        : "Koreksi Darurat"}
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+      {correction && (
+        <OfficialEmergencyCorrection
+          assignment={correction}
+          onClose={() => setCorrection(null)}
+          onSaved={reload}
+        />
       )}
       {!loading && <AdminPagination {...pagination.controls} />}
     </section>

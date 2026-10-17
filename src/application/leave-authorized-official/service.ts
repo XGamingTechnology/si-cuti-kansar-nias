@@ -4,6 +4,7 @@ export type LeaveAuthorizedOfficialCapacity = "DEFINITIVE" | "PLT" | "PLH";
 
 export type LeaveAuthorizedOfficialAssignment = Readonly<{
   id: string;
+  revision?: number;
   fullName: string;
   nip: string;
   capacity: LeaveAuthorizedOfficialCapacity;
@@ -15,13 +16,18 @@ export type LeaveAuthorizedOfficialAssignment = Readonly<{
 
 export type LeaveAuthorizedOfficialInput = Omit<
   LeaveAuthorizedOfficialAssignment,
-  "id"
+  "id" | "revision"
 >;
 
 export interface LeaveAuthorizedOfficialRepository {
+  findEffectiveAt?(
+    timestamp: Date,
+  ): Promise<LeaveAuthorizedOfficialAssignment | null>;
   list(): Promise<readonly LeaveAuthorizedOfficialAssignment[]>;
   findById(id: string): Promise<LeaveAuthorizedOfficialAssignment | null>;
-  findEffectiveOn(date: string): Promise<LeaveAuthorizedOfficialAssignment | null>;
+  findEffectiveOn(
+    date: string,
+  ): Promise<LeaveAuthorizedOfficialAssignment | null>;
   hasOverlap(
     from: string,
     to: string | null,
@@ -33,12 +39,13 @@ export interface LeaveAuthorizedOfficialRepository {
   update(
     id: string,
     input: LeaveAuthorizedOfficialInput,
+    expectedRevision?: number,
   ): Promise<LeaveAuthorizedOfficialAssignment>;
 }
 
 export class LeaveAuthorizedOfficialError extends Error {
   constructor(
-    readonly code: "VALIDATION" | "NOT_FOUND" | "OVERLAP",
+    readonly code: "VALIDATION" | "NOT_FOUND" | "OVERLAP" | "CONFLICT",
     message: string,
   ) {
     super(message);
@@ -52,7 +59,15 @@ const capacities = new Set<LeaveAuthorizedOfficialCapacity>([
   "PLH",
 ]);
 
-function validate(input: LeaveAuthorizedOfficialInput) {
+function validDate(value: string) {
+  return (
+    datePattern.test(value) &&
+    Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString().slice(0, 10) === value
+  );
+}
+
+export function validateOfficial(input: LeaveAuthorizedOfficialInput) {
   if (!input.fullName.trim() || input.fullName.length > 200)
     throw new LeaveAuthorizedOfficialError(
       "VALIDATION",
@@ -68,12 +83,12 @@ function validate(input: LeaveAuthorizedOfficialInput) {
       "VALIDATION",
       "Kapasitas pejabat tidak valid.",
     );
-  if (!datePattern.test(input.effectiveFrom))
+  if (!validDate(input.effectiveFrom))
     throw new LeaveAuthorizedOfficialError(
       "VALIDATION",
       "Tanggal mulai berlaku tidak valid.",
     );
-  if (input.effectiveTo && !datePattern.test(input.effectiveTo))
+  if (input.effectiveTo && !validDate(input.effectiveTo))
     throw new LeaveAuthorizedOfficialError(
       "VALIDATION",
       "Tanggal akhir berlaku tidak valid.",
@@ -98,7 +113,8 @@ function normalized(input: LeaveAuthorizedOfficialInput) {
 export function authorizedOfficialTitle(
   capacity: LeaveAuthorizedOfficialCapacity,
 ) {
-  const prefix = capacity === "PLT" ? "Plt. " : capacity === "PLH" ? "Plh. " : "";
+  const prefix =
+    capacity === "PLT" ? "Plt. " : capacity === "PLH" ? "Plh. " : "";
   return `${prefix}Kepala Kantor Pencarian dan Pertolongan Kelas B Nias`;
 }
 
@@ -127,18 +143,21 @@ export class LeaveAuthorizedOfficialService {
   }
 
   resolveAt(timestamp: Date) {
-    return this.repository.findEffectiveOn(toBusinessDate(timestamp));
+    return (
+      this.repository.findEffectiveAt?.(timestamp) ??
+      this.repository.findEffectiveOn(toBusinessDate(timestamp))
+    );
   }
 
   async create(input: LeaveAuthorizedOfficialInput) {
-    validate(input);
+    validateOfficial(input);
     const value = normalized(input);
     await this.assertNoOverlap(value.effectiveFrom, value.effectiveTo);
     return this.repository.create(value);
   }
 
   async update(id: string, input: LeaveAuthorizedOfficialInput) {
-    validate(input);
+    validateOfficial(input);
     const current = await this.repository.findById(id);
     if (!current)
       throw new LeaveAuthorizedOfficialError(
@@ -179,7 +198,7 @@ export class LeaveAuthorizedOfficialService {
     }
 
     await this.assertNoOverlap(value.effectiveFrom, value.effectiveTo, id);
-    return this.repository.update(id, value);
+    return this.repository.update(id, value, current.revision);
   }
 
   private async assertNoOverlap(from: string, to: string | null, id?: string) {
