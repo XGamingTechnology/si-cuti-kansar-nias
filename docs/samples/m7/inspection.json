@@ -1,0 +1,19 @@
+{
+  "r1": {
+    "rows": 30,
+    "sha256PDF": "9b008ce90bb205a86eebc1d20c19300c71a5d4c3cfb58d8f3e2071d271ee2f94",
+    "sha256XLSX": "95ee815b49e8af9cd27b6a6cd4bda363f2569cac814f16c2f55ad99f2c2bb7e1",
+    "nipText": true,
+    "validZipXml": true,
+    "noFormulaMacroExternalLinks": true
+  },
+  "r2": {
+    "rows": 1,
+    "sha256PDF": "27b2178ee397d177295aac759ae0f75ac7d40ea3a1a4355255e222bcae4796cf",
+    "sha256XLSX": "43cb466a5f85be8fdac5fa1cca27bbbfca4b2c49645feb69ac8fc865aec91909",
+    "nipText": true,
+    "validZipXml": true,
+    "noFormulaMacroExternalLinks": true
+  },
+  "scope": "Synthetic fixtures; actual production-build browser downloads; PDF visually inspected after pdftoppm render. ZIP/XML/openpyxl verification only; Excel/LibreOffice desktop not tested."
+}

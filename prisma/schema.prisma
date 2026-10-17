@@ -235,6 +235,8 @@ model JointLeaveEvent {
 }
 
 model User {
+  reportRuns ReportRun[]
+  reportAuditEvents ReportAuditEvent[]
   calendarOverlayVersions CalendarOverlayVersion[]
   officialCorrections LeaveAuthorizedOfficialCorrection[]
   id         String          @id @default(uuid()) @db.Uuid
@@ -638,4 +640,76 @@ model CalendarOverlayVersion {
   payloadHash String @db.Char(64)
   actor User @relation(fields:[actorUserId],references:[id],onDelete:Restrict,onUpdate:Restrict)
   @@unique([year,version])
+}
+
+model ReportRun {
+  id String @id @db.Uuid
+  actorUserId String @db.Uuid
+  idempotencyKey String @db.Uuid
+  payloadHash String @db.Char(64)
+  reportCode String @db.VarChar(30)
+  definitionVersion String @db.VarChar(50)
+  rendererVersion String @db.VarChar(50)
+  filters Json
+  capturedAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+  rowCount Int
+  datasetKey String @db.VarChar(191)
+  datasetChecksum String @db.Char(64)
+  datasetSize Int
+  actor User @relation(fields:[actorUserId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  artifacts ReportArtifact[]
+  @@unique([actorUserId,idempotencyKey])
+  @@index([expiresAt])
+}
+
+model ReportArtifact {
+  requests ReportExportRequest[]
+  id String @id @db.Uuid
+  runId String @db.Uuid
+  actorUserId String @db.Uuid
+  idempotencyKey String @db.Uuid
+  format String @db.VarChar(10)
+  rendererVersion String @db.VarChar(50)
+  storageKey String @db.VarChar(191)
+  checksum String @db.Char(64)
+  size Int
+  createdAt DateTime @db.Timestamptz(3)
+  run ReportRun @relation(fields:[runId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([runId,format])
+  @@unique([actorUserId,idempotencyKey])
+}
+
+model ReportAuditEvent {
+  id String @id @db.Uuid
+  actorUserId String? @db.Uuid
+  actorRole String @db.VarChar(40)
+  maintenanceRole String? @db.VarChar(100)
+  occurredAt DateTime @db.Timestamptz(3)
+  correlationId String @db.Uuid
+  runId String? @db.Uuid
+  reportCode String? @db.VarChar(30)
+  definitionVersion String @db.VarChar(50)
+  event String @db.VarChar(40)
+  resultCode String @db.VarChar(50)
+  format String? @db.VarChar(10)
+  rowCount Int?
+  filters Json
+  datasetChecksum String? @db.Char(64)
+  artifactChecksum String? @db.Char(64)
+  actor User? @relation(fields:[actorUserId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([occurredAt])
+  @@index([runId,occurredAt])
+}
+
+model ReportExportRequest {
+  id String @id @db.Uuid
+  actorUserId String @db.Uuid
+  idempotencyKey String @db.Uuid
+  runId String @db.Uuid
+  format String @db.VarChar(10)
+  artifactId String @db.Uuid
+  artifact ReportArtifact @relation(fields:[artifactId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([actorUserId,idempotencyKey])
 }
