@@ -641,8 +641,7 @@ try {
         assert.equal(await menu.getAttribute("aria-expanded"), "true");
         assert.equal(
           await page
-            .locator(".authenticated-sidebar nav a")
-            .first()
+            .locator(".authenticated-sidebar nav a[aria-current='page']")
             .evaluate((element) => element === document.activeElement),
           true,
         );

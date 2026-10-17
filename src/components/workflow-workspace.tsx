@@ -215,10 +215,14 @@ function statusGuidance(
 
 export function WorkflowWorkspace({
   role,
+  initialKind = "leave",
+  initialRequestId,
 }: {
   role: "ADMIN_KEPEGAWAIAN" | "PEGAWAI";
+  initialKind?: Kind;
+  initialRequestId?: string;
 }) {
-  const [kind, setKind] = useState<Kind>("leave");
+  const [kind, setKind] = useState<Kind>(initialKind);
   const [requests, setRequests] = useState<RequestRecord[]>([]);
   const pagination = useAdminPagination(requests, kind);
   const [types, setTypes] = useState<PermissionType[]>([]);
@@ -257,6 +261,36 @@ export function WorkflowWorkspace({
 
   const selectedIdRef = useRef<string | null>(null);
   const detailSequence = useRef(0);
+  useEffect(() => {
+    if (!initialRequestId) return;
+    let active = true;
+    const initialSequence = detailSequence.current;
+    async function deepLink() {
+      try {
+        const data = await api(
+          `/api/workflow/${initialKind}/${encodeURIComponent(initialRequestId!)}`,
+        );
+        if (
+          active &&
+          detailSequence.current === initialSequence &&
+          selectedIdRef.current === null
+        )
+          await open(data.request as RequestRecord);
+      } catch (error) {
+        if (active && detailSequence.current === initialSequence)
+          setMessage(
+            error instanceof Error ? error.message : "Pengajuan gagal dibuka.",
+          );
+      }
+    }
+    void deepLink();
+    return () => {
+      active = false;
+    };
+    // The initial deep link is opened once; subsequent selection stays user-driven.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRequestId, initialKind]);
+
   async function open(item: RequestRecord) {
     const sequence = ++detailSequence.current;
     selectedIdRef.current = item.id;
