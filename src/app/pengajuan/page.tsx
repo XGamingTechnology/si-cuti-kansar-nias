@@ -22,6 +22,7 @@ export default async function Page({
         initialAdminSurface="pengajuan"
         initialWorkflow={{
           kind: query.kind === "permission" ? "permission" : "leave",
+          create: query.new === "1",
           requestId:
             typeof query.request === "string" ? query.request : undefined,
         }}

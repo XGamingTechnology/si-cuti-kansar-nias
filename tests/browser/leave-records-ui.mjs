@@ -243,7 +243,9 @@ try {
         /000000000002$/,
       );
       const download = f.page.waitForEvent("download");
-      await f.page.getByRole("button", { name: "Unduh PDF Final" }).click();
+      await f.page
+        .getByRole("button", { name: "Unduh PDF Keputusan Final" })
+        .click();
       assert.ok(await download);
       assert.deepEqual(f.errors, []);
       await f.page.close();
@@ -275,7 +277,9 @@ try {
       0,
     );
     assert.equal(
-      await f.page.getByRole("button", { name: "Unduh PDF Final" }).count(),
+      await f.page
+        .getByRole("button", { name: "Unduh PDF Keputusan Final" })
+        .count(),
       1,
     );
     await f.page.close();
@@ -404,7 +408,9 @@ try {
     async () => {
       const f = await pageFixture({ legacy: true });
       assert.equal(
-        await f.page.getByRole("button", { name: "Unduh PDF Final" }).count(),
+        await f.page
+          .getByRole("button", { name: "Unduh PDF Keputusan Final" })
+          .count(),
         0,
       );
       await f.page
@@ -414,7 +420,9 @@ try {
       await f.page
         .getByRole("button", { name: "Kunci Sumber Arsip Lama" })
         .click();
-      await f.page.getByRole("button", { name: "Unduh PDF Final" }).waitFor();
+      await f.page
+        .getByRole("button", { name: "Unduh PDF Keputusan Final" })
+        .waitFor();
       assert.equal(f.applies.length, 0);
       await f.page.close();
     },

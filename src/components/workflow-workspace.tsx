@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate, formatDateTime } from "./indonesian-date";
 import { LeaveOutcomePanel } from "./leave-outcome-panel";
 import { AdminFloatingWindow } from "./admin-floating-window";
 import { AdminPagination, useAdminPagination } from "./admin-pagination";
@@ -86,7 +87,7 @@ type Detail = {
 const labels: Record<WorkflowStatus, string> = {
   DRAFT: "Draf",
   SUBMITTED: "Diajukan",
-  RETURNED_FOR_CORRECTION: "Dikembalikan untuk perbaikan",
+  RETURNED_FOR_CORRECTION: "Perlu diperbaiki",
   APPROVED: "Disetujui",
   REJECTED: "Ditolak",
   CANCELLED: "Dibatalkan",
@@ -157,26 +158,6 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 
-function formatDate(value: string) {
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function formatBytes(value: number) {
   if (value < 1024) return `${value} B`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
@@ -217,10 +198,12 @@ export function WorkflowWorkspace({
   role,
   initialKind = "leave",
   initialRequestId,
+  initialCreate = false,
 }: {
   role: "ADMIN_KEPEGAWAIAN" | "PEGAWAI";
   initialKind?: Kind;
   initialRequestId?: string;
+  initialCreate?: boolean;
 }) {
   const [kind, setKind] = useState<Kind>(initialKind);
   const [requests, setRequests] = useState<RequestRecord[]>([]);
@@ -228,25 +211,37 @@ export function WorkflowWorkspace({
   const [types, setTypes] = useState<PermissionType[]>([]);
   const [selected, setSelected] = useState<RequestRecord | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [detailError, setDetailError] = useState(false);
+  const [creating, setCreating] = useState(
+    initialCreate && role === "PEGAWAI" && !initialRequestId,
+  );
   const [editing, setEditing] = useState(false);
-  const [message, setMessage] = useState("Memuat pengajuan…");
+  const [message, setMessage] = useState("");
   const [reviewAction, setReviewAction] = useState<ReviewAction | null>(null);
   const [reviewValue, setReviewValue] = useState("");
   const [acting, setActing] = useState(false);
 
+  const listSequence = useRef(0);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState("");
   const load = useCallback(async () => {
+    const sequence = ++listSequence.current;
+    setListLoading(true);
+    setListError("");
     try {
       const [{ requests: values }, typeData] = await Promise.all([
         api(`/api/workflow/${kind}`),
         api("/api/workflow/permission-types"),
       ]);
+      if (sequence !== listSequence.current) return [];
       setRequests(values);
       setTypes(typeData.permissionTypes);
-      setMessage(values.length ? "" : "Belum ada pengajuan.");
+      setListLoading(false);
       return values as RequestRecord[];
     } catch (error) {
-      setMessage(
+      if (sequence !== listSequence.current) return [];
+      setListLoading(false);
+      setListError(
         error instanceof Error ? error.message : "Gagal memuat pengajuan.",
       );
       return [] as RequestRecord[];
@@ -257,6 +252,10 @@ export function WorkflowWorkspace({
     // Fetching is the external synchronization performed by this effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
+    const sequenceRef = listSequence;
+    return () => {
+      sequenceRef.current++;
+    };
   }, [load]);
 
   const selectedIdRef = useRef<string | null>(null);
@@ -301,6 +300,7 @@ export function WorkflowWorkspace({
     setEditing(false);
     setSelected(item);
     setDetail(null);
+    setDetailError(false);
     try {
       const [revisionData, historyData, documentData] = await Promise.all([
         api(`/api/workflow/${kind}/${item.id}/revisions`),
@@ -323,10 +323,12 @@ export function WorkflowWorkspace({
       if (
         sequence === detailSequence.current &&
         selectedIdRef.current === item.id
-      )
+      ) {
+        setDetailError(true);
         setMessage(
           error instanceof Error ? error.message : "Gagal memuat detail.",
         );
+      }
     }
   }
 
@@ -342,8 +344,13 @@ export function WorkflowWorkspace({
     await open(latest);
   }
 
+  const saving = useRef(false);
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving.current) return;
+    saving.current = true;
+    setActing(true);
+    const sequence = detailSequence.current;
     const values = Object.fromEntries(new FormData(event.currentTarget));
     const editingId = selected?.id;
     try {
@@ -354,22 +361,33 @@ export function WorkflowWorkspace({
           body: JSON.stringify(values),
         },
       );
+      if (sequence !== detailSequence.current) {
+        await load();
+        return;
+      }
       setCreating(false);
       setEditing(false);
       const requestId = (result.request as RequestRecord).id;
+      selectedIdRef.current = requestId;
+      setSelected(result.request as RequestRecord);
       await refreshSelected(requestId);
       if (selectedIdRef.current !== requestId) return;
       setMessage(
         editingId ? "Perubahan draf tersimpan." : "Draf pengajuan tersimpan.",
       );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Gagal menyimpan.");
+      if (sequence === detailSequence.current)
+        setMessage(error instanceof Error ? error.message : "Gagal menyimpan.");
+    } finally {
+      saving.current = false;
+      setActing(false);
     }
   }
 
   const [reviewDocumentId, setReviewDocumentId] = useState("");
   const reviewKey = useRef<{ payload: string; key: string } | null>(null);
 
+  const actionInFlight = useRef(false);
   async function performAction(
     action: WorkflowAction,
     payload?: {
@@ -378,7 +396,8 @@ export function WorkflowWorkspace({
       documentId?: string;
     },
   ) {
-    if (!selected) return;
+    if (!selected || actionInFlight.current) return;
+    actionInFlight.current = true;
     const requestId = selected.id;
     setActing(true);
     try {
@@ -417,6 +436,7 @@ export function WorkflowWorkspace({
       if (selectedIdRef.current === requestId)
         setMessage(error instanceof Error ? error.message : "Tindakan gagal.");
     } finally {
+      actionInFlight.current = false;
       setActing(false);
     }
   }
@@ -436,7 +456,9 @@ export function WorkflowWorkspace({
 
   async function uploadSignedDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selected || kind !== "leave") return;
+    if (!selected || kind !== "leave" || actionInFlight.current) return;
+    actionInFlight.current = true;
+    const requestId = selected.id;
     const form = event.currentTarget;
     const body = new FormData(form);
     setActing(true);
@@ -457,19 +479,26 @@ export function WorkflowWorkspace({
           data?.error ?? `Dokumen gagal diunggah (HTTP ${response.status}).`,
         );
       }
+      if (selectedIdRef.current !== requestId) return;
       form.reset();
-      await refreshSelected(selected.id);
+      await refreshSelected(requestId);
+      if (selectedIdRef.current !== requestId) return;
       setMessage("PDF bertanda tangan berhasil diarsipkan.");
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Dokumen gagal diunggah.",
-      );
+      if (selectedIdRef.current === requestId)
+        setMessage(
+          error instanceof Error ? error.message : "Dokumen gagal diunggah.",
+        );
     } finally {
+      actionInFlight.current = false;
       setActing(false);
     }
   }
 
   async function downloadPdf(path: string, filename: string) {
+    if (actionInFlight.current) return;
+    actionInFlight.current = true;
+    const requestId = selectedIdRef.current;
     setActing(true);
     try {
       const response = await fetch(path);
@@ -489,12 +518,17 @@ export function WorkflowWorkspace({
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-      setMessage(
-        "Unduhan PDF dimulai. Di iPad, periksa menu Unduhan atau aplikasi Files.",
-      );
+      if (selectedIdRef.current === requestId)
+        setMessage(
+          "Unduhan PDF dimulai. Di iPad, periksa menu Unduhan atau aplikasi Files.",
+        );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "PDF gagal diunduh.");
+      if (selectedIdRef.current === requestId)
+        setMessage(
+          error instanceof Error ? error.message : "PDF gagal diunduh.",
+        );
     } finally {
+      actionInFlight.current = false;
       setActing(false);
     }
   }
@@ -546,6 +580,9 @@ export function WorkflowWorkspace({
   ).length;
 
   function switchKind(next: Kind) {
+    if (next === kind) return;
+    listSequence.current++;
+    setRequests([]);
     setKind(next);
     selectedIdRef.current = null;
     detailSequence.current++;
@@ -553,7 +590,7 @@ export function WorkflowWorkspace({
     setDetail(null);
     setCreating(false);
     setEditing(false);
-    setMessage("Memuat pengajuan…");
+    setMessage("");
   }
 
   return (
@@ -608,7 +645,7 @@ export function WorkflowWorkspace({
         </div>
       )}
 
-      {message && (
+      {message && !selected && !showForm && (
         <p className="feedback" role="status">
           {message}
         </p>
@@ -626,6 +663,7 @@ export function WorkflowWorkspace({
                 className="primary-button"
                 type="button"
                 onClick={() => {
+                  setMessage("");
                   setCreating(true);
                   setEditing(false);
                   selectedIdRef.current = null;
@@ -640,7 +678,16 @@ export function WorkflowWorkspace({
           </div>
 
           <div className="request-list">
-            {requests.length === 0 ? (
+            {listLoading ? (
+              <p role="status">Memuat pengajuan…</p>
+            ) : listError ? (
+              <div role="alert">
+                <p>{listError}</p>
+                <button type="button" onClick={() => void load()}>
+                  Coba lagi
+                </button>
+              </div>
+            ) : requests.length === 0 ? (
               <div className="workflow-empty-state">
                 <strong>Belum ada pengajuan</strong>
                 <span>
@@ -650,63 +697,79 @@ export function WorkflowWorkspace({
                 </span>
               </div>
             ) : (
-              (role === "ADMIN_KEPEGAWAIAN" ? pagination.items : requests).map(
-                (item) => (
-                  <button
-                    type="button"
-                    className={`request-card ${selected?.id === item.id ? "selected" : ""}`}
-                    key={item.id}
-                    onClick={() => void open(item)}
-                    aria-pressed={selected?.id === item.id}
-                  >
-                    {role === "ADMIN_KEPEGAWAIAN" && (
-                      <div className="request-card-employee">
-                        <strong>{item.employee.fullName}</strong>
-                        <span>
-                          {item.employee.nip} · {item.employee.workUnit}
-                        </span>
-                      </div>
-                    )}
-                    <div className="request-card-topline">
-                      <strong>{requestName(item)}</strong>
-                      <span
-                        className={`workflow-status status-${item.status.toLowerCase()}`}
-                      >
-                        {labels[item.status]}
+              pagination.items.map((item) => (
+                <button
+                  type="button"
+                  className={`request-card ${selected?.id === item.id ? "selected" : ""}`}
+                  key={item.id}
+                  onClick={() => void open(item)}
+                  aria-pressed={selected?.id === item.id}
+                >
+                  {role === "ADMIN_KEPEGAWAIAN" && (
+                    <div className="request-card-employee">
+                      <strong>{item.employee.fullName}</strong>
+                      <span>
+                        {item.employee.nip} · {item.employee.workUnit}
                       </span>
                     </div>
-                    <small>
-                      {formatDate(item.currentRevision.startDate)} →{" "}
-                      {formatDate(item.currentRevision.endDate)}
-                    </small>
+                  )}
+                  <div className="request-card-topline">
+                    <strong>{requestName(item)}</strong>
+                    <span
+                      className={`workflow-status status-${item.status.toLowerCase()}`}
+                    >
+                      {labels[item.status]}
+                    </span>
+                  </div>
+                  <small>
+                    {formatDate(item.currentRevision.startDate)} →{" "}
+                    {formatDate(item.currentRevision.endDate)}
+                  </small>
+                  {role === "ADMIN_KEPEGAWAIAN" && (
                     <span className="request-card-reason">
                       {item.currentRevision.reason}
                     </span>
-                  </button>
-                ),
-              )
+                  )}
+                </button>
+              ))
             )}
           </div>
-          {role === "ADMIN_KEPEGAWAIAN" && (
-            <AdminPagination {...pagination.controls} />
+          <AdminPagination {...pagination.controls} />
+          {role === "PEGAWAI" && requests.length > 10 && (
+            <p className="employee-pagination-note">
+              10 per halaman · Daftar dimuat sekaligus dari server.
+            </p>
           )}
         </aside>
 
-        {(role !== "ADMIN_KEPEGAWAIAN" || selected) && (
+        {(selected || showForm) && (
           <AdminRequestDetailWindow
-            floating={role === "ADMIN_KEPEGAWAIAN"}
+            floating={true}
+            busy={acting}
             onClose={() => {
               selectedIdRef.current = null;
               detailSequence.current++;
               setSelected(null);
               setDetail(null);
+              setCreating(false);
+              setEditing(false);
+              setMessage("");
             }}
           >
             <div className="request-detail">
-              {role === "ADMIN_KEPEGAWAIAN" && message && (
+              {message && (
                 <p className="feedback" role="status">
                   {message}
                 </p>
+              )}
+              {detailError && selected && (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => void open(selected)}
+                >
+                  Muat ulang detail
+                </button>
               )}
               {showForm && (
                 <form className="workflow-form" onSubmit={save}>
@@ -731,6 +794,9 @@ export function WorkflowWorkspace({
                   <label className="workflow-field-full">
                     <span>Jenis {kind === "leave" ? "cuti" : "izin"}</span>
                     <select
+                      aria-label={
+                        kind === "leave" ? "Jenis cuti" : "Jenis izin"
+                      }
                       name={kind === "leave" ? "leaveType" : "permissionTypeId"}
                       defaultValue={
                         kind === "leave"
@@ -836,7 +902,11 @@ export function WorkflowWorkspace({
                         Batal Edit
                       </button>
                     )}
-                    <button className="primary-button" type="submit">
+                    <button
+                      className="primary-button"
+                      type="submit"
+                      disabled={acting}
+                    >
                       {editing ? "Simpan Perubahan" : "Simpan Draf"}
                     </button>
                   </div>
@@ -901,6 +971,27 @@ export function WorkflowWorkspace({
                     </dl>
                   </section>
 
+                  {role === "PEGAWAI" &&
+                    ["REJECTED", "RETURNED_FOR_CORRECTION"].includes(
+                      selected.status,
+                    ) && (
+                      <div className="employee-review-reason" role="note">
+                        <strong>
+                          {selected.status === "REJECTED"
+                            ? "Alasan penolakan"
+                            : "Catatan perbaikan"}
+                        </strong>
+                        <p>
+                          {detail
+                            ? ([...detail.history]
+                                .reverse()
+                                .find((h) => h.toStatus === selected.status)
+                                ?.reason ??
+                              "Alasan belum tersedia pada riwayat.")
+                            : "Memuat alasan…"}
+                        </p>
+                      </div>
+                    )}
                   <dl className="workflow-detail-grid">
                     <div>
                       <dt>Periode</dt>
@@ -970,7 +1061,10 @@ export function WorkflowWorkspace({
                           className="secondary-button"
                           type="button"
                           disabled={acting}
-                          onClick={() => setEditing(true)}
+                          onClick={() => {
+                            setMessage("");
+                            setEditing(true);
+                          }}
                         >
                           {selected.status === "DRAFT"
                             ? "Edit Draf"
@@ -1115,7 +1209,7 @@ export function WorkflowWorkspace({
                       <div className="workflow-signed-archive">
                         <div className="workflow-section-title">
                           <p className="eyebrow">ARSIP RESMI</p>
-                          <h3>Dokumen Asli Bertanda Tangan</h3>
+                          <h3>Scan Bertanda Tangan</h3>
                         </div>
 
                         {role === "PEGAWAI" &&
@@ -1151,7 +1245,7 @@ export function WorkflowWorkspace({
                             </form>
                           )}
 
-                        {!detail && (
+                        {!detail && !detailError && (
                           <p className="workflow-loading">
                             Memuat arsip dokumen…
                           </p>
@@ -1232,7 +1326,7 @@ export function WorkflowWorkspace({
                       <h3>Riwayat Status</h3>
                     </div>
 
-                    {!detail && (
+                    {!detail && !detailError && (
                       <p className="workflow-loading">Memuat riwayat…</p>
                     )}
 
@@ -1283,7 +1377,7 @@ export function WorkflowWorkspace({
                       <h3>Riwayat Revisi</h3>
                     </div>
 
-                    {!detail && (
+                    {!detail && !detailError && (
                       <p className="workflow-loading">Memuat revisi…</p>
                     )}
 
@@ -1459,15 +1553,17 @@ export function WorkflowWorkspace({
 
 function AdminRequestDetailWindow({
   floating,
+  busy,
   onClose,
   children,
 }: {
   floating: boolean;
+  busy?: boolean;
   onClose: () => void;
   children: import("react").ReactNode;
 }) {
   return floating ? (
-    <AdminFloatingWindow title="Detail pengajuan" onClose={onClose}>
+    <AdminFloatingWindow title="Detail pengajuan" onClose={onClose} busy={busy}>
       {children}
     </AdminFloatingWindow>
   ) : (

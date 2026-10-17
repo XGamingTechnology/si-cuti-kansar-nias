@@ -1,5 +1,7 @@
 "use client";
 
+import "./employee-workspace.css";
+import { EmployeeProfile } from "./employee-profile";
 import { DashboardWorkspace } from "./dashboard-workspace";
 import { useEffect, useState } from "react";
 import { AdminUiIcon } from "./admin-ui-icon";
@@ -27,9 +29,15 @@ export function AuthenticatedShell({
   principal,
   initialAdminSurface = "pegawai",
   initialWorkflow,
+  initialEmployeeHome = false,
 }: {
   principal: Principal;
-  initialWorkflow?: { kind: "leave" | "permission"; requestId?: string };
+  initialEmployeeHome?: boolean;
+  initialWorkflow?: {
+    kind: "leave" | "permission";
+    requestId?: string;
+    create?: boolean;
+  };
   initialAdminSurface?:
     | "pegawai"
     | "saldo"
@@ -43,10 +51,18 @@ export function AuthenticatedShell({
     "pegawai" | "saldo" | "pejabat" | "pengajuan" | "klaim" | "dashboard"
   >(initialAdminSurface);
   const isAdmin = isAdminPrincipal(principal);
+  useEffect(() => {
+    if (!initialEmployeeHome || isAdmin) return;
+    // Keep old /#profil and /#pengajuan bookmarks intact.
+    if (window.location.hash === "#pengajuan")
+      window.location.replace("/pengajuan");
+    else if (window.location.hash !== "#profil")
+      window.location.replace("/dashboard");
+  }, [initialEmployeeHome, isAdmin]);
   const role = isAdmin ? "Admin Kepegawaian" : "Pegawai";
 
   useEffect(() => {
-    if ((!isAdmin && adminSurface !== "dashboard") || !menuOpen) return;
+    if (!menuOpen) return;
     const sidebar = document.querySelector<HTMLElement>(
       ".authenticated-shell .authenticated-sidebar",
     );
@@ -101,16 +117,14 @@ export function AuthenticatedShell({
   const dashboardActive = adminSurface === "dashboard";
   const claimActive = adminSurface === "klaim";
   const employeeActive =
-    !dashboardActive &&
-    !claimActive &&
-    (!isAdmin || adminSurface === "pegawai");
+    !dashboardActive && !claimActive && adminSurface === "pegawai";
   const balanceActive = isAdmin && adminSurface === "saldo";
   const officialActive = isAdmin && adminSurface === "pejabat";
   const workflowActive = adminSurface === "pengajuan";
 
   return (
     <div
-      className={`authenticated-shell${isAdmin ? " admin-interface" : ""}${dashboardActive ? " m6-shell" : ""}`}
+      className={`authenticated-shell${isAdmin ? " admin-interface" : " employee-interface"}${dashboardActive ? " m6-shell" : ""}`}
     >
       <a className="skip-link" href="#main-content">
         Lewati ke konten utama
@@ -145,18 +159,14 @@ export function AuthenticatedShell({
             aria-current={dashboardActive ? "page" : undefined}
           >
             <Icon name="calendar" />
-            <span>Dashboard & Kalender</span>
+            <span>
+              {isAdmin ? "Dashboard & Kalender" : "Beranda & Kalender"}
+            </span>
           </a>
           <a
             className={employeeActive ? "active" : ""}
             aria-current={employeeActive ? "page" : undefined}
-            href={
-              isAdmin
-                ? "/#pegawai"
-                : claimActive || dashboardActive
-                  ? "/#profil"
-                  : "#profil"
-            }
+            href={isAdmin ? "/#pegawai" : "/#profil"}
             onClick={() => {
               if (isAdmin) setAdminSurface("pegawai");
               setMenuOpen(false);
@@ -295,30 +305,16 @@ export function AuthenticatedShell({
             !claimActive &&
             !dashboardActive &&
             adminSurface !== "pengajuan" && (
-              <section className="profile-surface" id="profil">
-                <p className="eyebrow">PROFIL SAYA</p>
-                <h1>{principal.fullName}</h1>
-                <p>
-                  Informasi profil hanya dapat diakses oleh Anda sesuai
-                  otorisasi server.
-                </p>
-                <a
-                  className="primary-button button-link"
-                  href={`/api/employees/${principal.employeeId}`}
-                >
-                  Lihat profil saya
-                </a>
-              </section>
+              <EmployeeProfile employeeId={principal.employeeId} />
             )}
-          {!dashboardActive &&
-            !claimActive &&
-            (!isAdmin || adminSurface === "pengajuan") && (
-              <WorkflowWorkspace
-                role={principal.role}
-                initialKind={initialWorkflow?.kind}
-                initialRequestId={initialWorkflow?.requestId}
-              />
-            )}
+          {!dashboardActive && !claimActive && adminSurface === "pengajuan" && (
+            <WorkflowWorkspace
+              role={principal.role}
+              initialKind={initialWorkflow?.kind}
+              initialRequestId={initialWorkflow?.requestId}
+              initialCreate={initialWorkflow?.create}
+            />
+          )}
         </main>
       </div>
     </div>

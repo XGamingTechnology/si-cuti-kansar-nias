@@ -390,7 +390,7 @@ try {
       await nav
         .getByRole("link", { name: "Pengajuan", exact: true })
         .getAttribute("href"),
-      "/#pengajuan",
+      "/pengajuan",
     );
     assert.equal(
       await nav
