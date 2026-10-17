@@ -1,0 +1,8 @@
+# TEMPLATE ONLY: install separately after operator review; do not install in this task.
+# These audit times require a host cron daemon using UTC (verify timedatectl first).
+# 19:30 UTC = 02:30 WIB the following day. For a WIB host use 30 2 instead.
+# Configure image/volume/network/env file in the 0600 config sourced by each wrapper below.
+# Actual alert delivery/collection is an operator rollout gate, not provided by cron itself.
+*/10 * * * * /usr/bin/flock -n /run/lock/si-cuti-staging-report-files.lock /opt/si-cuti-env/report-files-staging files >> /var/log/si-cuti-report-files-staging.log 2>&1
+*/10 * * * * /usr/bin/flock -n /run/lock/si-cuti-staging-report-check.lock /opt/si-cuti-env/report-files-staging check >> /var/log/si-cuti-report-check-staging.log 2>&1
+30 19 * * * /usr/bin/flock -n /run/lock/si-cuti-staging-report-audit.lock /opt/si-cuti-env/report-audit-staging audit >> /var/log/si-cuti-report-audit-staging.log 2>&1

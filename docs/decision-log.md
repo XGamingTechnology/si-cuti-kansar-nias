@@ -165,3 +165,24 @@ pemilik/otoritas persetujuan, tanggal, referensi notulen/regulasi, tanggal berla
 aturan migrasi. Setelah itu perbarui seluruh referensi Decision ID pada dokumen M0 dan traceability.
 Keputusan teknis tidak boleh mengubah requirement bisnis yang telah tegas hanya demi kemudahan
 implementasi.
+
+## Amendment M7 — disetujui stakeholder 17 Oktober 2026 WIB
+
+Sumber persetujuan: percakapan pengguna yang memerintahkan implementasi R1/R2 setelah PR #114.
+Baseline terperinci: [m7-reporting-design.md](m7-reporting-design.md), khusus fase pertama.
+
+- **RPT-001 resolved untuk R1 Rekap Cuti dan R2 Rekap Izin** beserta kolom desain: periode overlap
+  inklusif, currentRevisionNumber, status dan master saat snapshot; default APPROVED, non-draf
+  dapat difilter. PDF/XLSX memakai satu dataset beku. R3 saldo, R4 klaim dan R5 pengembalian ditunda.
+- **Akses M7 disetujui:** hanya Admin pembuat dengan sesi/role aktif untuk run, preview dan artefak.
+  Read owner Pegawai existing tidak diperluas menjadi bulk export.
+- **AUD-001 resolved untuk M7:** audit durable wajib berhasil sebelum hasil/unduhan dilayani,
+  append-only metadata minimal, retensi 90 hari; kegagalan audit fail closed. Ini tidak memfinalkan
+  seluruh cakupan audit modul lain atau memberikan UI audit umum.
+- Akses dataset/artefak privat 24 jam; file sementara pada storage aktif dihapus maksimal 48 jam.
+  Batas itu **bukan jaminan penghapusan backup**; cakupan dan retensi backup tetap dijelaskan terpisah.
+- Tidak mengubah retensi pengajuan, ledger, bukti, histori koreksi dan PDF keputusan final.
+
+Definisi M6, aturan saldo/approval/eligibility/hari kerja dan kebijakan domain yang sudah disepakati
+bukan keputusan baru M7. Implemented/merged/deployed/UAT accepted tetap dibedakan; persetujuan
+desain ini bukan penerimaan UAT bisnis atau izin merge/deploy.
