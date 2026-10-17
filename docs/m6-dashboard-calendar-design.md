@@ -1,7 +1,9 @@
 # M6 — Desain Dashboard dan Kalender SI CUTI
 
-**Status: usulan untuk persetujuan, belum otorisasi coding.** Ditinjau 17 Oktober
-2026 WIB pada `origin/staging` `cdc180952982caa5f2aedc28685d5fd5578ccd74`.
+**Status: definisi indikator disetujui; desain overlay diperluas sesuai arahan
+pengguna, konektor sumber pemerintah belum terverifikasi. Belum memulai coding.**
+Diperbarui 17 Oktober 2026 WIB pada `origin/staging`
+`ca27193335849f0c53c06a0acda40089256138a9`.
 Task hanya menambah dokumen ini; tidak mengubah runtime/schema/dependency/migration.
 
 ## 1. Rekomendasi fase pertama dan sumber keputusan
@@ -12,8 +14,9 @@ terpisah. Default kalender hanya APPROVED. Label utama: **“Periode cuti disetu
 bukan bukti penggunaan aktual atau kehadiran. Grafik pertama cukup tabel jumlah
 per jenis/status; tidak perlu chart library, persentase atau grafik “hari terpakai”.
 Saldo Pegawai berasal dari pembacaan layanan saldo existing dengan owner isolation.
-Tidak membutuhkan model baru untuk fase pertama; kebutuhan indeks dievaluasi dari
-query plan saat implementasi, bukan diasumsikan atau dimigrasikan di task desain.
+Data pengajuan tidak membutuhkan model baru. Tambahkan overlay libur nasional/cuti
+bersama dengan adapter sumber dan snapshot berversi (bagian 10); kebutuhan persistence
+atau indeks dipastikan pada desain teknis coding, tanpa migration dalam task ini.
 
 Sumber dibaca: `AGENTS.md`; PDF `docs/source/Laporan-Kerangka-Inovasi-SI-CUTI-KANSAR-NIAS.pdf`
 (h. 5–8: akses, hybrid workflow, kalender/dashboard); `docs/requirements.md`,
@@ -24,22 +27,23 @@ Sumber dibaca: `AGENTS.md`; PDF `docs/source/Laporan-Kerangka-Inovasi-SI-CUTI-KA
 
 - Backlog menempatkan dashboard/calendar setelah koreksi operasional; belum ditemukan
   issue M6 tersendiri melalui pencarian GitHub issue M6 dan daftar issue yang diperiksa.
-- CAL-001, RPT-001 dan RPT-002 di decision log masih **belum diputuskan**; tidak ditemukan
-  amendemen yang menyetujui sumber agenda/libur tampilan, katalog indikator M6 atau
-  indikator kesiapan. Persetujuan desain ini dapat menjadi baseline terbatas M6,
-  **bukan** penyelesaian seluruh CAL/RPT atau persetujuan laporan resmi.
+- Pada review awal, CAL-001/RPT-001/RPT-002 masih terbuka di register historis.
+  Pengguna kemudian menyetujui indikator periode persetujuan beserta penanda return,
+  dan meminta overlay dengan preferensi koneksi data pemerintah yang diperbarui otomatis.
+  Keputusan terbatas tersebut dicatat di bagian 9; bukan persetujuan kesiapan personel,
+  laporan resmi, atau endorsement sebuah API tertentu.
 - BAL-003 sudah disetujui melalui amendemen M3: kalender kantor bersama, Senin–Jumat,
   weekend nonkerja, exception PUBLIC_HOLIDAY/JOINT_LEAVE/INSTITUTION_NON_WORKING,
   rentang inklusif dan satuan sehari penuh. **Tidak membuka kembali aturan day-count.**
   Cakupan/sumber kalender tampilan lintas sistem tetap persoalan berbeda CAL-001.
 - AUTH-002/M2 dan WF-001–004/M4 sudah menetapkan role, owner isolation, status serta
   authority; M6 menggunakannya tanpa membuat approval atau status baru.
-- Klaim Cuti Bersama deploy pada base di atas; kesehatan internal/publik sukses menurut
+- Klaim Cuti Bersama deploy pada `cdc180952982caa5f2aedc28685d5fd5578ccd74`; kesehatan internal/publik sukses menurut
   konteks pengguna, UAT bisnis masih tertunda. Klaim tidak berarti sedang cuti dan
   tanggal event klaim tidak otomatis menjadi hari libur authoritative.
 - PR [#110](https://github.com/XGamingTechnology/si-cuti-kansar-nias/pull/110)
-  berstatus **OPEN**, `mergedAt=null`, saat diperiksa. Koreksi Pejabat Cuti belum menjadi
-  bagian base ini; M6 tidak bergantung padanya atau mengulang implementasinya.
+  terkonfirmasi **MERGED** pada 17 Oktober 2026, merge commit `ca27193335849f0c53c06a0acda40089256138a9`.
+  Koreksi Pejabat Cuti sudah berada pada base terbaru dan tidak dikerjakan ulang.
 
 ## 2. Audit kemampuan existing
 
@@ -98,9 +102,10 @@ menghilang saat pengguna memilih bulan baru. Tidak ada total Cuti+Izin ambigu.
   pada kalender Admin/Pegawai fase pertama. Tidak mengubah akses workflow existing.
 - **Weekend/libur:** rentang persetujuan tetap tampak pada Sabtu/Minggu; shading
   weekend hanyalah orientasi tanggal, bukan pengurangan saldo atau jadwal kerja SAR.
-  Tidak ada angka “hari terpakai” dari panjang rentang. Fase pertama tidak menampilkan
-  overlay libur/agenda kantor; sumber/kelengkapan display menunggu CAL-001. BAL-003
-  dan working-calendar existing tetap berlaku bagi layanan saldo/workflow.
+  Tidak ada angka “hari terpakai” dari panjang rentang. Overlay hari libur ditambahkan
+  menurut bagian 10, dengan provenance dan freshness terpisah. Agenda internal belum
+  memiliki sumber sehingga tidak dibuat-buat. BAL-003 dan working-calendar existing
+  tetap berlaku bagi layanan saldo/workflow; sinkronisasi overlay tidak menulis ke sana.
 - **Pengembalian sebagian/penuh:** request tetap APPROVED dan rentang persetujuan
   tidak dipendekkan. Tambahkan `hasBalanceReturn` dan label “Ada pengembalian saldo;
   periode persetujuan tetap ditampilkan”. Berlaku pada kartu hari ini juga, dengan
@@ -245,19 +250,121 @@ karena M6 hanya membaca. Nama/label panjang harus terbungkus tanpa overflow.
 hanya satu file berubah. Tidak menjalankan lint/typecheck/build/seluruh tes aplikasi
 karena tidak ada kode runtime yang berubah. Tes di atas adalah rencana, bukan klaim lulus.
 
-## 9. Keputusan stakeholder yang benar-benar tersisa
+## 9. Keputusan stakeholder dan status terbaru
 
-| Keputusan                                      | Rekomendasi default untuk disetujui                                                                                                              | Alasan                                                                                               | Dampak alternatif                                                                                                                                                               |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Baseline indikator M6 (subset RPT-001/RPT-002) | Setujui definisi bagian 3–4: periode persetujuan, hitung request/distinct pegawai yang eksplisit, badge return; bukan penggunaan aktual/kesiapan | Data existing cukup dan tidak menyamarkan keterbatasan return                                        | Jika ingin aktual/siap gerak, perlu tanggal penggunaan/absensi/roster dan owner sumber; scope serta model berbeda, blokir indikator tersebut, bukan mengarang dari restoredDays |
-| Sumber kalender fase awal (subset CAL-001)     | Hanya request Cuti/Izin; shading weekend, tanpa overlay hari libur atau agenda kantor                                                            | Kalender kerja M3 sudah punya semantik, tetapi kelengkapan/sumber overlay operasional belum disahkan | Overlay memerlukan persetujuan owner, sumber/kelengkapan dan maintenance; bukan memakai tanggal katalog klaim secara otomatis                                                   |
+Dasar: balasan pengguna pada 17 Oktober 2026: (1) “Iya tambahkan” atas periode
+APPROVED dengan penanda pengembalian; (2) meminta overlay dan, jika memungkinkan,
+koneksi data pemerintah real-time. Tidak meminta persetujuan ulang poin (1).
 
-Dua keputusan ini cukup sebagai persetujuan desain fase pertama. Parameter teknis,
-security/owner isolation, BAL-003, state machine dan lifecycle saldo existing tidak
-memerlukan voting ulang. Tidak menganggap rekomendasi telah disetujui; catat keputusan
-stakeholder sebelum satu task implementasi fitur lengkap. Jika label periode dianggap
-cukup, tidak perlu meminta kebijakan tanggal return/roster baru untuk fase ini.
+| Topik                                          | Status/keputusan                                                                                                         | Implikasi                                                                                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Indikator periode persetujuan, termasuk return | **Disetujui pengguna**; tetap tampil dengan badge/keterangan, bukan penggunaan aktual                                    | Implementasikan definisi bagian 3–4; tidak mengurangi tanggal dari restoredDays                            |
+| Overlay kalender                               | **Arah fitur disetujui/diminta**; masukkan libur nasional/cuti bersama dan koneksi pemerintah bila sumber layak tersedia | Menggantikan rekomendasi awal tanpa overlay; rancangan bagian 10 mengatur validasi/fallback                |
+| Endpoint/sumber resmi tertentu                 | **Belum terverifikasi**, bukan dianggap disetujui                                                                        | Inventarisasi API/feed pemerintah saat akses tersedia; tidak menunjuk API komunitas sebagai API pemerintah |
+| Kesiapan personel dan absensi aktual           | Tidak termasuk lingkup, bukan pertanyaan baru                                                                            | Tidak membuka kembali batasan yang sudah diberikan pengguna                                                |
+
+Tidak ada pertanyaan bisnis yang menghalangi desain overlay read-only ini.
+Pemilihan URL/konektor yang dapat dibuktikan adalah pekerjaan verifikasi teknis.
+Jika kelak sumber yang dipilih memerlukan biaya, kredensial, atau hanya agregator
+nonpemerintah tersedia, ajukan pilihan spesifik beserta buktinya sebelum mengadopsi.
+Aturan saldo/day-count, state machine dan owner isolation tidak memerlukan voting ulang.
 
 **Ditunda:** ekspor PDF/Excel dan laporan resmi RPT-001/M7, reminder, roster SAR,
-integrasi kalender eksternal, overlay libur/agenda kantor, penggunaan aktual dan
-kesiapan. Tidak menutup issue, merge atau deploy dari task desain ini.
+integrasi kalender pribadi/eksternal dua arah, agenda internal tanpa sumber, penggunaan
+aktual dan kesiapan. Koneksi baca data libur pemerintah kini masuk lingkup overlay,
+bukan kategori integrasi eksternal yang ditunda. Tidak menutup issue, merge atau
+deploy staging dari task desain ini.
+
+## 10. Overlay libur dan koneksi sumber pemerintah
+
+**Cakupan:** libur nasional dan cuti bersama pada lapisan kalender terpisah dari
+request Cuti/Izin. Toggle “Libur nasional” dan “Cuti bersama” default aktif ketika
+tersedia dataset tervalidasi. Event overlay bukan pengajuan, tidak memiliki employeeId,
+tidak masuk count pengajuan/pegawai, dan tidak berarti semua pegawai absen. Badge
+cuti bersama tidak menambah hak klaim maupun mengesahkan eligibility baru.
+Agenda kerja internal belum memiliki sumber: lapisan dapat disiapkan untuk pengembangan
+berikutnya, tetapi tidak menampilkan data rekaan.
+
+### Sumber dan tingkat kepercayaan
+
+1. Kandidat rujukan primer: SKB hari libur nasional/cuti bersama dari tiga kementerian
+   dan perubahan resminya, diterbitkan melalui kanal pemerintah/JDIH terkait. Kanal
+   publikasi Kemenko PMK (`https://www.kemenkopmk.go.id`) dan JDIH Kementerian PANRB
+   (`https://jdih.menpan.go.id`) adalah kandidat untuk diverifikasi, **bukan endpoint
+   API yang sudah dinyatakan tersedia/kompatibel**.
+2. Pada investigasi 17 Oktober, akses kedua host ditolak proxy lingkungan dengan
+   `Tunnel connection failed: 403 Forbidden`. Ini batas akses lingkungan, bukan bukti
+   bahwa situs pemerintah gagal atau bahwa API pemerintah tidak ada. Belum ada URL
+   feed, dokumentasi API, autentikasi, lisensi, SLA atau mekanisme push yang terverifikasi.
+3. Prioritas konektor: API/feed resmi terdokumentasi → dataset resmi yang dapat
+   diimpor → input/import Admin dari dokumen SKB resmi dengan referensi. API komunitas,
+   Google Calendar umum atau hasil pencarian tidak otomatis sumber pemerintah.
+   Jangan menyalakan scraper HTML/PDF rapuh sebagai sumber otomatis authoritative.
+4. Initial dataset dari SKB/import diverifikasi Admin: tahun, nomor/tanggal dokumen,
+   penerbit, URL/referensi resmi, daftar tanggal/nama/kategori dan checksum sumber.
+   Jika API resmi tervalidasi tersedia, allowlist konektor dan kontraknya diverifikasi
+   dahulu; setelah itu refresh otomatis dapat menerbitkan versi baru yang lolos validasi.
+   Dokumen/PDF yang memerlukan interpretasi tetap masuk pratinjau/review Admin.
+
+### Sinkronisasi dan kegagalan
+
+“Real-time” dijabarkan sebagai **pembaruan otomatis dari sumber resmi**, bukan janji
+push/instan yang belum ditawarkan sumber. Default teknis polling setiap 6 jam dan
+refresh Admin on-demand dengan cooldown 15 menit; gunakan ETag/Last-Modified jika
+tersedia. Tampilkan `Terakhir diperiksa`, `Versi sumber`, dan `Terakhir diperbarui`
+secara terpisah. Jika API resmi kelak menyediakan webhook/stream terautentikasi,
+adapter dapat diperluas tanpa mengubah makna indikator. Dashboard membaca snapshot
+lokal tervalidasi, tidak bergantung pada fetch pemerintah pada setiap page load.
+
+Server hanya mengambil URL konektor allowlist via HTTPS, dengan batas waktu/ukuran,
+validasi content-type/schema, tanggal/tahun/kategori dan deduplikasi. Jangan menerima
+URL bebas dari query browser; redirect juga harus tetap ke host yang disetujui.
+Setiap versi menyimpan penerbit/referensi/tanggal publikasi/checksum, waktu fetch dan
+status validasinya. Perubahan/penghapusan dibanding versi sebelumnya dicatat sebagai
+diff; feed kosong, parsial, perubahan skema atau konflik sumber dikarantina, bukan
+menghapus data aktif. Publikasi snapshot harus atomik dan retry idempotent terhadap
+checksum/versi. Simpan versi lama agar koreksi sumber dapat ditelusuri.
+
+- Gagal refresh/rate-limit/timeout: pertahankan last-known-good, tampilkan waktu dan
+  status “Pembaruan tertunda”; retry dengan backoff. Melewati 24 jam tanpa pemeriksaan
+  sukses diberi label “Belum terverifikasi ulang”, bukan otomatis “tidak berlaku”.
+- Belum ada dataset tahun terpilih: tampilkan “Data libur resmi tahun … belum tersedia”;
+  kalender pengajuan tetap berfungsi. Ini bukan daftar libur kosong atau bukti hari kerja.
+- Snapshot tersedia tidak membuktikan daftar lengkap setahun: tampilkan cakupan tahun
+  dan referensi, serta status lengkap hanya jika sumber menyatakan kelengkapannya.
+- Koreksi retroaktif mengubah versi overlay tampilan, bukan snapshot pengajuan, arsip,
+  saldo, WorkingCalendarException atau workflow yang sudah diproses. Tidak ada auto
+  re-count, auto-kredit Klaim Cuti Bersama atau auto-adjust saldo.
+
+Kebutuhan tambahan terhadap desain awal: adapter fetch, job sinkronisasi dan penyimpanan
+snapshot/provenance berversi yang persisten. Reuse transport/runtime/storage yang cocok;
+tidak memasang library tanpa kebutuhan. Snapshot overlay terpisah dari arsip pegawai.
+Detail storage dipastikan sebelum coding; bila memerlukan schema/migration, nyatakan
+secara eksplisit dalam rencana fitur untuk review, jangan menyisipkannya dalam PR desain.
+
+### API, akses, dan UI tambahan
+
+- Usulan `GET /api/calendar/overlays?year=YYYY`: Admin dan Pegawai terautentikasi membaca
+  dataset libur umum yang sama, tanpa PII; satu tahun 1900–9999/request. Batas 500 event
+  tervalidasi/tahun; sumber melebihi batas ditandai untuk review, tidak dipotong diam-diam.
+  DTO: `date,name,category,sourceReference,sourceUrl,sourceVersion` plus `coverage`,
+  `lastCheckedAt,lastUpdatedAt,freshness,status`. Tidak memuat bukti/agenda personal.
+- Usulan endpoint Admin terpisah untuk status sync, trigger refresh dan pratinjau/publikasi
+  import fallback; Pegawai dilarang mengubah sumber, refresh/import/publikasi. Semua
+  operasi administratif mengikat aktor server dan audit/provenance; credential konektor
+  hanya di server. Endpoint kalender pengajuan existing dalam desain tidak berubah makna.
+- Filter Cuti/Izin/status/pegawai hanya memengaruhi request. Toggle overlay dan tahun
+  kalender mengendalikan libur; keduanya ditampilkan dengan legenda dan count terpisah.
+  Mobile agenda menampilkan baris libur tersendiri tanpa menumpuk chip/nama pegawai.
+  Kegagalan overlay tidak menghilangkan pengajuan/saldo; error, empty dan stale terpisah.
+
+### Tambahan acceptance criteria
+
+Uji dengan fixture sumber sintetis: endpoint resmi sukses, 304, perubahan jadwal,
+retry identik, timeout/429, response kosong/parsial, tanggal invalid, kategori berubah,
+konflik/duplikat, pergantian tahun, snapshot stale dan publikasi atomik. Uji SSRF/
+redirect allowlist, Admin-only write, read tanpa PII dan rendering toggle di mobile.
+Buktikan update overlay tidak menulis account/ledger/exception/workflow/arsip dan tidak
+mengubah indikator APPROVED/return. Integrasi ke sumber pemerintah nyata baru dinyatakan
+terverifikasi setelah URL, dokumentasi, respons serta referensinya diperiksa; mock test
+tidak membuktikan konektivitas atau SLA real-time pemerintah.
