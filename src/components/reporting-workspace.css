@@ -162,3 +162,46 @@
   color: #223b4e;
   font: inherit;
 }
+
+.report-filters {
+  align-items: start;
+  gap: 12px;
+}
+.report-filters label {
+  align-content: start;
+  grid-template-rows: auto 42px;
+}
+.report-filters input,
+.report-filters select {
+  height: 42px;
+  box-sizing: border-box;
+}
+.report-filters > div {
+  align-content: start;
+}
+.report-filters p {
+  margin: 2px 0;
+}
+.report-desktop-filters {
+  padding: 14px 18px;
+}
+.report-workspace > header > p:not(.eyebrow) {
+  margin: 6px 0;
+}
+
+.report-filters .report-employee-chooser {
+  grid-template-rows: auto 42px;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.report-employee-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px 42px;
+  gap: 5px;
+}
+.report-employee-control button {
+  height: 42px;
+  padding: 0;
+  font-size: 18px;
+}

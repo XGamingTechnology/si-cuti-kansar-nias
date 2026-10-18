@@ -176,6 +176,40 @@ try {
       await agenda.locator(".m6-agenda-item").first().waitFor();
       assert.equal(await agenda.locator(".m6-agenda-item").count(), 10);
       await agenda.getByText(/15 pengajuan/).waitFor();
+      const grid = page
+        .getByLabel(/^Kalender /)
+        .filter({ has: page.locator(".m6-weekday") });
+      await grid.locator(".m6-calendar-chip").first().waitFor();
+      assert.equal(
+        await grid
+          .locator("button")
+          .first()
+          .locator(".m6-calendar-chip")
+          .count(),
+        3,
+      );
+      assert.ok(
+        (await grid.locator(".m6-calendar-chip").first().innerText()).includes(
+          "Pegawai Kalender",
+        ),
+      );
+      assert.equal(
+        await grid.getByText("+12 lainnya", { exact: true }).count(),
+        Number(to.slice(-2)),
+      );
+      await grid.locator("button").first().click();
+      await agenda
+        .getByRole("heading", { name: /Agenda Cuti tanggal/ })
+        .waitFor();
+      assert.equal(
+        await agenda
+          .getByRole("heading")
+          .evaluate((e) => document.activeElement === e),
+        true,
+      );
+      await agenda
+        .getByRole("button", { name: "Kembali ke rentang filter" })
+        .click();
       await agenda
         .getByRole("button", { name: "Berikutnya", exact: true })
         .click();
@@ -286,6 +320,20 @@ try {
         ).status(),
         403,
       );
+      const cal = await (
+        await context.request.get(
+          `/api/calendar?kind=leave&from=${from}&to=${to}`,
+        )
+      ).json();
+      assert.ok(cal.days.every((d) => d.entries.length <= 3));
+      assert.ok(
+        !JSON.stringify(cal).match(/fullName|employee|PRIVATE_|storageKey/),
+      );
+      assert.ok(
+        (await page.locator(".m6-calendar-chip").first().innerText()).includes(
+          "Cuti saya",
+        ),
+      );
       await screenshot(page, "m6-employee-desktop");
     },
   );
@@ -344,13 +392,13 @@ try {
       await screenshot(page, "m6-overlay-admin");
       await dialog.getByRole("button", { name: "Tutup jendela" }).click();
       await page
-        .getByText(`Overlay Sintetis ${suffix}`, { exact: true })
+        .getByText(`LN · Overlay Sintetis ${suffix}`, { exact: true })
         .first()
         .waitFor();
       await page.getByLabel("Libur Nasional", { exact: true }).uncheck();
       assert.equal(
         await page
-          .getByText(`Overlay Sintetis ${suffix}`, { exact: true })
+          .getByText(`LN · Overlay Sintetis ${suffix}`, { exact: true })
           .count(),
         0,
       );
@@ -511,19 +559,19 @@ try {
       );
       await dialog.getByRole("button", { name: "Tutup jendela" }).click();
       await page
-        .getByText(`Bersama Sintetis ${suffix}`, { exact: true })
+        .getByText(`CB · Bersama Sintetis ${suffix}`, { exact: true })
         .first()
         .waitFor();
       await page.getByLabel("Cuti Bersama", { exact: true }).uncheck();
       assert.equal(
         await page
-          .getByText(`Bersama Sintetis ${suffix}`, { exact: true })
+          .getByText(`CB · Bersama Sintetis ${suffix}`, { exact: true })
           .count(),
         0,
       );
       assert.ok(
         (await page
-          .getByText(`Libur Sintetis ${suffix}`, { exact: true })
+          .getByText(`LN · Libur Sintetis ${suffix}`, { exact: true })
           .count()) > 0,
       );
     },
