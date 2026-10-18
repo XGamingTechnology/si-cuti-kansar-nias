@@ -1168,3 +1168,53 @@
   border: 1px solid #d5dee5;
   margin: 12px 0;
 }
+
+/* Employee master: compact actions and a unit filter without widening mobile layout. */
+.employee-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 1rem;
+}
+.employee-import-rows {
+  max-width: 100%;
+  overflow: auto;
+}
+.employee-header-actions a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.employee-directory .employee-toolbar {
+  flex-wrap: wrap;
+}
+.employee-directory .employee-filter {
+  min-width: 0;
+  flex: 1 1 10rem;
+}
+.employee-directory .employee-search {
+  min-width: 0;
+  flex: 3 1 17rem;
+}
+.employee-directory .floating-window-body {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .employee-header-actions {
+    flex-wrap: wrap;
+  }
+  .employee-header-actions > * {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  .employee-directory .employee-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 601px) {
+  .employee-directory .employee-toolbar {
+    grid-template-columns: minmax(0, 2fr) minmax(130px, 1fr) minmax(130px, 1fr);
+  }
+}

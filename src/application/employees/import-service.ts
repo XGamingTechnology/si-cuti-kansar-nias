@@ -1,3 +1,4 @@
+import type { EmployeeImportMutation } from "./mutation";
 import { EmployeeError, type Employee } from "./service";
 
 export const EMPLOYEE_IMPORT_HEADERS = [
@@ -35,8 +36,10 @@ export interface EmployeeWorkbookReader {
 }
 export interface EmployeeImportRepository {
   findExistingNips(nips: readonly string[]): Promise<readonly string[]>;
+  replayImport?(mutation: EmployeeImportMutation): Promise<Employee[] | null>;
   importAll(
     rows: readonly Omit<EmployeeImportRow, "rowNumber">[],
+    mutation?: EmployeeImportMutation,
   ): Promise<Employee[]>;
 }
 
@@ -72,6 +75,8 @@ export class EmployeeImportService {
       .slice(1)
       .map((row, index) => ({ row, rowNumber: index + 2 }))
       .filter(({ row }) => row.some((cell) => text(cell)));
+    if (source.length > 500)
+      throw new EmployeeError("VALIDATION", "Maksimal 500 pegawai per impor.");
     const errors: EmployeeImportError[] = [];
     const candidates: EmployeeImportRow[] = [];
     const occurrences = new Map<string, number[]>();
@@ -153,13 +158,25 @@ export class EmployeeImportService {
     };
   }
 
-  async commit(buffer: Uint8Array): Promise<Employee[]> {
+  async commit(
+    buffer: Uint8Array,
+    mutation?: EmployeeImportMutation,
+  ): Promise<Employee[]> {
+    if (mutation && this.repository.replayImport) {
+      const replay = await this.repository.replayImport(mutation);
+      if (replay) return replay;
+    }
     const preview = await this.preview(buffer);
-    if (preview.errors.length)
+    if (preview.errors.length) {
+      if (mutation && this.repository.replayImport) {
+        const replay = await this.repository.replayImport(mutation);
+        if (replay) return replay;
+      }
       throw new EmployeeError(
         "VALIDATION",
         "Impor dibatalkan karena masih ada baris yang tidak valid.",
       );
+    }
     if (!preview.rows.length)
       throw new EmployeeError(
         "VALIDATION",
@@ -173,6 +190,7 @@ export class EmployeeImportService {
         workUnit: row.workUnit,
         isActive: row.isActive,
       })),
+      mutation,
     );
   }
 }

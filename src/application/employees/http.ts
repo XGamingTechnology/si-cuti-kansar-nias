@@ -1,3 +1,4 @@
+import type { EmployeeMutation } from "./mutation";
 import { z } from "zod";
 import { EmployeeError } from "./service";
 
@@ -21,8 +22,28 @@ export async function employeeInput(request: Request) {
     string,
     unknown
   > | null;
-  if (!body || typeof body !== "object")
+  if (!body || typeof body !== "object" || Array.isArray(body))
     throw new EmployeeError("VALIDATION", "Data pegawai tidak valid.");
+  if (
+    Object.keys(body).some(
+      (key) =>
+        ![
+          "nip",
+          "fullName",
+          "positionTitle",
+          "workUnit",
+          "directSupervisorId",
+          "employmentStartDate",
+        ].includes(key),
+    )
+  )
+    throw new EmployeeError("VALIDATION", "Kolom pegawai tidak dikenal.");
+  if (
+    body.employmentStartDate !== undefined &&
+    body.employmentStartDate !== null &&
+    typeof body.employmentStartDate !== "string"
+  )
+    throw new EmployeeError("VALIDATION", "Tanggal mulai bekerja tidak valid.");
   const fields = ["nip", "fullName", "positionTitle", "workUnit"] as const;
   if (fields.some((field) => typeof body[field] !== "string"))
     throw new EmployeeError("VALIDATION", "Data pegawai tidak lengkap.");
@@ -49,4 +70,41 @@ export async function employeeInput(request: Request) {
         ? body.employmentStartDate
         : null,
   };
+}
+
+export function employeeMutation(
+  request: Request,
+  actorUserId: string,
+  version = false,
+): EmployeeMutation {
+  const origin = request.headers.get("origin");
+  let originHost: string | undefined;
+  if (origin) {
+    try {
+      const parsed = new URL(origin);
+      if (!["http:", "https:"].includes(parsed.protocol)) throw new Error();
+      originHost = parsed.host;
+    } catch {
+      throw new EmployeeError("VALIDATION", "Sumber permintaan tidak valid.");
+    }
+  }
+  if (
+    request.headers.get("sec-fetch-site") === "cross-site" ||
+    (origin &&
+      originHost !== (request.headers.get("host") ?? new URL(request.url).host))
+  )
+    throw new EmployeeError("VALIDATION", "Sumber permintaan tidak valid.");
+  if (!version) return { actorUserId };
+  const expectedUpdatedAt = /^"(.*)"$/.exec(
+    request.headers.get("if-match") ?? "",
+  )?.[1];
+  if (
+    !expectedUpdatedAt ||
+    !z.iso.datetime().safeParse(expectedUpdatedAt).success
+  )
+    throw new EmployeeError(
+      "VALIDATION",
+      "Muat ulang data pegawai sebelum mengubahnya.",
+    );
+  return { actorUserId, expectedUpdatedAt };
 }

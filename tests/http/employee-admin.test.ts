@@ -48,20 +48,18 @@ const request = (method = "GET", body?: unknown) =>
     headers: {
       cookie: "si_cuti_session=token",
       "content-type": "application/json",
+      "if-match": '"2026-10-18T00:00:00.000Z"',
       "x-role": "ADMIN_KEPEGAWAIAN",
       "x-user-id": "forged",
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 const valid = {
-  id: "forged",
   nip: "TEST-2",
   fullName: "Nama",
   positionTitle: "Jabatan",
   workUnit: "Unit",
   directSupervisorId: null,
-  role: "ADMIN_KEPEGAWAIAN",
-  userId: "forged",
 };
 describe("Admin employee HTTP authorization", () => {
   it.each([
@@ -85,20 +83,23 @@ describe("Admin employee HTTP authorization", () => {
     expect(response.status).toBe(403);
     expect(d.employees.create).not.toHaveBeenCalled();
   });
-  it("allows Admin create but never forwards client-controlled ID or claims", async () => {
+  it("allows Admin create using the session audit actor", async () => {
     const d = deps(admin);
     const response = await createEmployeeCollectionHandlers(
       () => d as never,
     ).POST(request("POST", valid));
     expect(response.status).toBe(201);
-    expect(d.employees.create).toHaveBeenCalledWith({
-      nip: "TEST-2",
-      fullName: "Nama",
-      positionTitle: "Jabatan",
-      workUnit: "Unit",
-      directSupervisorId: null,
-      employmentStartDate: null,
-    });
+    expect(d.employees.create).toHaveBeenCalledWith(
+      {
+        nip: "TEST-2",
+        fullName: "Nama",
+        positionTitle: "Jabatan",
+        workUnit: "Unit",
+        directSupervisorId: null,
+        employmentStartDate: null,
+      },
+      { actorUserId: "admin" },
+    );
   });
   it("denies Pegawai update and status changes", async () => {
     const d = deps(pegawai);
@@ -225,6 +226,7 @@ describe("Admin employee HTTP authorization", () => {
     );
     expect(d.employees.create).toHaveBeenCalledWith(
       expect.objectContaining({ directSupervisorId: unknownSupervisorId }),
+      { actorUserId: "admin" },
     );
   });
 });

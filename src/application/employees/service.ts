@@ -1,5 +1,8 @@
+import type { EmployeeMutation } from "./mutation";
+
 export type Employee = Readonly<{
   id: string;
+  updatedAt?: string | Date;
   nip: string;
   fullName: string;
   positionTitle: string;
@@ -22,12 +25,17 @@ export interface EmployeeRepository {
   list(): Promise<Employee[]>;
   findById(id: string): Promise<Employee | null>;
   findByNip(nip: string): Promise<Employee | null>;
-  create(input: EmployeeWrite): Promise<Employee>;
+  create(input: EmployeeWrite, mutation?: EmployeeMutation): Promise<Employee>;
   updateWithLocalIdentity(
     employeeId: string,
     input: EmployeeWrite,
+    mutation?: EmployeeMutation,
   ): Promise<Employee>;
-  setActive(employeeId: string, isActive: boolean): Promise<Employee>;
+  setActive(
+    employeeId: string,
+    isActive: boolean,
+    mutation?: EmployeeMutation,
+  ): Promise<Employee>;
 }
 
 export type EmployeeErrorCode =
@@ -78,6 +86,21 @@ function normalize(input: EmployeeWrite): EmployeeWrite {
         `${field} melebihi batas ${limits[field]} karakter.`,
       );
   }
+  if (normalized.employmentStartDate) {
+    const date =
+      normalized.employmentStartDate instanceof Date
+        ? normalized.employmentStartDate.toISOString().slice(0, 10)
+        : normalized.employmentStartDate;
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      !Number.isFinite(Date.parse(date)) ||
+      new Date(date).toISOString().slice(0, 10) !== date
+    )
+      throw new EmployeeError(
+        "VALIDATION",
+        "Tanggal mulai bekerja tidak valid.",
+      );
+  }
   return normalized;
 }
 
@@ -91,15 +114,22 @@ export class EmployeeService {
     return this.repository.findById(id);
   }
 
-  async create(input: EmployeeWrite): Promise<Employee> {
+  async create(
+    input: EmployeeWrite,
+    mutation?: EmployeeMutation,
+  ): Promise<Employee> {
     const value = normalize(input);
     await this.validateSupervisor(value.directSupervisorId ?? null);
     if (await this.repository.findByNip(value.nip))
       throw new EmployeeError("CONFLICT", "NIP sudah digunakan.");
-    return this.repository.create(value);
+    return this.repository.create(value, mutation);
   }
 
-  async update(employeeId: string, input: EmployeeWrite): Promise<Employee> {
+  async update(
+    employeeId: string,
+    input: EmployeeWrite,
+    mutation?: EmployeeMutation,
+  ): Promise<Employee> {
     const current = await this.requireEmployee(employeeId);
     const value = normalize(input);
     if (value.directSupervisorId === employeeId)
@@ -111,12 +141,16 @@ export class EmployeeService {
     const duplicate = await this.repository.findByNip(value.nip);
     if (duplicate && duplicate.id !== current.id)
       throw new EmployeeError("CONFLICT", "NIP sudah digunakan.");
-    return this.repository.updateWithLocalIdentity(employeeId, value);
+    return this.repository.updateWithLocalIdentity(employeeId, value, mutation);
   }
 
-  async setActive(employeeId: string, isActive: boolean): Promise<Employee> {
+  async setActive(
+    employeeId: string,
+    isActive: boolean,
+    mutation?: EmployeeMutation,
+  ): Promise<Employee> {
     await this.requireEmployee(employeeId);
-    return this.repository.setActive(employeeId, isActive);
+    return this.repository.setActive(employeeId, isActive, mutation);
   }
 
   private async requireEmployee(id: string) {

@@ -11,7 +11,7 @@ export function createEmployeeRuntime() {
     ...runtime,
     employees: new EmployeeService(repository),
     employeeImport: new EmployeeImportService(
-      new XlsxWorkbookReader(),
+      new XlsxWorkbookReader(true, true),
       repository,
     ),
   };

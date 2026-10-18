@@ -1,6 +1,7 @@
 "use client";
 
-import { useAdminPanelFocus } from "./use-admin-panel-focus";
+import { handoffReportDownload } from "./reporting-client";
+import { AdminFloatingWindow } from "./admin-floating-window";
 
 import { AdminPagination, useAdminPagination } from "./admin-pagination";
 
@@ -8,6 +9,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -115,6 +117,7 @@ function AccountBadge({
 export function EmployeeManagement() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [form, setForm] = useState(empty);
+  const [editVersion, setEditVersion] = useState<string>("");
   const [mode, setMode] = useState<FormMode>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -124,8 +127,19 @@ export function EmployeeManagement() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<EmployeeImportPreview | null>(null);
   const [importBusy, setImportBusy] = useState(false);
+  const [unitFilter, setUnitFilter] = useState("");
+  const [templateBusy, setTemplateBusy] = useState(false);
+  const templateFlight = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const inFlight = useRef(false);
+  const panelEpoch = useRef(0);
+  const listSequence = useRef(0);
+  const importAttempt = useRef<string | null>(null);
+  const [importComplete, setImportComplete] = useState(false);
+  const [importUnknown, setImportUnknown] = useState(false);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<EmployeeStatusFilter>("all");
+  const [statusFilter, setStatusFilter] =
+    useState<EmployeeStatusFilter>("active");
   const [accountRefreshVersions, setAccountRefreshVersions] = useState<
     Record<string, number>
   >({});
@@ -139,7 +153,8 @@ export function EmployeeManagement() {
         statusFilter === "all" ||
         (statusFilter === "active" && employee.isActive) ||
         (statusFilter === "inactive" && !employee.isActive);
-      if (!matchesStatus) return false;
+      if (!matchesStatus || (unitFilter && employee.workUnit !== unitFilter))
+        return false;
       if (!normalizedQuery) return true;
       return [
         employee.fullName,
@@ -150,11 +165,11 @@ export function EmployeeManagement() {
         value.toLocaleLowerCase("id-ID").includes(normalizedQuery),
       );
     });
-  }, [employees, query, statusFilter]);
+  }, [employees, query, statusFilter, unitFilter]);
 
   const pagination = useAdminPagination(
     visibleEmployees,
-    `${query}|${statusFilter}`,
+    `${query}|${statusFilter}|${unitFilter}`,
   );
 
   const summary = useMemo(
@@ -173,9 +188,6 @@ export function EmployeeManagement() {
     [employees],
   );
 
-  const panelOpen = importOpen || Boolean(mode || selected);
-  useAdminPanelFocus(panelOpen, ".employee-directory .management-panel");
-
   const handleAccountChanged = useCallback((employeeId: string) => {
     setAccountRefreshVersions((versions) => ({
       ...versions,
@@ -185,24 +197,28 @@ export function EmployeeManagement() {
 
   const requestEmployees = useCallback(
     async (isCurrent: () => boolean = () => true) => {
+      const sequence = ++listSequence.current;
       try {
-        const response = await fetch("/api/admin/employees");
+        const response = await fetch("/api/admin/employees", {
+          cache: "no-store",
+        });
         const data = await response.json();
-        if (!isCurrent()) return;
-        if (response.ok) setEmployees(data.employees);
+        if (!isCurrent() || sequence !== listSequence.current) return;
+        if (response.ok && Array.isArray(data?.employees))
+          setEmployees(data.employees);
         else {
           setListError(true);
-          setMessage(data.error ?? "Data pegawai gagal dimuat.");
+          setMessage(data?.error ?? "Data pegawai gagal dimuat.");
         }
       } catch {
-        if (isCurrent()) {
+        if (isCurrent() && sequence === listSequence.current) {
           setListError(true);
           setMessage(
             "Data pegawai gagal dimuat. Periksa koneksi lalu coba lagi.",
           );
         }
       } finally {
-        if (isCurrent()) setLoading(false);
+        if (isCurrent() && sequence === listSequence.current) setLoading(false);
       }
     },
     [],
@@ -224,39 +240,23 @@ export function EmployeeManagement() {
     };
   }, [requestEmployees]);
 
-  useEffect(() => {
-    if (!panelOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      if (importOpen) {
-        setImportOpen(false);
-        return;
-      }
-      closePanel();
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [panelOpen, importOpen]);
-
   function openCreate() {
+    if (inFlight.current || busy) return;
+    panelEpoch.current++;
     setMode("create");
     setSelectedId(null);
     setForm(empty);
     setMessage("");
   }
   function openDetail(employee: Employee) {
+    if (inFlight.current || busy) return;
+    panelEpoch.current++;
     setSelectedId(employee.id);
     setMode(null);
     setMessage("");
   }
   function openEdit(employee: Employee) {
+    setEditVersion(String(employee.updatedAt ?? ""));
     setSelectedId(employee.id);
     setMode("edit");
     setMessage("");
@@ -272,6 +272,9 @@ export function EmployeeManagement() {
     });
   }
   function closePanel() {
+    if (inFlight.current) return;
+    panelEpoch.current++;
+    setMessage("");
     setMode(null);
     setSelectedId(null);
     setForm(empty);
@@ -279,64 +282,250 @@ export function EmployeeManagement() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    const epoch = panelEpoch.current;
     const editing = mode === "edit" && selected;
     setMessage("");
-    const response = await fetch(
-      editing ? `/api/admin/employees/${selected.id}` : "/api/admin/employees",
-      {
-        method: editing ? "PATCH" : "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(form),
-      },
-    );
-    const data = await response.json();
-    if (!response.ok) return setMessage(data.error ?? "Operasi gagal.");
-    setMessage(
-      editing
-        ? "Data pegawai berhasil diperbarui."
-        : "Pegawai berhasil ditambahkan.",
-    );
-    closePanel();
-    await load();
+    try {
+      const response = await fetch(
+        editing
+          ? `/api/admin/employees/${selected.id}`
+          : "/api/admin/employees",
+        {
+          method: editing ? "PATCH" : "POST",
+          headers: {
+            "content-type": "application/json",
+            ...(editing ? { "if-match": `"${editVersion}"` } : {}),
+          },
+          body: JSON.stringify(form),
+        },
+      );
+      const data = await response.json().catch(() => null);
+      if (epoch !== panelEpoch.current) return;
+      if (!response.ok || typeof data?.employee?.id !== "string") {
+        setMessage(
+          data?.error ??
+            "Respons simpan belum dapat dipastikan. Tutup dan muat ulang daftar/NIP sebelum mengulang.",
+        );
+        return;
+      }
+      inFlight.current = false;
+      closePanel();
+      await load();
+      setMessage(
+        editing
+          ? "Data pegawai berhasil diperbarui."
+          : "Pegawai berhasil ditambahkan; akun dan saldo belum dibuat.",
+      );
+    } catch {
+      if (epoch === panelEpoch.current)
+        setMessage(
+          "Respons simpan belum diterima. Tutup dan muat ulang daftar sebelum mengulang; periksa NIP agar tidak membuat data ganda.",
+        );
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
   }
   async function changeStatus(employee: Employee) {
-    const response = await fetch(`/api/admin/employees/${employee.id}/status`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ isActive: !employee.isActive }),
-    });
-    const data = await response.json();
-    setMessage(
-      response.ok
-        ? `Pegawai berhasil ${employee.isActive ? "dinonaktifkan" : "diaktifkan"}.`
-        : data.error,
-    );
-    if (response.ok) await load();
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(
+        `/api/admin/employees/${employee.id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+            "if-match": `"${employee.updatedAt}"`,
+          },
+          body: JSON.stringify({ isActive: !employee.isActive }),
+        },
+      );
+      const data = await response.json().catch(() => null);
+      if (!response.ok || typeof data?.employee?.id !== "string") {
+        setMessage(
+          data?.error ??
+            "Respons status belum dapat dipastikan. Muat ulang data sebelum mengulang.",
+        );
+        return;
+      }
+      inFlight.current = false;
+      closePanel();
+      await load();
+      setMessage(
+        employee.isActive
+          ? "Pegawai dinonaktifkan dan dapat ditemukan di Nonaktif (Arsip). Sesi lama dicabut."
+          : "Pegawai diaktifkan kembali. Status akun login tetap dikelola terpisah.",
+      );
+    } catch {
+      setMessage(
+        "Respons perubahan status belum diterima. Muat ulang data sebelum mengulang.",
+      );
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
   }
-
+  async function downloadTemplate() {
+    if (templateFlight.current) return;
+    templateFlight.current = true;
+    setTemplateBusy(true);
+    setMessage("");
+    const epoch = panelEpoch.current;
+    try {
+      const response = await fetch("/api/admin/employees/template", {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(
+          data?.error ??
+            "Template belum dapat diunduh. Periksa sesi/koneksi lalu coba lagi.",
+        );
+      }
+      if (
+        !response.headers
+          .get("content-type")
+          ?.startsWith(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          )
+      )
+        throw new Error(
+          "Respons template tidak valid. Muat ulang sesi dan coba lagi.",
+        );
+      handoffReportDownload(await response.blob(), "template-pegawai.xlsx");
+      if (epoch === panelEpoch.current)
+        setMessage(
+          "Template diteruskan ke unduhan browser. Periksa daftar unduhan perangkat Anda.",
+        );
+    } catch (error) {
+      if (epoch === panelEpoch.current)
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Template gagal diunduh. Coba lagi.",
+        );
+    } finally {
+      templateFlight.current = false;
+      setTemplateBusy(false);
+    }
+  }
+  function closeImport() {
+    if (inFlight.current) return;
+    panelEpoch.current++;
+    setImportOpen(false);
+    setMessage("");
+  }
+  function downloadImportResult() {
+    if (!preview || importBusy) return;
+    try {
+      // Derived only from the already Admin-authorized preview; never an account/password export.
+      const tahap = importUnknown
+        ? "KONFIRMASI_BELUM_DIKETAHUI"
+        : importComplete
+          ? "TERSIMPAN"
+          : "PRATINJAU_BELUM_DISIMPAN";
+      const result = {
+        tahap,
+        totalBaris: preview.totalRows,
+        barisValid: preview.validRows,
+        barisTidakValid: preview.invalidRows,
+        baris: preview.rows.map((row) => ({
+          baris: row.rowNumber,
+          nip: row.nip,
+          nama: row.fullName,
+          status: preview.errors.some(
+            (error) => error.rowNumber === row.rowNumber,
+          )
+            ? "TIDAK_VALID"
+            : importUnknown
+              ? "BELUM_DIKETAHUI"
+              : importComplete
+                ? "BERHASIL"
+                : "VALID_BELUM_DISIMPAN",
+          kesalahan: preview.errors
+            .filter((error) => error.rowNumber === row.rowNumber)
+            .map((error) => ({ kolom: error.field, pesan: error.message })),
+        })),
+      };
+      handoffReportDownload(
+        new Blob([JSON.stringify(result, null, 2)], {
+          type: "application/json;charset=utf-8",
+        }),
+        "hasil-impor-pegawai.json",
+      );
+    } catch {
+      setMessage(
+        "Hasil belum dapat diteruskan ke unduhan browser. Coba unduh lagi.",
+      );
+    }
+  }
   async function sendImport(commit: boolean) {
-    if (!importFile) return;
+    if (!importFile || inFlight.current) return;
+    inFlight.current = true;
     setImportBusy(true);
     setMessage("");
     const body = new FormData();
     body.append("file", importFile);
+    if (commit) importAttempt.current ??= crypto.randomUUID();
     try {
       const response = await fetch("/api/admin/employees/import", {
         method: commit ? "PUT" : "POST",
+        ...(commit
+          ? { headers: { "idempotency-key": importAttempt.current! } }
+          : {}),
         body,
       });
-      const data = await response.json();
-      if (!response.ok) return setMessage(data.error ?? "Impor pegawai gagal.");
+      const data = await response.json().catch(() => null);
+      if (
+        !response.ok ||
+        (commit
+          ? !Number.isInteger(data?.imported)
+          : !data?.preview ||
+            !Array.isArray(data.preview.rows) ||
+            !Array.isArray(data.preview.errors))
+      ) {
+        setMessage(
+          data?.error ??
+            "Respons impor tidak valid. Coba lagi dengan file dan kunci yang sama.",
+        );
+        if (commit) {
+          const unknown =
+            response.status >= 500 ||
+            (response.ok && !Number.isInteger(data?.imported)) ||
+            !data;
+          setImportUnknown(unknown);
+          if (!unknown) setPreview(null);
+        }
+        return;
+      }
       if (commit) {
-        setMessage(`${data.imported} pegawai berhasil diimpor.`);
-        setImportOpen(false);
-        setPreview(null);
+        setImportUnknown(false);
+        setMessage(
+          `Berhasil: ${data.imported}. Dilewati: 0. Gagal: 0. Seluruh baris disimpan bersama; akun/saldo tidak dibuat.`,
+        );
+        setImportComplete(true);
         setImportFile(null);
+        importAttempt.current = null;
         await load();
-      } else setPreview(data.preview);
+      } else {
+        setPreview(data.preview);
+        setImportUnknown(false);
+      }
     } catch {
-      setMessage("Impor pegawai gagal. Periksa koneksi lalu coba lagi.");
+      if (commit) setImportUnknown(true);
+      setMessage(
+        commit
+          ? "Hasil konfirmasi belum diketahui. Jangan mengganti file atau mengulang sebagai impor baru. Tekan Coba konfirmasi lagi dengan file/kunci yang sama; server tidak menggandakan data."
+          : "Pratinjau gagal dimuat. Periksa koneksi dan coba lagi.",
+      );
     } finally {
+      inFlight.current = false;
       setImportBusy(false);
     }
   }
@@ -355,15 +544,39 @@ export function EmployeeManagement() {
           <button
             className="secondary-button"
             type="button"
+            disabled={templateBusy}
+            onClick={() => void downloadTemplate()}
+          >
+            {templateBusy ? "Menyiapkan template…" : "Unduh Template Pegawai"}
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={busy}
             onClick={() => {
+              if (busy || inFlight.current) return;
+              panelEpoch.current++;
               setImportOpen(true);
-              setPreview(null);
-              setMessage("");
+              if (!importUnknown) {
+                setImportFile(null);
+                setImportComplete(false);
+                importAttempt.current = null;
+                setPreview(null);
+                setMessage("");
+              } else
+                setMessage(
+                  "Hasil impor sebelumnya belum diketahui. Gunakan Coba konfirmasi lagi dengan file dan kunci yang sama.",
+                );
             }}
           >
-            <AdminUiIcon name="upload" /> Import Excel
+            <AdminUiIcon name="upload" /> Impor Pegawai
           </button>
-          <button className="primary-button" type="button" onClick={openCreate}>
+          <button
+            disabled={busy}
+            className="primary-button"
+            type="button"
+            onClick={openCreate}
+          >
             <AdminUiIcon name="plus" /> Tambah Pegawai
           </button>
         </div>
@@ -439,14 +652,32 @@ export function EmployeeManagement() {
             <label className="employee-filter">
               <span>Status pegawai</span>
               <select
+                aria-label="Status pegawai"
                 value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(event.target.value as EmployeeStatusFilter)
                 }
               >
-                <option value="all">Semua status</option>
                 <option value="active">Aktif</option>
-                <option value="inactive">Tidak aktif</option>
+                <option value="inactive">Nonaktif (Arsip)</option>
+                <option value="all">Semua</option>
+              </select>
+            </label>
+            <label className="employee-filter">
+              <span>Unit kerja</span>
+              <select
+                aria-label="Unit kerja"
+                value={unitFilter}
+                onChange={(event) => setUnitFilter(event.target.value)}
+              >
+                <option value="">Semua unit</option>
+                {[...new Set(employees.map((e) => e.workUnit))]
+                  .sort((a, b) => a.localeCompare(b, "id"))
+                  .map((unit) => (
+                    <option key={unit} value={unit}>
+                      {unit}
+                    </option>
+                  ))}
               </select>
             </label>
           </div>
@@ -489,7 +720,8 @@ export function EmployeeManagement() {
               type="button"
               onClick={() => {
                 setQuery("");
-                setStatusFilter("all");
+                setStatusFilter("active");
+                setUnitFilter("");
               }}
             >
               Reset pencarian
@@ -539,6 +771,7 @@ export function EmployeeManagement() {
                       </td>
                       <td>
                         <AccountBadge
+                          key={employee.id}
                           employeeId={employee.id}
                           refreshVersion={
                             accountRefreshVersions[employee.id] ?? 0
@@ -583,6 +816,7 @@ export function EmployeeManagement() {
                       <dt>Status Akun Login</dt>
                       <dd>
                         <AccountBadge
+                          key={employee.id}
                           employeeId={employee.id}
                           refreshVersion={
                             accountRefreshVersions[employee.id] ?? 0
@@ -608,205 +842,178 @@ export function EmployeeManagement() {
           </>
         )}
       </div>
-      {!loading && !listError && <AdminPagination {...pagination.controls} />}
-      {importOpen && (
+      {!loading && !listError && (
         <>
-          <button
-            className="panel-scrim"
-            type="button"
-            aria-label="Tutup impor"
-            onClick={() => setImportOpen(false)}
-          />
-          <aside
-            className="management-panel import-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="employee-import-title"
-          >
-            <header>
-              <div>
-                <p className="eyebrow">IMPORT PEGAWAI</p>
-                <h2 id="employee-import-title">Import Excel</h2>
-              </div>
-              <button
-                className="panel-close"
-                type="button"
-                onClick={() => setImportOpen(false)}
-                aria-label="Tutup panel"
-              >
-                ×
-              </button>
-            </header>
-            <div className="management-form">
-              {message && (
-                <p className="feedback" role="status">
-                  {message}
-                </p>
-              )}
-              <p className="panel-description">
-                Gunakan file .xlsx maksimal 2 MB dengan kolom persis: NIP, Nama
-                Lengkap, Jabatan, Unit Kerja, Status Aktif. Status menerima
-                TRUE/FALSE atau AKTIF/TIDAK AKTIF.
-              </p>
-              <label>
-                Pilih workbook
-                <input
-                  type="file"
-                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                  onChange={(event) => {
-                    setImportFile(event.target.files?.[0] ?? null);
-                    setPreview(null);
-                  }}
-                />
-              </label>
-              <p className="panel-description">
-                Pratinjau belum menyimpan data. Periksa hasil validasi sebelum
-                mengimpor pegawai.
-              </p>
-              {preview && (
-                <section className="import-preview" aria-live="polite">
-                  <div className="import-summary">
-                    <span>
-                      <strong>{preview.totalRows}</strong>Total baris
-                    </span>
-                    <span>
-                      <strong>{preview.validRows}</strong>Valid
-                    </span>
-                    <span>
-                      <strong>{preview.invalidRows}</strong>Tidak valid
-                    </span>
-                  </div>
-                  {preview.errors.length ? (
-                    <div className="import-errors">
-                      <table className="employee-table">
-                        <thead>
-                          <tr>
-                            <th scope="col">Baris</th>
-                            <th scope="col">NIP</th>
-                            <th scope="col">Kolom</th>
-                            <th scope="col">Kesalahan</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {preview.errors.map((error, index) => (
-                            <tr
-                              key={`${error.rowNumber}-${error.field}-${index}`}
-                            >
-                              <td>{error.rowNumber}</td>
-                              <td className="mono">{error.nip || "—"}</td>
-                              <td>{error.field}</td>
-                              <td>{error.message}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="feedback">
-                      Semua baris valid dan siap diimpor.
-                    </p>
-                  )}
-                </section>
-              )}
-              <div className="panel-actions">
-                <button
-                  className="secondary-button"
-                  type="button"
-                  disabled={!importFile || importBusy}
-                  onClick={() => void sendImport(false)}
-                >
-                  {importBusy ? "Memvalidasi…" : "Preview & Validasi"}
-                </button>
-                <button
-                  className="primary-button"
-                  type="button"
-                  disabled={
-                    !preview ||
-                    preview.invalidRows > 0 ||
-                    preview.totalRows === 0 ||
-                    importBusy
-                  }
-                  onClick={() => void sendImport(true)}
-                >
-                  Impor Pegawai
-                </button>
-              </div>
-            </div>
-          </aside>
+          <AdminPagination {...pagination.controls} />
+          <p className="panel-description">
+            Pencarian, filter dan pagination lokal: 10 pegawai per halaman dari
+            daftar yang telah dimuat. Arsip adalah pegawai nonaktif; histori
+            tetap tersimpan.
+          </p>
         </>
       )}
-      {(mode || selected) && (
-        <>
-          <button
-            className="panel-scrim"
-            type="button"
-            aria-label="Tutup panel"
-            onClick={closePanel}
-          />
-          <aside
-            className="management-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="employee-panel-title"
-          >
-            <header>
-              <div>
-                <p className="eyebrow">
-                  {mode === "create" ? "DATA BARU" : "MASTER PEGAWAI"}
-                </p>
-                <h2 id="employee-panel-title">
-                  {mode === "create"
-                    ? "Tambah Pegawai"
-                    : mode === "edit"
-                      ? "Edit Pegawai"
-                      : selected?.fullName}
-                </h2>
-              </div>
-              <button
-                className="panel-close"
-                type="button"
-                onClick={closePanel}
-                aria-label="Tutup panel"
-              >
-                ×
-              </button>
-            </header>
+      {importOpen && (
+        <AdminFloatingWindow
+          title="Impor Pegawai"
+          onClose={closeImport}
+          busy={importBusy}
+        >
+          <div className="management-form">
             {message && (
-              <p className="feedback directory-panel-feedback" role="status">
+              <p className="feedback" role="status">
                 {message}
               </p>
             )}
-            {mode ? (
-              <EmployeeForm
-                form={form}
-                setForm={setForm}
-                employees={employees}
-                editingId={selected?.id}
-                mode={mode}
-                submit={submit}
-                cancel={() =>
-                  mode === "edit" && selected ? setMode(null) : closePanel()
-                }
+            <p className="panel-description">
+              Gunakan file .xlsx maksimal 2 MB dengan kolom persis: NIP, Nama
+              Lengkap, Jabatan, Unit Kerja, Status Aktif. Status menerima
+              TRUE/FALSE atau AKTIF/TIDAK AKTIF.
+            </p>
+            <p className="panel-description">
+              Maksimal 500 baris pegawai. Semua lima kolom wajib. Gunakan
+              template kosong tanpa contoh data; NIP harus teks agar awalan
+              nol/digit panjang terjaga. Atasan tidak didukung dalam impor ini.
+              Seluruh baris valid disimpan atomik: satu kesalahan membatalkan
+              semuanya, tanpa melewati/menimpa data existing. Tidak membuat akun
+              atau saldo.
+            </p>
+            <label>
+              Pilih workbook
+              <input
+                type="file"
+                disabled={importBusy || importUnknown}
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={(event) => {
+                  setImportComplete(false);
+                  importAttempt.current = null;
+                  setImportFile(event.target.files?.[0] ?? null);
+                  setMessage("");
+                  setPreview(null);
+                }}
               />
-            ) : (
-              selected && (
-                <EmployeeDetail
-                  employee={selected}
-                  employees={employees}
-                  onEdit={() => openEdit(selected)}
-                  onStatus={() => void changeStatus(selected)}
-                  onAccountChanged={handleAccountChanged}
-                />
-              )
+            </label>
+            <p className="panel-description">
+              Pratinjau belum menyimpan data. Periksa hasil validasi sebelum
+              mengimpor pegawai.
+            </p>
+            {preview && (
+              <section className="import-preview" aria-live="polite">
+                <div className="import-summary">
+                  <span>
+                    <strong>{preview.totalRows}</strong>Total baris
+                  </span>
+                  <span>
+                    <strong>{preview.validRows}</strong>Valid
+                  </span>
+                  <span>
+                    <strong>{preview.invalidRows}</strong>Tidak valid
+                  </span>
+                </div>
+                <ImportRows preview={preview} imported={importComplete} />
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={importBusy}
+                  onClick={downloadImportResult}
+                >
+                  Unduh hasil (JSON)
+                </button>
+                {preview.errors.length ? (
+                  <p role="alert">
+                    Perbaiki kolom bermasalah pada baris di atas. Belum ada
+                    baris yang disimpan; impor hanya dapat dikonfirmasi jika
+                    semuanya valid.
+                  </p>
+                ) : (
+                  <p className="feedback">
+                    {importComplete
+                      ? "Seluruh baris di atas berhasil diimpor."
+                      : "Semua baris valid dan siap diimpor."}
+                  </p>
+                )}
+              </section>
             )}
-          </aside>
-        </>
+            <div className="panel-actions">
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={!importFile || importBusy || importUnknown}
+                onClick={() => void sendImport(false)}
+              >
+                {importBusy ? "Memproses…" : "Preview & Validasi"}
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                disabled={
+                  !importFile ||
+                  !preview ||
+                  preview.invalidRows > 0 ||
+                  preview.totalRows === 0 ||
+                  importBusy
+                }
+                onClick={() => void sendImport(true)}
+              >
+                {importBusy
+                  ? "Memproses…"
+                  : importUnknown
+                    ? "Coba konfirmasi lagi"
+                    : "Konfirmasi Impor Pegawai"}
+              </button>
+            </div>
+          </div>
+        </AdminFloatingWindow>
+      )}
+      {(mode || selected) && (
+        <AdminFloatingWindow
+          title={
+            mode === "create"
+              ? "Tambah Pegawai"
+              : mode === "edit"
+                ? "Edit Pegawai"
+                : (selected?.fullName ?? "Detail Pegawai")
+          }
+          onClose={closePanel}
+          busy={busy}
+        >
+          {message && (
+            <p className="feedback directory-panel-feedback" role="status">
+              {message}
+            </p>
+          )}
+          {mode ? (
+            <EmployeeForm
+              busy={busy}
+              form={form}
+              setForm={setForm}
+              employees={employees}
+              editingId={selected?.id}
+              mode={mode}
+              submit={submit}
+              cancel={() =>
+                mode === "edit" && selected ? setMode(null) : closePanel()
+              }
+            />
+          ) : (
+            selected && (
+              <EmployeeDetail
+                busy={busy}
+                employee={selected}
+                employees={employees}
+                onEdit={() => openEdit(selected)}
+                onStatus={() => void changeStatus(selected)}
+                onAccountChanged={handleAccountChanged}
+              />
+            )
+          )}
+        </AdminFloatingWindow>
       )}
     </section>
   );
 }
 
 function EmployeeForm({
+  busy,
   form,
   setForm,
   employees,
@@ -815,6 +1022,7 @@ function EmployeeForm({
   submit,
   cancel,
 }: {
+  busy: boolean;
   form: typeof empty;
   setForm: (value: typeof empty) => void;
   employees: Employee[];
@@ -825,88 +1033,93 @@ function EmployeeForm({
 }) {
   return (
     <form className="management-form" onSubmit={submit}>
-      <p className="panel-description">
-        Lengkapi data utama pegawai. Semua kolom bertanda wajib harus diisi.
-      </p>
-      <div className="form-field-grid">
-        {(
-          [
-            ["nip", "NIP"],
-            ["fullName", "Nama lengkap"],
-            ["positionTitle", "Jabatan"],
-            ["workUnit", "Unit kerja"],
-          ] as const
-        ).map(([name, label]) => (
-          <label key={name}>
-            {label}
-            <input
-              required
-              type="text"
-              maxLength={name === "nip" ? 32 : 200}
-              autoCapitalize={name === "nip" ? "off" : undefined}
-              autoCorrect={name === "nip" ? "off" : undefined}
-              spellCheck={name === "nip" ? false : undefined}
-              value={form[name]}
-              onChange={(event) =>
-                setForm({ ...form, [name]: event.target.value })
-              }
-            />
-          </label>
-        ))}
-      </div>
-      <label>
-        Tanggal mulai bekerja <span className="optional">(opsional)</span>
-        <input
-          type="date"
-          value={form.employmentStartDate}
-          onChange={(event) =>
-            setForm({ ...form, employmentStartDate: event.target.value })
-          }
-        />
-      </label>
-      <label>
-        Atasan langsung <span className="optional">(opsional)</span>
-        <select
-          value={form.directSupervisorId}
-          onChange={(event) =>
-            setForm({ ...form, directSupervisorId: event.target.value })
-          }
-        >
-          <option value="">Tidak ada</option>
-          {employees
-            .filter((employee) => employee.id !== editingId)
-            .map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.fullName} — {employee.nip}
-              </option>
-            ))}
-        </select>
-      </label>
-      <div className="panel-actions">
-        <button className="secondary-button" type="button" onClick={cancel}>
-          Batal
-        </button>
-        <button className="primary-button" type="submit">
-          {mode === "edit" ? "Simpan Perubahan" : "Tambah Pegawai"}
-        </button>
-      </div>
+      <fieldset disabled={busy} className="employee-fields">
+        <p className="panel-description">
+          Lengkapi data utama pegawai. Semua kolom bertanda wajib harus diisi.
+        </p>
+        <div className="form-field-grid">
+          {(
+            [
+              ["nip", "NIP"],
+              ["fullName", "Nama lengkap"],
+              ["positionTitle", "Jabatan"],
+              ["workUnit", "Unit kerja"],
+            ] as const
+          ).map(([name, label]) => (
+            <label key={name}>
+              {label}
+              <input
+                required
+                type="text"
+                maxLength={name === "nip" ? 32 : 200}
+                autoCapitalize={name === "nip" ? "off" : undefined}
+                autoCorrect={name === "nip" ? "off" : undefined}
+                spellCheck={name === "nip" ? false : undefined}
+                value={form[name]}
+                onChange={(event) =>
+                  setForm({ ...form, [name]: event.target.value })
+                }
+              />
+            </label>
+          ))}
+        </div>
+        <label>
+          Tanggal mulai bekerja <span className="optional">(opsional)</span>
+          <input
+            type="date"
+            value={form.employmentStartDate}
+            onChange={(event) =>
+              setForm({ ...form, employmentStartDate: event.target.value })
+            }
+          />
+        </label>
+        <label>
+          Atasan langsung <span className="optional">(opsional)</span>
+          <select
+            value={form.directSupervisorId}
+            onChange={(event) =>
+              setForm({ ...form, directSupervisorId: event.target.value })
+            }
+          >
+            <option value="">Tidak ada</option>
+            {employees
+              .filter((employee) => employee.id !== editingId)
+              .map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.fullName} — {employee.nip}
+                </option>
+              ))}
+          </select>
+        </label>
+        <div className="panel-actions">
+          <button className="secondary-button" type="button" onClick={cancel}>
+            Batal
+          </button>
+          <button className="primary-button" type="submit">
+            {mode === "edit" ? "Simpan Perubahan" : "Tambah Pegawai"}
+          </button>
+        </div>
+      </fieldset>
     </form>
   );
 }
 
 function EmployeeDetail({
+  busy,
   employee,
   employees,
   onEdit,
   onStatus,
   onAccountChanged,
 }: {
+  busy: boolean;
   employee: Employee;
   employees: Employee[];
   onEdit: () => void;
   onStatus: () => void;
   onAccountChanged: (employeeId: string) => void;
 }) {
+  const [confirmStatus, setConfirmStatus] = useState(false);
   const supervisor = employees.find(
     (item) => item.id === employee.directSupervisorId,
   );
@@ -947,13 +1160,19 @@ function EmployeeDetail({
           </div>
         </dl>
         <div className="detail-actions">
-          <button className="secondary-button" type="button" onClick={onEdit}>
+          <button
+            disabled={busy}
+            className="secondary-button"
+            type="button"
+            onClick={onEdit}
+          >
             Edit Pegawai
           </button>
           <button
             className={employee.isActive ? "danger-button" : "success-button"}
             type="button"
-            onClick={onStatus}
+            disabled={busy}
+            onClick={() => setConfirmStatus(true)}
           >
             {employee.isActive ? "Nonaktifkan Pegawai" : "Aktifkan Pegawai"}
           </button>
@@ -967,10 +1186,106 @@ function EmployeeDetail({
           </div>
         </div>
         <EmployeeAccountControls
+          key={employee.id}
           employeeId={employee.id}
           onAccountChanged={() => onAccountChanged(employee.id)}
         />
       </section>
+      {confirmStatus && (
+        <AdminFloatingWindow
+          title={
+            employee.isActive
+              ? "Nonaktifkan Pegawai?"
+              : "Aktifkan kembali Pegawai?"
+          }
+          busy={busy}
+          onClose={() => setConfirmStatus(false)}
+        >
+          <p>{employee.fullName}</p>
+          <p>
+            {employee.isActive
+              ? "Pegawai masuk Arsip dan tidak dapat login. Seluruh sesi lama dicabut; histori saldo, pengajuan dan dokumen tetap tersimpan."
+              : "Pegawai kembali aktif. Akun yang nonaktif tetap nonaktif; sesi lama tidak dipulihkan."}
+          </p>
+          <div className="panel-actions">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirmStatus(false)}
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={busy}
+              onClick={() => {
+                setConfirmStatus(false);
+                onStatus();
+              }}
+            >
+              Ya, {employee.isActive ? "nonaktifkan" : "aktifkan kembali"}
+            </button>
+          </div>
+        </AdminFloatingWindow>
+      )}
     </div>
+  );
+}
+
+function ImportRows({
+  preview,
+  imported,
+}: {
+  preview: EmployeeImportPreview;
+  imported: boolean;
+}) {
+  const paging = useAdminPagination(
+    preview.rows,
+    JSON.stringify(preview.rows.map((row) => row.nip)),
+  );
+  return (
+    <>
+      <div className="employee-import-rows">
+        <table className="employee-table">
+          <thead>
+            <tr>
+              <th>Baris</th>
+              <th>NIP / Nama</th>
+              <th>Hasil</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paging.items.map((row) => (
+              <tr key={row.rowNumber}>
+                <td>{row.rowNumber}</td>
+                <td>
+                  {row.nip}
+                  <br />
+                  {row.fullName}
+                </td>
+                <td>
+                  {preview.errors.some(
+                    (error) => error.rowNumber === row.rowNumber,
+                  )
+                    ? "Tidak valid"
+                    : imported
+                      ? "Berhasil"
+                      : "Valid"}
+                  {preview.errors
+                    .filter((error) => error.rowNumber === row.rowNumber)
+                    .map((error) => (
+                      <p key={error.field}>
+                        {error.field}: {error.message}
+                      </p>
+                    ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <AdminPagination {...paging.controls} />
+    </>
   );
 }

@@ -139,7 +139,16 @@ async function scenario(name, token, work, options = {}) {
 async function open(page) {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
+  if (await page.locator(".employee-directory").count()) {
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelector(".directory-summary")
+          ?.getAttribute("aria-busy") === "false",
+    );
+  }
 }
+
 async function snapshot(page, name) {
   if (!screenshots) return;
   await mkdir(screenshots, { recursive: true });
@@ -164,6 +173,7 @@ try {
       }));
       await routes(page, rows, { onCreate: () => rows.splice(0, 22) });
       await open(page);
+      await page.locator(".employee-filter select").first().selectOption("all");
       assert.equal(await page.locator(".employee-table tbody tr").count(), 10);
       const paging = page.getByRole("navigation", {
         name: "Navigasi halaman daftar",
@@ -405,12 +415,15 @@ try {
         .getByRole("searchbox", { name: "Cari pegawai" })
         .fill("pegawai uji 01");
       assert.equal(await page.locator(".employee-table tbody tr").count(), 1);
-      await page.locator(".employee-filter select").selectOption("inactive");
+      await page
+        .locator(".employee-filter select")
+        .first()
+        .selectOption("inactive");
       await page
         .getByText("Pegawai tidak ditemukan", { exact: true })
         .waitFor();
       await page.getByRole("button", { name: "Reset pencarian" }).click();
-      assert.equal(await page.locator(".employee-table tbody tr").count(), 8);
+      assert.equal(await page.locator(".employee-table tbody tr").count(), 6);
       await snapshot(page, "admin-desktop");
     },
   );
@@ -492,12 +505,12 @@ try {
       });
       await open(page);
       await page
-        .getByRole("button", { name: "Import Excel", exact: true })
+        .getByRole("button", { name: "Impor Pegawai", exact: true })
         .click();
       const dialog = page.getByRole("dialog");
       assert.equal(
         await dialog
-          .getByRole("button", { name: "Impor Pegawai" })
+          .getByRole("button", { name: "Konfirmasi Impor Pegawai" })
           .isDisabled(),
         true,
       );
@@ -510,9 +523,8 @@ try {
       await dialog.getByRole("button", { name: "Preview & Validasi" }).click();
       await page.waitForFunction(
         () =>
-          !document.querySelector(
-            ".import-panel .panel-actions .primary-button",
-          )?.disabled,
+          !document.querySelector("dialog .panel-actions .primary-button")
+            ?.disabled,
       );
       assert.equal(commits, 0);
       await page.keyboard.press("Escape");

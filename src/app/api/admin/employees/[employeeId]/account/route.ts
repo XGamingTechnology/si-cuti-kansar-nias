@@ -8,6 +8,10 @@ import {
   accountErrorResponse,
   validateAccountEmployeeId,
 } from "@/application/accounts/http";
+import {
+  employeeMutation,
+  employeeErrorResponse,
+} from "@/application/employees/http";
 import { createAccountAdministrationRuntime } from "@/infrastructure/accounts/runtime";
 
 type Dependencies = ReturnType<typeof createAccountAdministrationRuntime>;
@@ -22,20 +26,24 @@ export function createAccountHandlers(
         runtime: Dependencies,
         request: Request,
         id: string,
+        actorUserId: string,
       ) => Promise<Response>,
     ) =>
     async (request: Request, context: Context) => {
       const runtime = factory();
       try {
-        requireAdmin(
-          await requireRequestPrincipal(request, runtime.authentication),
+        const principal = await requireRequestPrincipal(
+          request,
+          runtime.authentication,
         );
+        requireAdmin(principal);
         const id = validateAccountEmployeeId((await context.params).employeeId);
-        return await operation(runtime, request, id);
+        return await operation(runtime, request, id, principal.userId);
       } catch (error) {
         return (
           authorizationResponse(error) ??
           accountErrorResponse(error) ??
+          employeeErrorResponse(error) ??
           Response.json(
             { error: "Operasi administrasi akun gagal." },
             { status: 500 },
@@ -50,21 +58,29 @@ export function createAccountHandlers(
     GET: run(async (runtime, _request, id) =>
       Response.json({ account: await runtime.accounts.findByEmployeeId(id) }),
     ),
-    POST: run(async (runtime, request, id) => {
-      const body = await accountBody(request);
+    POST: run(async (runtime, request, id, actorUserId) => {
+      const body = await accountBody(request, ["role", "password"]);
       return Response.json(
         {
-          account: await runtime.accounts.provision(id, {
-            role: body.role,
-            password: body.password,
-          }),
+          account: await runtime.accounts.provision(
+            id,
+            {
+              role: body.role,
+              password: body.password,
+            },
+            employeeMutation(request, actorUserId),
+          ),
         },
         { status: 201 },
       );
     }),
-    PATCH: run(async (runtime, request, id) =>
+    PATCH: run(async (runtime, request, id, actorUserId) =>
       Response.json({
-        account: await runtime.accounts.update(id, await accountBody(request)),
+        account: await runtime.accounts.update(
+          id,
+          await accountBody(request, ["role", "isActive"]),
+          employeeMutation(request, actorUserId),
+        ),
       }),
     ),
   };

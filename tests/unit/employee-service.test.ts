@@ -144,4 +144,14 @@ describe("EmployeeService", () => {
     expect("delete" in new EmployeeService({} as EmployeeRepository)).toBe(
       false,
     ));
+  it("rejects an impossible calendar date and accepts a valid leap date", async () => {
+    const { service } = fixture();
+    await expect(
+      service.create(input({ employmentStartDate: "2026-02-30" })),
+    ).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(
+      (await service.create(input({ employmentStartDate: "2024-02-29" })))
+        .employmentStartDate,
+    ).toBe("2024-02-29");
+  });
 });

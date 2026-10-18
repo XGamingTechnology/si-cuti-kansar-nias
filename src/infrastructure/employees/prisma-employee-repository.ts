@@ -1,3 +1,12 @@
+import { randomUUID } from "node:crypto";
+import type {
+  EmployeeMutation,
+  EmployeeImportMutation,
+} from "@/application/employees/mutation";
+import {
+  administrationAudit,
+  checkEmployeeVersion,
+} from "./administration-audit";
 import { Prisma } from "@/generated/prisma/client";
 import type { PrismaClient } from "@/generated/prisma/client";
 import {
@@ -18,6 +27,7 @@ import {
 
 const select = {
   id: true,
+  updatedAt: true,
   nip: true,
   fullName: true,
   positionTitle: true,
@@ -62,61 +72,164 @@ export class PrismaEmployeeRepository
     });
     return rows.map((row) => row.nip);
   }
-  async importAll(rows: readonly Omit<EmployeeImportRow, "rowNumber">[]) {
+  async replayImport(mutation: EmployeeImportMutation) {
+    const prior = await this.database.employeeAdministrationEvent.findUnique({
+      where: {
+        actorUserId_idempotencyKey: {
+          actorUserId: mutation.actorUserId,
+          idempotencyKey: mutation.idempotencyKey,
+        },
+      },
+    });
+    if (!prior) return null;
+    if (
+      prior.requestHash !== mutation.requestHash ||
+      prior.action !== "EMPLOYEE_IMPORT"
+    )
+      throw new EmployeeError(
+        "CONFLICT",
+        "Kunci impor sudah digunakan untuk file lain.",
+      );
+    return this.database.employee.findMany({
+      where: { id: { in: prior.employeeIds } },
+      select,
+    });
+  }
+  async importAll(
+    rows: readonly Omit<EmployeeImportRow, "rowNumber">[],
+    mutation?: EmployeeImportMutation,
+  ) {
     try {
-      return await this.database.$transaction(async (transaction) => {
-        const existing = await transaction.employee.findFirst({
-          where: { nip: { in: rows.map((row) => row.nip) } },
-          select: { nip: true },
-        });
-        if (existing)
-          throw new EmployeeError(
-            "CONFLICT",
-            `NIP ${existing.nip} sudah terdaftar.`,
-          );
-        const created = [];
-        for (const row of rows)
-          created.push(
-            await transaction.employee.create({
-              data: { ...row, directSupervisorId: null },
-              select,
-            }),
-          );
-        return created;
-      });
+      return await this.database.$transaction(
+        async (transaction) => {
+          await lockAdminLifecycle(transaction);
+          if (mutation) {
+            const prior =
+              await transaction.employeeAdministrationEvent.findUnique({
+                where: {
+                  actorUserId_idempotencyKey: {
+                    actorUserId: mutation.actorUserId,
+                    idempotencyKey: mutation.idempotencyKey,
+                  },
+                },
+              });
+            if (prior) {
+              if (prior.requestHash !== mutation.requestHash)
+                throw new EmployeeError(
+                  "CONFLICT",
+                  "Kunci impor sudah digunakan untuk file lain.",
+                );
+              return transaction.employee.findMany({
+                where: { id: { in: prior.employeeIds } },
+                select,
+              });
+            }
+          }
+          const existing = await transaction.employee.findFirst({
+            where: { nip: { in: rows.map((row) => row.nip) } },
+            select: { nip: true },
+          });
+          if (existing)
+            throw new EmployeeError(
+              "CONFLICT",
+              `NIP ${existing.nip} sudah terdaftar.`,
+            );
+          const created = [];
+          for (const row of rows)
+            created.push(
+              await transaction.employee.create({
+                data: { ...row, directSupervisorId: null },
+                select,
+              }),
+            );
+          if (mutation)
+            await transaction.employeeAdministrationEvent.create({
+              data: {
+                id: randomUUID(),
+                actorUserId: mutation.actorUserId,
+                action: "EMPLOYEE_IMPORT",
+                changedFields: [],
+                employeeIds: created.map((row) => row.id),
+                idempotencyKey: mutation.idempotencyKey,
+                requestHash: mutation.requestHash,
+              },
+            });
+          return created;
+        },
+        { timeout: 30000 },
+      );
     } catch (error) {
       throw this.safeError(error);
     }
   }
-  async create(input: EmployeeWrite) {
-    try {
-      return await this.database.employee.create({
-        data: employeeData(input),
-        select,
-      });
-    } catch (error) {
-      throw this.safeError(error);
-    }
-  }
-  async updateWithLocalIdentity(employeeId: string, input: EmployeeWrite) {
+  async create(input: EmployeeWrite, mutation?: EmployeeMutation) {
     try {
       return await this.database.$transaction(async (transaction) => {
-        const employee = await transaction.employee.update({
-          where: { id: employeeId },
+        const employee = await transaction.employee.create({
           data: employeeData(input),
           select,
         });
-        await transaction.authenticationIdentity.updateMany({
-          where: { provider: "LOCAL", user: { employeeId } },
-          data: { providerSubject: input.nip },
-        });
+        await administrationAudit(
+          transaction,
+          mutation,
+          "EMPLOYEE_CREATE",
+          employee.id,
+          Object.keys(input),
+        );
         return employee;
       });
     } catch (error) {
       throw this.safeError(error);
     }
   }
-  async setActive(employeeId: string, isActive: boolean) {
+  async updateWithLocalIdentity(
+    employeeId: string,
+    input: EmployeeWrite,
+    mutation?: EmployeeMutation,
+  ) {
+    try {
+      return await this.database.$transaction(async (transaction) => {
+        await lockAdminLifecycle(transaction);
+        await checkEmployeeVersion(transaction, employeeId, mutation);
+        const employee = await transaction.employee.update({
+          where: { id: employeeId },
+          data: {
+            ...employeeData(input),
+            ...(mutation?.expectedUpdatedAt
+              ? {
+                  updatedAt: new Date(
+                    Math.max(
+                      Date.now(),
+                      Date.parse(mutation.expectedUpdatedAt) + 1,
+                    ),
+                  ),
+                }
+              : {}),
+          },
+          select,
+        });
+        await transaction.authenticationIdentity.updateMany({
+          where: { provider: "LOCAL", user: { employeeId } },
+          data: { providerSubject: input.nip },
+        });
+        await administrationAudit(
+          transaction,
+          mutation,
+          "EMPLOYEE_UPDATE",
+          employee.id,
+          Object.keys(input),
+        );
+        return employee;
+      });
+    } catch (error) {
+      throw this.safeError(error);
+    }
+  }
+  async setActive(
+    employeeId: string,
+    isActive: boolean,
+    mutation?: EmployeeMutation,
+  ) {
     try {
       return await this.database.$transaction(async (transaction) => {
         await lockAdminLifecycle(transaction);
@@ -129,11 +242,41 @@ export class PrismaEmployeeRepository
             "INVARIANT",
             LAST_LOGIN_CAPABLE_ADMIN_MESSAGE,
           );
-        return transaction.employee.update({
+        await checkEmployeeVersion(transaction, employeeId, mutation);
+        // Revocation is permanent: reactivation must never revive pre-deactivation sessions.
+        if (!isActive)
+          await transaction.session.updateMany({
+            where: {
+              authenticationIdentity: { user: { employeeId } },
+              revokedAt: null,
+            },
+            data: { revokedAt: new Date() },
+          });
+        const employee = await transaction.employee.update({
           where: { id: employeeId },
-          data: { isActive },
+          data: {
+            isActive,
+            ...(mutation?.expectedUpdatedAt
+              ? {
+                  updatedAt: new Date(
+                    Math.max(
+                      Date.now(),
+                      Date.parse(mutation.expectedUpdatedAt) + 1,
+                    ),
+                  ),
+                }
+              : {}),
+          },
           select,
         });
+        await administrationAudit(
+          transaction,
+          mutation,
+          isActive ? "EMPLOYEE_ACTIVATE" : "EMPLOYEE_DEACTIVATE",
+          employeeId,
+          ["isActive"],
+        );
+        return employee;
       });
     } catch (error) {
       throw this.safeError(error);

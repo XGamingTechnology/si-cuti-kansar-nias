@@ -75,6 +75,9 @@ export function AdminFloatingWindow({
         }
       }}
       onCancel={(event) => {
+        // React bubbles cancel from a nested confirmation; only its own dialog closes.
+        if (event.target !== event.currentTarget) return;
+        event.stopPropagation();
         event.preventDefault();
         if (!busy) onClose();
       }}

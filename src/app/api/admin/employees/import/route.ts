@@ -3,7 +3,12 @@ import {
   requireRequestPrincipal,
 } from "@/application/authorization/http";
 import { requireAdmin } from "@/application/authorization/policy";
-import { employeeErrorResponse } from "@/application/employees/http";
+import { createHash } from "node:crypto";
+import { z } from "zod";
+import {
+  employeeMutation,
+  employeeErrorResponse,
+} from "@/application/employees/http";
 import { EmployeeError } from "@/application/employees/service";
 import { createEmployeeRuntime } from "@/infrastructure/employees/runtime";
 
@@ -16,7 +21,43 @@ async function workbook(request: Request): Promise<Uint8Array> {
     throw new EmployeeError("VALIDATION", "Ukuran file maksimal 2 MB.");
   if (!request.headers.get("content-type")?.startsWith("multipart/form-data"))
     throw new EmployeeError("VALIDATION", "Unggah file Excel .xlsx.");
-  const data = await request.formData().catch(() => null);
+  if (!request.body) throw new EmployeeError("VALIDATION", "Pilih file Excel.");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  const reader = request.body.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > MAX_UPLOAD_BYTES) {
+        await reader.cancel();
+        throw new EmployeeError(
+          "VALIDATION",
+          "Ukuran unggahan maksimal 2 MB termasuk formulir.",
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const data = await new Request(request.url, {
+    method: "POST",
+    headers: { "content-type": request.headers.get("content-type")! },
+    body: Buffer.concat(chunks),
+  })
+    .formData()
+    .catch(() => null);
+  if (
+    data &&
+    ([...data.keys()].some((key) => key !== "file") ||
+      data.getAll("file").length !== 1)
+  )
+    throw new EmployeeError(
+      "VALIDATION",
+      "Formulir impor hanya menerima satu file.",
+    );
   const file = data?.get("file");
   if (!(file instanceof File) || !file.name.toLowerCase().endsWith(".xlsx"))
     throw new EmployeeError("VALIDATION", "File harus berformat .xlsx.");
@@ -32,12 +73,27 @@ export function createEmployeeImportHandlers(factory = createEmployeeRuntime) {
   const run = (commit: boolean) => async (request: Request) => {
     const runtime: Dependencies = factory();
     try {
-      requireAdmin(
-        await requireRequestPrincipal(request, runtime.authentication),
+      const principal = await requireRequestPrincipal(
+        request,
+        runtime.authentication,
       );
+      requireAdmin(principal);
+      employeeMutation(request, principal.userId);
+      if (new URL(request.url).search)
+        throw new EmployeeError("VALIDATION", "Parameter impor tidak dikenal.");
       const bytes = await workbook(request);
       if (commit) {
-        const employees = await runtime.employeeImport.commit(bytes);
+        const idempotencyKey = request.headers.get("idempotency-key");
+        if (!z.string().uuid().safeParse(idempotencyKey).success)
+          throw new EmployeeError(
+            "VALIDATION",
+            "Kunci konfirmasi impor tidak valid.",
+          );
+        const employees = await runtime.employeeImport.commit(bytes, {
+          actorUserId: principal.userId,
+          idempotencyKey: idempotencyKey!,
+          requestHash: createHash("sha256").update(bytes).digest("hex"),
+        });
         return Response.json({ imported: employees.length }, { status: 201 });
       }
       return Response.json({

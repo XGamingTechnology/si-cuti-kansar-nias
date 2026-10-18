@@ -1,3 +1,4 @@
+import type { EmployeeMutation } from "@/application/employees/mutation";
 import { hashPassword } from "@/modules/auth/password";
 import {
   APPLICATION_ROLES,
@@ -17,13 +18,23 @@ export interface AccountAdministrationRepository {
     employeeId: string,
     role: ApplicationRole,
     passwordHash: string,
+    mutation?: EmployeeMutation,
   ): Promise<AccountStatus>;
-  updateRole(employeeId: string, role: ApplicationRole): Promise<AccountStatus>;
-  updateActive(employeeId: string, isActive: boolean): Promise<AccountStatus>;
+  updateRole(
+    employeeId: string,
+    role: ApplicationRole,
+    mutation?: EmployeeMutation,
+  ): Promise<AccountStatus>;
+  updateActive(
+    employeeId: string,
+    isActive: boolean,
+    mutation?: EmployeeMutation,
+  ): Promise<AccountStatus>;
   resetLocalPassword(
     employeeId: string,
     passwordHash: string,
     changedAt: Date,
+    mutation?: EmployeeMutation,
   ): Promise<AccountStatus>;
 }
 
@@ -73,6 +84,7 @@ export class AccountAdministrationService {
   async provision(
     employeeId: string,
     input: Readonly<{ role: unknown; password: unknown }>,
+    mutation?: EmployeeMutation,
   ): Promise<AccountStatus> {
     const role = approvedRole(input.role);
     const password = validPassword(input.password);
@@ -85,12 +97,14 @@ export class AccountAdministrationService {
       employeeId,
       role,
       await hashPassword(password),
+      mutation,
     );
   }
 
   async update(
     employeeId: string,
     input: Readonly<{ role?: unknown; isActive?: unknown }>,
+    mutation?: EmployeeMutation,
   ): Promise<AccountStatus> {
     const hasRole = input.role !== undefined;
     const hasStatus = input.isActive !== undefined;
@@ -100,25 +114,31 @@ export class AccountAdministrationService {
         "Pilih tepat satu perubahan role atau status akun.",
       );
     if (hasRole)
-      return this.repository.updateRole(employeeId, approvedRole(input.role));
+      return this.repository.updateRole(
+        employeeId,
+        approvedRole(input.role),
+        mutation,
+      );
     if (typeof input.isActive !== "boolean")
       throw new AccountAdministrationError(
         "VALIDATION",
         "Status akun tidak valid.",
       );
-    return this.repository.updateActive(employeeId, input.isActive);
+    return this.repository.updateActive(employeeId, input.isActive, mutation);
   }
 
   async resetPassword(
     employeeId: string,
     password: unknown,
     changedAt = new Date(),
+    mutation?: EmployeeMutation,
   ): Promise<AccountStatus> {
     const passwordHash = await hashPassword(validPassword(password));
     return this.repository.resetLocalPassword(
       employeeId,
       passwordHash,
       changedAt,
+      mutation,
     );
   }
 }
