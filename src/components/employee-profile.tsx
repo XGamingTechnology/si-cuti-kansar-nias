@@ -1,4 +1,5 @@
 "use client";
+import { AvatarEditor } from "./account-avatar";
 import { useDashboardJSON } from "./use-dashboard-json";
 export function EmployeeProfile({ employeeId }: { employeeId: string }) {
   const profile = useDashboardJSON<{
@@ -13,6 +14,7 @@ export function EmployeeProfile({ employeeId }: { employeeId: string }) {
     <section className="profile-surface" id="profil">
       <p className="eyebrow">PROFIL SAYA</p>
       <h1>Profil Pegawai</h1>
+      <AvatarEditor />
       {profile.loading && <p role="status">Memuat profil…</p>}
       {profile.error && (
         <div role="alert">

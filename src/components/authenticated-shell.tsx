@@ -1,6 +1,7 @@
 "use client";
 
 import "./employee-workspace.css";
+import { AvatarProvider, AccountAvatar } from "./account-avatar";
 import { EmployeeProfile } from "./employee-profile";
 import { ReportingWorkspace } from "./reporting-workspace";
 import { DashboardWorkspace } from "./dashboard-workspace";
@@ -17,16 +18,7 @@ import { AnnualBalanceManagement } from "@/components/annual-balance-management"
 import { LeaveAuthorizedOfficialManagement } from "@/components/leave-authorized-official-management";
 import { isAdminPrincipal } from "@/application/authorization/policy";
 
-function initials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-}
-
-export function AuthenticatedShell({
+function AuthenticatedShellContent({
   principal,
   initialAdminSurface = "pegawai",
   initialWorkflow,
@@ -46,7 +38,8 @@ export function AuthenticatedShell({
     | "pengajuan"
     | "klaim"
     | "dashboard"
-    | "laporan";
+    | "laporan"
+    | "profil";
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [adminSurface, setAdminSurface] = useState<
@@ -57,6 +50,7 @@ export function AuthenticatedShell({
     | "klaim"
     | "dashboard"
     | "laporan"
+    | "profil"
   >(initialAdminSurface);
   const isAdmin = isAdminPrincipal(principal);
   useEffect(() => {
@@ -251,9 +245,13 @@ export function AuthenticatedShell({
         </nav>
 
         <div className="sidebar-user">
-          <span className="avatar" aria-hidden="true">
-            {initials(principal.fullName)}
-          </span>
+          <a
+            className="avatar-profile-link"
+            href="/profil"
+            aria-label="Buka Profil Saya"
+          >
+            <AccountAvatar className="avatar" />
+          </a>
           <div>
             <strong>{principal.fullName}</strong>
             <span>{role}</span>
@@ -297,9 +295,13 @@ export function AuthenticatedShell({
             className="current-user"
             aria-label={`Pengguna aktif: ${principal.fullName}, ${role}`}
           >
-            <span className="top-avatar" aria-hidden="true">
-              {initials(principal.fullName)}
-            </span>
+            <a
+              className="avatar-profile-link"
+              href="/profil"
+              aria-label="Buka Profil Saya"
+            >
+              <AccountAvatar className="top-avatar" />
+            </a>
             <div>
               <strong>{principal.fullName}</strong>
               <span>{role}</span>
@@ -313,6 +315,9 @@ export function AuthenticatedShell({
 
         <main id="main-content" className="authenticated-content" tabIndex={-1}>
           {dashboardActive && <DashboardWorkspace admin={isAdmin} />}
+          {adminSurface === "profil" && (
+            <EmployeeProfile employeeId={principal.employeeId} />
+          )}
           {isAdmin && adminSurface === "laporan" && <ReportingWorkspace />}
           {isAdmin && adminSurface === "pegawai" && <EmployeeManagement />}
           {isAdmin && adminSurface === "saldo" && <AnnualBalanceManagement />}
@@ -323,7 +328,8 @@ export function AuthenticatedShell({
           {!isAdmin &&
             !claimActive &&
             !dashboardActive &&
-            adminSurface !== "pengajuan" && (
+            adminSurface !== "pengajuan" &&
+            adminSurface !== "profil" && (
               <EmployeeProfile employeeId={principal.employeeId} />
             )}
           {!dashboardActive && !claimActive && adminSurface === "pengajuan" && (
@@ -337,5 +343,18 @@ export function AuthenticatedShell({
         </main>
       </div>
     </div>
+  );
+}
+
+export function AuthenticatedShell(
+  props: Parameters<typeof AuthenticatedShellContent>[0],
+) {
+  return (
+    <AvatarProvider
+      key={props.principal.userId}
+      name={props.principal.fullName}
+    >
+      <AuthenticatedShellContent {...props} />
+    </AvatarProvider>
   );
 }

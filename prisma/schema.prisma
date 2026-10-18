@@ -235,6 +235,8 @@ model JointLeaveEvent {
 }
 
 model User {
+  avatar UserAvatar?
+  avatarOperations AvatarOperation[]
   reportRuns ReportRun[]
   reportAuditEvents ReportAuditEvent[]
   calendarOverlayVersions CalendarOverlayVersion[]
@@ -711,5 +713,28 @@ model ReportExportRequest {
   format String @db.VarChar(10)
   artifactId String @db.Uuid
   artifact ReportArtifact @relation(fields:[artifactId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([actorUserId,idempotencyKey])
+}
+
+model UserAvatar {
+  userId String @id @db.Uuid
+  version Int @default(0)
+  storageKey String? @unique @db.VarChar(32)
+  checksum String? @db.Char(64)
+  mime String? @db.VarChar(20)
+  width Int?
+  height Int?
+  updatedAt DateTime @db.Timestamptz(3)
+  user User @relation(fields:[userId], references:[id], onDelete:Restrict, onUpdate:Restrict)
+}
+model AvatarOperation {
+  id String @id @db.Uuid
+  actorUserId String @db.Uuid
+  idempotencyKey String @db.Uuid
+  payloadHash String @db.Char(64)
+  action String @db.VarChar(10)
+  resultVersion Int
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  actor User @relation(fields:[actorUserId],references:[id],onDelete:Restrict,onUpdate:Restrict)
   @@unique([actorUserId,idempotencyKey])
 }
