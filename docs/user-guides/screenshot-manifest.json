@@ -1,0 +1,1750 @@
+{
+  "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+  "dateWib": "2026-10-18",
+  "screenshots": [
+    {
+      "file": "screenshots/originals/001-umum-login.png",
+      "role": "umum",
+      "route": "/",
+      "scenario": "Form login kosong",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "U1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "031562c9213d0c2ce8dc7ecafc82d758a942edf07f101d1c73c42dda00400c35",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/002-umum-login-gagal.png",
+      "role": "umum",
+      "route": "/",
+      "scenario": "Penolakan login; password dikosongkan sebelum screenshot",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "U1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "e5777db73a78b0d6e23aea5e2f12043f190cc35985d077e7186431456d8cebff",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/003-pegawai-beranda.png",
+      "role": "pegawai",
+      "route": "/dashboard",
+      "scenario": "Saldo sendiri, ringkasan tindakan dan aksi utama",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "3b643113b01ec35bf2c4258221fcd8216225c75d77ca265aeabbd3994f05a806",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/004-pegawai-kalender.png",
+      "role": "pegawai",
+      "route": "/dashboard",
+      "scenario": "Kalender personal, legenda, hari ini dan agenda",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "3f3785ebb3ae07cb44e91e73f086709718d60455d419c31da2206547ae7ee855",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/005-pegawai-agenda.png",
+      "role": "pegawai",
+      "route": "/dashboard",
+      "scenario": "Agenda sendiri dan penanda pengembalian",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "d926570d0b317bd0cd1cfcce1a4d2551d36254a45ea39da00b397e7bd8cf32c2",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/006-pegawai-draf.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Detail draf",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "28ac1cb835268876207f20fa40a78f42c42ea2a87f815dd8f1e60e5777001ab9",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/007-pegawai-diajukan.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Detail diajukan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "4e4a13901b3627787e72b3ea41c6987541e7cccc7c43105678d710d31c29af56",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/008-pegawai-scan-versi.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Formulir awal dan daftar versi scan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P4",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "8fdf261ab6ac223990217fe8d94035d1242bdbaef1973e05d560c552fb20d43b",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/009-pegawai-perbaikan.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Detail perbaikan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "70ae3f85d954d3c4fcee29d26d41d8bef43873e07759e3cc5c685ff35a7a6585",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/010-pegawai-ditolak.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Detail ditolak",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "a0372c47afb835563851149d9c7194f73b71b31762b48b5a78e8a5bc1595c842",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/011-pegawai-dibatalkan.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Detail dibatalkan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "d762136366c7e14ac836e742a84a7a7b673ffd7c29abb1a7744b73047b26d8be",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/012-pegawai-disetujui.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Detail disetujui",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P4",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "7ae1648529bc1596671906b779ff5e9f901ff62fbd03ecff4aa3fcce9a7a47d9",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/013-pegawai-arsip-dan-return.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Arsip keputusan dan pengembalian",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P4",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "7ad09617a1261de924d3fe43994b5b200325bb562ec66a4ea868312cb42b75cb",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/014-pegawai-form-cuti.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave&new=1",
+      "scenario": "Form pengajuan baru sebelum disimpan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "79d09ea363aa2f801bcf1a57295d903a08a92d5c67c15eca8907fcd99eb519c3",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/015-pegawai-form-izin.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=permission&new=1",
+      "scenario": "Jenis izin fixture aktif; bukan daftar resmi",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P5",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "3fbbe0828d29b2c4bd592fcf441a6cf5904715df5bf234568f9231073b30a203",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/016-pegawai-klaim-kendala.png",
+      "role": "pegawai",
+      "route": "/klaim-cuti-bersama",
+      "scenario": "Kondisi aktual: endpoint koleksi gagal, bukan daftar kosong yang sah",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P6",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "565ae4e6995d9cb83bc6420a08320138f893e92cf1e8eb51b0bbc5ff53b527cf",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/017-pegawai-klaim-form-kendala.png",
+      "role": "pegawai",
+      "route": "/klaim-cuti-bersama",
+      "scenario": "Form klaim dan kendala memuat kebijakan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P6",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "961cf06b2ee875fd5b420b976674633a5738411002a13dc526256d331dff5b17",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/018-pegawai-form-perbaikan.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Edit revisi dikembalikan sebelum diajukan kembali",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "f71245c5e5c579901d06632fe4d8c890ddebb86dedbc92a0d7d338466281e222",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/019-pegawai-revisi-diajukan-kembali.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Revisi berikutnya dan status diajukan kembali",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "5e96020bb58e967f6b82626f817a4b48a31b3a4d3aa1ef4d0e5fdb844750c041",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/020-pegawai-pdf-formulir-awal.png",
+      "role": "pegawai",
+      "route": "/api/workflow/leave/a418534d-448b-4f22-9750-f2c7c47f6652/document",
+      "scenario": "Render halaman pertama PDF formulir-awal asli keluaran aplikasi; data sintetis",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": null,
+      "dataMode": "REAL_DB",
+      "origin": "APPLICATION_PDF_RENDER",
+      "chapter": "P4",
+      "notes": "PDF diambil melalui sesi login; bukan screenshot menu dan bukan dokumen resmi.",
+      "sha256": "451ec3ae3e95db5f2c96ecf67153d388aff76652d5086c2f369ce71e2d33270d",
+      "imageDimensions": {
+        "width": 778,
+        "height": 1100
+      }
+    },
+    {
+      "file": "screenshots/originals/021-pegawai-pdf-keputusan-final.png",
+      "role": "pegawai",
+      "route": "/api/workflow/leave/a418534d-448b-4f22-9750-f2c7c47f6652/decision/document",
+      "scenario": "Render halaman pertama PDF keputusan-final asli keluaran aplikasi; data sintetis",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": null,
+      "dataMode": "REAL_DB",
+      "origin": "APPLICATION_PDF_RENDER",
+      "chapter": "P4",
+      "notes": "PDF diambil melalui sesi login; bukan screenshot menu dan bukan dokumen resmi.",
+      "sha256": "8e3c6fcef4702bea8ea591b81a4a5dec7a41dec3ec2cb4596c27e4e2c989bf44",
+      "imageDimensions": {
+        "width": 778,
+        "height": 1100
+      }
+    },
+    {
+      "file": "screenshots/originals/022-admin-pegawai-daftar.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Daftar aktif, search/unit dan pagination lokal",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "79c7656fe79d96a0eaaa10c1964d2aae129f1d9ed1fe8cc7fc58a3bf50cffd13",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/023-admin-pegawai-tambah.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Tambah master tanpa saldo/akun",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "b145a553324b4ddc0ad61c06128fe09cb34eeb1a1e506abbcc0bb9c468ed048e",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/024-admin-pegawai-detail-akun.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Status pegawai dan akun terpisah",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "309f2f344540e44abda5868ba0db3c62e14eb8da85574bc902bcf213a1e60c0e",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/025-admin-akun-reset.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Provision/role/reset LOCAL existing; password kosong",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "1a82ea3745ab4da7cddc1b665eced7908965d26d00a72a0f92d52d277afa9c7a",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/026-admin-pegawai-edit.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Edit master termasuk atasan langsung",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "ff7cd2182474d967db20c6320e5bcbe61acd42cbdb4e9f5f91ded0b0d36efe3c",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/027-admin-pegawai-nonaktif-konfirmasi.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Konfirmasi dampak nonaktif dan sesi",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "7920a3267242084c7a9b08558b42a6c4c06d0b00e1ae2978bf73520f3bccd9f6",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/028-admin-pegawai-arsip.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Arsip adalah filter pegawai nonaktif",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "c711473decf0e4bffc2848988f6559b7b3b43209731c082f3db9240d21fbdc02",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/029-admin-pegawai-reaktivasi.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Reaktivasi tidak mengaktifkan akun nonaktif otomatis",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "d8d81b97f1d05cc8ac24160a89b1c2813ff9011cf7949247214bcb3eaa5a1172",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/030-admin-impor-pegawai-form.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Impor pegawai terpisah dari saldo",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "067b3a61fcdf89dccbbc0ebf94f9d83710f6417bb382b081ec6ba6666f729115",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/031-admin-impor-pegawai-invalid.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Baris invalid dan diagnosis, belum tersimpan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "2c49598d57a804fa918249541027d20fa2ce4a7e836a2e9fae7e254fe75b3696",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/032-admin-impor-pegawai-preview.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Preview valid sebelum konfirmasi",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "b0ae544714871d22ca017ef95824ab6fdf617044c47fc05487140ae274e6480e",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/033-admin-impor-pegawai-hasil.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Sukses transaksi, rincian dan unduh JSON",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "93a7d217be0a27038a267162e607ac6235dd5277b7dc2b3efb97bed7a36b74ed",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/034-admin-dashboard.png",
+      "role": "admin",
+      "route": "/dashboard",
+      "scenario": "Ringkasan tetap, pending dan pegawai unik periode disetujui hari ini",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "e73b1fef9527e78c61171285698954765d4cabd35f75fc1e749b19e9e7c6f7fb",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/035-admin-kalender-nama.png",
+      "role": "admin",
+      "route": "/dashboard",
+      "scenario": "Chip nama dan kategori, weekend/legenda/agenda",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "93a7e666ab6545606452b21ee4baa927de1a6d07e997398ee30c91c1a2d6908a",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/036-admin-agenda.png",
+      "role": "admin",
+      "route": "/dashboard",
+      "scenario": "Agenda dan periode persetujuan, bukan penggunaan aktual",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "fcc5104e4b9bd2638cbc198818616d02357e273fe7227f4b785bc60c96d6782a",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/037-admin-overlay-form.png",
+      "role": "admin",
+      "route": "/dashboard",
+      "scenario": "Input/import dan riwayat kosong, belum ada dataset resmi",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A6",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "5917a831c44e78b503a62dd204e88870e2e3f188143bfa89f7e9808ba81d7292",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/038-admin-overlay-preview.png",
+      "role": "admin",
+      "route": "/dashboard",
+      "scenario": "Pratinjau simulasi saja; checkbox verifikasi tidak dicentang",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A6",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "b913ad61b025ee10caaa5d8338cd80b4b0a7844f89b031a449085b6fac293e16",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/039-admin-cuti-review-detail.png",
+      "role": "admin",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Detail request dengan scan dan aksi pemeriksaan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "f2a99c0eb843c5b7e8f736483a8046831c456c93f6878a96453122192af4ded0",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/040-admin-cuti-review-koreksi.png",
+      "role": "admin",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Dialog catatan pengembalian, bukan penolakan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "eb91232a9f19525298915e91266b0a8c28ca959a36a12110b790a2f508e05652",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/041-admin-cuti-review-persetujuan.png",
+      "role": "admin",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Memilih scan sumber dan dasar keputusan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "a570d4dafd93553d060c5664f00247485d943f48ae76188c449cafa634b611b8",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/042-admin-arsip-final.png",
+      "role": "admin",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Arsip final, sumber dan edisi penanda",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "90dbdef7905a0fa067d57ca36a2cf43fd6c3bc4e63a288dfc70a7ee6ff49154d",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/043-admin-return-form.png",
+      "role": "admin",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Bukti, dasar, jumlah dan attestation pengembalian",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "aa4c29264882fbf20960e00342f532d47cce215c5f084ffccd21a9d17ea476eb",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/044-admin-klaim-kendala.png",
+      "role": "admin",
+      "route": "/klaim-cuti-bersama",
+      "scenario": "Respons aktual daftar klaim HTTP500",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A6",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "026f8205d8dd68f557c29d572ff765dbe9d9bbd91974995b406e98e92d7e6ae5",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/045-admin-klaim-kebijakan.png",
+      "role": "admin",
+      "route": "/klaim-cuti-bersama",
+      "scenario": "Form konfigurasi tersedia; simpan HTTP500 belum berhasil",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A6",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "7e087960a80a4ed21546509dfd94f346dff7d85bde6184a583d560ad120fdb47",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/046-pegawai-mobile-beranda.png",
+      "role": "pegawai",
+      "route": "/dashboard",
+      "scenario": "Viewport 390×844; data sendiri",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "a90caae974a39a0a867405cb158d5e376d95e551700b6f576825f7bc512e02b6",
+      "imageDimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "screenshots/originals/047-pegawai-mobile-form-cuti.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave&new=1",
+      "scenario": "Viewport 390×844; data sendiri",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "b1ff3daeb62422ee387e45649d9a8b1fb5d1084dd71f61f0771f66f7440c7b9d",
+      "imageDimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "screenshots/originals/048-pegawai-mobile-profil.png",
+      "role": "pegawai",
+      "route": "/profil",
+      "scenario": "Viewport 390×844; data sendiri",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "cbcb5815d8ed3d60ac11fba70d6423e17c8551e4fb2ced3962997c12ff394e4f",
+      "imageDimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "screenshots/originals/049-pegawai-mobile-menu.png",
+      "role": "pegawai",
+      "route": "/profil",
+      "scenario": "Menu ponsel dan navigasi keyboard",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "2b5883f7d926adb92d5184169f9466c799a4a5ff108dcef7519f1947afb6df61",
+      "imageDimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "screenshots/originals/050-pegawai-mobile-upload.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave",
+      "scenario": "Upload PDF scan pada ponsel",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P4",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "d571dd23cf1bc365d2f07650cde58b49baeeeb1a48a837252c2641fa06313f8a",
+      "imageDimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "screenshots/originals/051-admin-mobile-pegawai.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Kartu pegawai dan aksi ponsel",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "a2c0a529dcd3ec2d5ff6e4c30a42fd27964b15a5bba5d9eb5fdce29a1520e83e",
+      "imageDimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "screenshots/originals/052-umum-logout.png",
+      "role": "umum",
+      "route": "/",
+      "scenario": "Logout kembali ke login, sesi berakhir",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "U1",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "585d1e6255f0dac9a67711561911df715b2086e15bf2b54471d9fbcbb3d28a0e",
+      "imageDimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "screenshots/originals/053-pegawai-profil-inisial.png",
+      "role": "pegawai",
+      "route": "/profil",
+      "scenario": "Profil sendiri dengan fallback inisial",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "6f10112a095eda80da5e92fd24b89f75958825d6dc24aca3b2a74eddb183099a",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/054-pegawai-foto-preview.png",
+      "role": "pegawai",
+      "route": "/profil",
+      "scenario": "Preview foto sintetis lokal belum disimpan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "47ef9c0fe44ec74319bc3a04d902dc5010eb83cc76c68a033d1d2d03841addea",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/055-pegawai-foto-tersimpan.png",
+      "role": "pegawai",
+      "route": "/profil",
+      "scenario": "Foto diri sendiri tersimpan, header/sidebar diperbarui",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "4d34bbba497edd3f954bed9f145350894547b9f8067fe0bd8eb6fb31dc31f2a4",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/056-pegawai-hapus-foto.png",
+      "role": "pegawai",
+      "route": "/profil",
+      "scenario": "Konfirmasi hapus foto sendiri",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "55dc2621beaeefdff49f599c76212cb68ff5d8b76ba06713cb5a394814553657",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/057-pegawai-foto-dihapus.png",
+      "role": "pegawai",
+      "route": "/profil",
+      "scenario": "Foto dihapus; inisial dipakai kembali",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "4a8bc15894afaaa41504dad1968887ce0947404f52c9b3004b24b83f3133cb93",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/058-admin-profil-inisial.png",
+      "role": "admin",
+      "route": "/profil",
+      "scenario": "Profil sendiri dengan fallback inisial",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A9",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "e0b99c145fbeab1c79b2bdcfdf7352a431b1973c005333082209c75bde01e1aa",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/059-admin-foto-preview.png",
+      "role": "admin",
+      "route": "/profil",
+      "scenario": "Preview foto sintetis lokal belum disimpan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A9",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "e6b4c17fefa24e623199cb7969c7b614c7a33e143a826207569125fd2206d995",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/060-admin-foto-tersimpan.png",
+      "role": "admin",
+      "route": "/profil",
+      "scenario": "Foto diri sendiri tersimpan, header/sidebar diperbarui",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A9",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "f8186994a344a3361e1bec023fb227815a938eb5a4561f757e5008afe9eab36d",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/061-admin-hapus-foto.png",
+      "role": "admin",
+      "route": "/profil",
+      "scenario": "Konfirmasi hapus foto sendiri",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A9",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "244c40e4585c0137e1294c5516647514d9bde71f45994c943f437501698ca35d",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/062-admin-foto-dihapus.png",
+      "role": "admin",
+      "route": "/profil",
+      "scenario": "Foto dihapus; inisial dipakai kembali",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A9",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "4324fd44e774cd46578ed3a124f7d399384d33ab37f4ae767d618d4d48dba194",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/063-admin-saldo-daftar.png",
+      "role": "admin",
+      "route": "/admin/saldo-cuti",
+      "scenario": "Saldo siap/belum/partial dan tahun administrasi",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A4",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "493e94b5667f7c472c593bf476c33a1a988b994124955a057de2c2171b69648f",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/064-admin-saldo-detail.png",
+      "role": "admin",
+      "route": "/admin/saldo-cuti",
+      "scenario": "Detail bucket dan inisialisasi satuan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A4",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "4068a69de3f58cb8de3372be580dabb70ff677bd45a57de9315c9303989a3f82",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/065-admin-saldo-batch-form.png",
+      "role": "admin",
+      "route": "/admin/saldo-cuti",
+      "scenario": "Template dan impor saldo berbeda dengan pegawai",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A4",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "99fc058513f0be5001c2db1a0c1fc55326344bd5c2b9e87e8b63e10482d28b85",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/066-admin-saldo-batch-preview.png",
+      "role": "admin",
+      "route": "/admin/saldo-cuti",
+      "scenario": "Ready/skip/error sebelum commit, terpisah dari impor pegawai",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A4",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "d97b509e838fb857dee8caa81d6769f577e5ade704b4697370424979bfe086f9",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/067-admin-saldo-batch-hasil.png",
+      "role": "admin",
+      "route": "/admin/saldo-cuti",
+      "scenario": "Hasil per baris, tidak menimpa saldo existing",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A4",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "6809ce9a9270632170df144118087d84a04f2524eee9564f1cdcdafc255a4f0b",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/068-admin-pejabat-daftar.png",
+      "role": "admin",
+      "route": "/admin/pejabat-cuti",
+      "scenario": "Pejabat efektif dan batas perubahan historis",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A5",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "1f47e6417d1a849ac0e64b8ad9d6871ba7a26a933573bf96417a40ff1e031a89",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/069-admin-pejabat-form.png",
+      "role": "admin",
+      "route": "/admin/pejabat-cuti",
+      "scenario": "Tanggal kapasitas dan referensi penugasan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A5",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "075f4a148248de63b9f29eece8c4ec1c3148e2b2a464ce9d717e0ed959e61db5",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/070-admin-pejabat-koreksi-darurat.png",
+      "role": "admin",
+      "route": "/admin/pejabat-cuti",
+      "scenario": "Alasan, referensi dan konfirmasi; snapshot lama tidak berubah",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A5",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "a08b70d8d78d9e4f90a1b8b34684ac771cd96a350d3ae0f429fbb5fc5066ba4c",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/071-admin-izin-review.png",
+      "role": "admin",
+      "route": "/pengajuan?kind=permission",
+      "scenario": "Review izin terpisah, tidak mengurangi saldo",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A7",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "4c86fdfc4c597aa5fbe1465f6eadd88c685250fcc3e4892c3c57cbf1e13bacdc",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/072-admin-laporan-filter.png",
+      "role": "admin",
+      "route": "/admin/laporan",
+      "scenario": "Filter ringkas laporan cuti dan izin terpisah",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A8",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "83767028120ce2d7d54b23c288cec82d8567ffd79d3323941a4bd9f3b5172ac7",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/073-admin-laporan-cuti-preview.png",
+      "role": "admin",
+      "route": "/admin/laporan",
+      "scenario": "Snapshot pratinjau Cuti, masa berlaku dan unit angka",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A8",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "2f634448997c8e9baad60a57e2acb3e9f006126dfcba09a2d7c0207bc48f4827",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/074-admin-laporan-cuti-unduhan.png",
+      "role": "admin",
+      "route": "/admin/laporan",
+      "scenario": "Handoff PDF/Excel berhasil dimulai; penyimpanan perangkat tidak diasumsikan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A8",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "e2c9cbe9832204c55a0765a0535db9324ada01445681b982fc54423d8c11a4bc",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/075-admin-laporan-izin-preview.png",
+      "role": "admin",
+      "route": "/admin/laporan",
+      "scenario": "Snapshot pratinjau Izin, masa berlaku dan unit angka",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A8",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "194f0b27f094493397e364d503679a3fda97bb755266600d3a812d55b7e62846",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/076-admin-laporan-izin-unduhan.png",
+      "role": "admin",
+      "route": "/admin/laporan",
+      "scenario": "Handoff PDF/Excel berhasil dimulai; penyimpanan perangkat tidak diasumsikan",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A8",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "9c5862384ddd63097aa3271127d70743616eb44516150a8841de50130c8634ee",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/077-admin-akun-provision.png",
+      "role": "admin",
+      "route": "/",
+      "scenario": "Master tanpa akun: form Buat akun dengan kata sandi kosong",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "A3",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "39b6aa24f3e92ab3c3e0de6dcb34ebed5b98bf2514cda48266630d20f5b0cb2b",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "screenshots/originals/078-pegawai-form-cuti-bawah.png",
+      "role": "pegawai",
+      "route": "/pengajuan?kind=leave&new=1",
+      "scenario": "Tanggal, alasan dan Simpan Draf pada bagian bawah form",
+      "sourceSha": "4c341b0b67bbeed0ea366fb22b3d369c47677b39",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dataMode": "REAL_DB",
+      "chapter": "P2",
+      "origin": "BROWSER_UI",
+      "notes": "Data sintetis lokal; login normal, tanpa intersepsi atau injeksi sesi.",
+      "sha256": "b43d98f1bb946eed90428e5f7c4f5fa4d3e7fdad7e893377fa58e5a639c7c201",
+      "imageDimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    }
+  ],
+  "checks": [
+    {
+      "scenario": "Login Admin melalui UI",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Login Pegawai melalui UI",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Pegawai draf",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Pegawai diajukan",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Pegawai perbaikan",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Pegawai ditolak",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Pegawai dibatalkan",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Pegawai disetujui",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Form cuti baru",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Form izin",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Pegawai klaim (kondisi aktual)",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Perbaikan dan submit ulang",
+      "status": "PASS"
+    },
+    {
+      "scenario": "PDF aktual",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Pegawai form detail edit arsip",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Import pegawai",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Admin dashboard kalender",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Overlay preview (tanpa publikasi palsu)",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Admin review cuti",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Admin final PDF dan return",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Admin klaim aktual",
+      "status": "PASS"
+    },
+    {
+      "scenario": "mobile-beranda",
+      "status": "PASS"
+    },
+    {
+      "scenario": "mobile-form-cuti",
+      "status": "PASS"
+    },
+    {
+      "scenario": "mobile-profil",
+      "status": "PASS"
+    },
+    {
+      "scenario": "mobile navigasi",
+      "status": "PASS"
+    },
+    {
+      "scenario": "mobile upload scan",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Admin mobile",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Logout",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Profil pegawai",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Profil admin",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Saldo dan batch",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Pejabat cuti",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Admin review izin",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Laporan R1/R2 dan unduhan",
+      "status": "PASS"
+    },
+    {
+      "scenario": "RBAC Admin/Pegawai dan owner isolation melalui sesi login nyata",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Akun provision tanpa akun",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Bagian bawah form cuti",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Akses daftar pegawai Admin HTTP 200",
+      "status": "PASS"
+    }
+  ],
+  "conditionsNotCaptured": [
+    {
+      "scenario": "HTTP konfigurasi klaim",
+      "reason": "POST /api/joint-leave/policies HTTP 500: Klaim cuti bersama gagal diproses."
+    },
+    {
+      "scenario": "Klaim endpoint koleksi",
+      "reason": "GET koleksi klaim HTTP 500\n\n500 !== 200\n"
+    },
+    {
+      "scenario": "Overlay publikasi dan riwayat terisi",
+      "reason": "Tidak menerbitkan simulasi sebagai data resmi. PDF/nomor/perubahan SKB belum terverifikasi; source checkpoint calendar-data/2026/README.md."
+    },
+    {
+      "scenario": "Klaim: hasil sukses, review sebagian, bukti tersimpan dan duplikasi",
+      "reason": "Terblokir endpoint statis HTTP 500; tidak mengganti screenshot dengan mock."
+    },
+    {
+      "scenario": "Laporan: UI kedaluwarsa 24 jam",
+      "reason": "Dijelaskan dari kode, tidak menunggu 24 jam atau mengubah clock/runtime."
+    },
+    {
+      "scenario": "Retry setelah respons impor hilang, race dan kegagalan jaringan buatan",
+      "reason": "Tidak diinjeksi pada pengambilan dokumentasi; prosedur berdasarkan komponen/service dan pengujian existing, bukan klaim E2E baru."
+    }
+  ],
+  "fixtureNotes": [
+    "Admin bootstrap melalui service Employee/Account existing; bukan injeksi sesi. Semua sesi melalui login UI dan seluruh request bisnis melalui API terautentikasi.",
+    "Satu PermissionType reference fixture memakai nama Izin Contoh Dokumentasi. Tidak ada menu/aturan jenis izin baru; bukan katalog resmi.",
+    "Tanggal/kuota kebijakan klaim adalah simulasi berlabel fixture, bukan data pemerintah. Overlay simulasi hanya preview, tidak diterbitkan."
+  ],
+  "captureEnvironment": {
+    "baseUrl": "http://127.0.0.1:3199",
+    "nodeEnv": "test",
+    "browser": "Chromium lokal",
+    "timezone": "Asia/Jakarta",
+    "database": "PostgreSQL disposable lokal; seluruh data sintetis",
+    "mocks": 0,
+    "note": "Login UI normal; tanpa cookie injection, request mock atau session state tersimpan."
+  }
+}
