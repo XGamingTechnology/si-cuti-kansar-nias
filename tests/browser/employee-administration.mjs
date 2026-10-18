@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { templateWorkbook } from "../../src/infrastructure/spreadsheet/workbook.ts";
 const require = createRequire(import.meta.url),
   { chromium } = require(process.env.SI_CUTI_PLAYWRIGHT_MODULE || "playwright"),
@@ -534,6 +534,19 @@ try {
         .getByRole("button", { name: "Coba konfirmasi lagi", exact: true })
         .click();
       await dialog.getByText(/Berhasil: 1. Dilewati: 0. Gagal: 0./).waitFor();
+      const resultDownload = page.waitForEvent("download");
+      await dialog
+        .getByRole("button", { name: "Unduh hasil (JSON)", exact: true })
+        .click();
+      const resultFile = await resultDownload;
+      assert.equal(resultFile.suggestedFilename(), "hasil-impor-pegawai.json");
+      const result = JSON.parse(
+        await readFile(await resultFile.path(), "utf8"),
+      );
+      assert.equal(result.tahap, "TERSIMPAN");
+      assert.equal(result.baris[0].nip, nip);
+      assert.equal(result.baris[0].status, "BERHASIL");
+      assert.equal(typeof result.baris[0].nip, "string");
       assert.equal(keys.length, 2);
       assert.equal(keys[0], keys[1]);
       assert.equal(

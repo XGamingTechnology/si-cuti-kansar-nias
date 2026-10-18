@@ -80,8 +80,11 @@ Indonesia; pesan tidak menyatakan file pasti tersimpan di perangkat.
   Jika tab/halaman ditutup/dimuat ulang, key memori hilang: periksa daftar/NIP terlebih dahulu;
   preview file yang sudah committed menunjukkan NIP existing, bukan mengimpor ulang. Tidak ada
   klaim durable browser state lintas logout/tab. API retry persistence tetap durable.
-- Unduh hasil terpisah belum ditambah: hasil/rincian sudah terlihat, sedangkan existing kontrak commit
-  hanya jumlah. Tidak memperluas export/audit laporan untuk tambahan opsional ini.
+- Unduh hasil **JSON** memakai handoff Blob existing atas preview Admin yang sudah dimuat, tanpa
+  endpoint/kewenangan export baru. NIP tetap string persis (tanpa konversi angka/formula spreadsheet),
+  nomor baris/status/diagnosis tersimpan. Tahap PRATINJAU_BELUM_DISIMPAN, KONFIRMASI_BELUM_DIKETAHUI
+  atau TERSIMPAN dibedakan; file ini bukan arsip/pengesahan resmi atau pembacaan ulang master saat ini.
+  Tidak berisi akun/password/role. Handoff tidak mengklaim file sudah tersimpan di perangkat.
 
 ## Audit, migration dan operasi
 

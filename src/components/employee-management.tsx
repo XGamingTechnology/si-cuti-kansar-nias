@@ -421,6 +421,50 @@ export function EmployeeManagement() {
     setImportOpen(false);
     setMessage("");
   }
+  function downloadImportResult() {
+    if (!preview || importBusy) return;
+    try {
+      // Derived only from the already Admin-authorized preview; never an account/password export.
+      const tahap = importUnknown
+        ? "KONFIRMASI_BELUM_DIKETAHUI"
+        : importComplete
+          ? "TERSIMPAN"
+          : "PRATINJAU_BELUM_DISIMPAN";
+      const result = {
+        tahap,
+        totalBaris: preview.totalRows,
+        barisValid: preview.validRows,
+        barisTidakValid: preview.invalidRows,
+        baris: preview.rows.map((row) => ({
+          baris: row.rowNumber,
+          nip: row.nip,
+          nama: row.fullName,
+          status: preview.errors.some(
+            (error) => error.rowNumber === row.rowNumber,
+          )
+            ? "TIDAK_VALID"
+            : importUnknown
+              ? "BELUM_DIKETAHUI"
+              : importComplete
+                ? "BERHASIL"
+                : "VALID_BELUM_DISIMPAN",
+          kesalahan: preview.errors
+            .filter((error) => error.rowNumber === row.rowNumber)
+            .map((error) => ({ kolom: error.field, pesan: error.message })),
+        })),
+      };
+      handoffReportDownload(
+        new Blob([JSON.stringify(result, null, 2)], {
+          type: "application/json;charset=utf-8",
+        }),
+        "hasil-impor-pegawai.json",
+      );
+    } catch {
+      setMessage(
+        "Hasil belum dapat diteruskan ke unduhan browser. Coba unduh lagi.",
+      );
+    }
+  }
   async function sendImport(commit: boolean) {
     if (!importFile || inFlight.current) return;
     inFlight.current = true;
@@ -866,6 +910,14 @@ export function EmployeeManagement() {
                   </span>
                 </div>
                 <ImportRows preview={preview} imported={importComplete} />
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={importBusy}
+                  onClick={downloadImportResult}
+                >
+                  Unduh hasil (JSON)
+                </button>
                 {preview.errors.length ? (
                   <p role="alert">
                     Perbaiki kolom bermasalah pada baris di atas. Belum ada
