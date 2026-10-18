@@ -306,7 +306,7 @@ try {
       await page
         .getByRole("button", { name: "Simpan foto", exact: true })
         .click();
-      await page.getByText(/Gambar tidak valid, rusak/).waitFor();
+      await page.getByText(/Byte foto tidak sesuai JPEG\/PNG/).waitFor();
       assert.equal(
         (await (await ctx.request.get("/api/me/avatar")).json()).version,
         1,

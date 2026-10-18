@@ -38,7 +38,7 @@ terkait diperlukan. pdf-lib/OOXML existing bukan decoder/resize JPEG/EXIF yang m
 Tidak menambah UI library atau editor crop.
 
 `normalizeAvatar`: input 1byte–5MiB, JPEG/PNG hasil identifikasi decoder harus cocok dengan MIME,
-satu frame, tolak GIF/SVG/format lain serta APNG acTL. Metadata dibaca dahulu; limitInputPixels
+satu frame, tolak GIF/SVG/format lain serta APNG acTL. Signature JPEG/PNG diperiksa sebelum memilih native loader (SVG tersamar tidak masuk loader SVG). Metadata dibaca dahulu; limitInputPixels
 16.777.216 dan maksimum sisi8192. Maksimal dua decode pixel bersamaan per proses (429 bila sibuk).
 Full decode strict menolak truncation/rusak, auto-rotate orientasi EXIF, resize inside512×512 tanpa
 memperbesar, re-encode JPEG/PNG. Tidak memakai keepMetadata/withMetadata; EXIF/ICC/XMP dihapus.

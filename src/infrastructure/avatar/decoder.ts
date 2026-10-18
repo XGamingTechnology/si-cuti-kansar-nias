@@ -20,6 +20,18 @@ export async function normalizeAvatar(bytes: Uint8Array, mime: string) {
       "AVATAR_FORMAT",
       "Gunakan JPEG atau PNG, bukan SVG/URL/file lain.",
     );
+  // Select only JPEG/PNG native loaders. A spoofed MIME must not invoke SVG/HEIF/etc
+  // even for metadata; signature is an early gate, never a substitute for full decode.
+  const png = Buffer.from(bytes.subarray(0, 8)).equals(
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+  );
+  const jpeg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+  if ((mime === "image/png" && !png) || (mime === "image/jpeg" && !jpeg))
+    throw new AvatarError(
+      422,
+      "AVATAR_INVALID",
+      "Byte foto tidak sesuai JPEG/PNG. Pilih gambar yang valid.",
+    );
   if (processing >= 2)
     throw new AvatarError(
       429,
