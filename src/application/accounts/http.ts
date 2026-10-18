@@ -14,12 +14,18 @@ export function validateAccountEmployeeId(value: string): string {
 
 export async function accountBody(
   request: Request,
+  allowed: readonly string[] = ["role", "password", "isActive"],
 ): Promise<Record<string, unknown>> {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object" || Array.isArray(body))
     throw new AccountAdministrationError(
       "VALIDATION",
       "Data akun tidak valid.",
+    );
+  if (Object.keys(body).some((key) => !allowed.includes(key)))
+    throw new AccountAdministrationError(
+      "VALIDATION",
+      "Kolom akun tidak dikenal.",
     );
   return body as Record<string, unknown>;
 }

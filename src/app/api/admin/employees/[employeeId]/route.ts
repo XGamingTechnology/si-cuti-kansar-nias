@@ -5,6 +5,7 @@ import {
 import { requireAdmin } from "@/application/authorization/policy";
 import {
   employeeErrorResponse,
+  employeeMutation,
   employeeInput,
   validateEmployeeId,
 } from "@/application/employees/http";
@@ -19,18 +20,22 @@ export function createEmployeeItemHandlers(factory = createEmployeeRuntime) {
         runtime: Dependencies,
         request: Request,
         id: string,
+        actorUserId: string,
       ) => Promise<Response>,
     ) =>
     async (request: Request, context: Context) => {
       const runtime = factory();
       try {
-        requireAdmin(
-          await requireRequestPrincipal(request, runtime.authentication),
+        const principal = await requireRequestPrincipal(
+          request,
+          runtime.authentication,
         );
+        requireAdmin(principal);
         return await operation(
           runtime,
           request,
           validateEmployeeId((await context.params).employeeId),
+          principal.userId,
         );
       } catch (error) {
         return (
@@ -49,11 +54,12 @@ export function createEmployeeItemHandlers(factory = createEmployeeRuntime) {
         ? Response.json({ employee })
         : Response.json({ error: "Pegawai tidak ditemukan." }, { status: 404 });
     }),
-    PATCH: run(async (runtime, request, id) =>
+    PATCH: run(async (runtime, request, id, actorUserId) =>
       Response.json({
         employee: await runtime.employees.update(
           id,
           await employeeInput(request),
+          employeeMutation(request, actorUserId, true),
         ),
       }),
     ),

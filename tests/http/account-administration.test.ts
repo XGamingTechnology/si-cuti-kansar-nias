@@ -101,12 +101,10 @@ describe("Admin account HTTP authorization", () => {
     }
   });
 
-  it("allows Admin provisioning and never forwards forged claims", async () => {
+  it("allows Admin provisioning with the session actor", async () => {
     const d = deps(admin);
     const response = await createAccountHandlers(() => d as never).POST(
       request("POST", {
-        employeeId: "forged",
-        userId: "forged",
         role: "PEGAWAI",
         password: "secret",
       }),
@@ -116,6 +114,7 @@ describe("Admin account HTTP authorization", () => {
     expect(d.accounts.provision).toHaveBeenCalledWith(
       employeeId,
       expect.objectContaining({ role: "PEGAWAI", password: "secret" }),
+      { actorUserId: "admin" },
     );
     expect(JSON.stringify(await response.json())).not.toMatch(
       /password|credential|identityId/i,

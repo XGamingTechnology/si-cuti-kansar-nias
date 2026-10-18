@@ -1,3 +1,5 @@
+import type { EmployeeMutation } from "@/application/employees/mutation";
+import { administrationAudit } from "@/infrastructure/employees/administration-audit";
 import { Prisma } from "@/generated/prisma/client";
 import type { PrismaClient } from "@/generated/prisma/client";
 import {
@@ -58,6 +60,7 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
     employeeId: string,
     role: ApplicationRole,
     passwordHash: string,
+    mutation?: EmployeeMutation,
   ) {
     try {
       return await this.database.$transaction(async (transaction) => {
@@ -84,6 +87,13 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
           },
           select: accountSelect,
         });
+        await administrationAudit(
+          transaction,
+          mutation,
+          "ACCOUNT_PROVISION",
+          employeeId,
+          ["role", "credential"],
+        );
         return account(row);
       });
     } catch (error) {
@@ -91,7 +101,11 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
     }
   }
 
-  async updateRole(employeeId: string, role: ApplicationRole) {
+  async updateRole(
+    employeeId: string,
+    role: ApplicationRole,
+    mutation?: EmployeeMutation,
+  ) {
     try {
       return await this.database.$transaction(async (transaction) => {
         await lockAdminLifecycle(transaction);
@@ -104,20 +118,32 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
             "INVARIANT",
             LAST_LOGIN_CAPABLE_ADMIN_MESSAGE,
           );
-        return account(
+        const result = account(
           await transaction.user.update({
             where: { employeeId },
             data: { role },
             select: accountSelect,
           }),
         );
+        await administrationAudit(
+          transaction,
+          mutation,
+          "ACCOUNT_ROLE",
+          employeeId,
+          ["role"],
+        );
+        return result;
       });
     } catch (error) {
       throw this.safeError(error);
     }
   }
 
-  async updateActive(employeeId: string, isActive: boolean) {
+  async updateActive(
+    employeeId: string,
+    isActive: boolean,
+    mutation?: EmployeeMutation,
+  ) {
     try {
       return await this.database.$transaction(async (transaction) => {
         await lockAdminLifecycle(transaction);
@@ -130,13 +156,29 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
             "INVARIANT",
             LAST_LOGIN_CAPABLE_ADMIN_MESSAGE,
           );
-        return account(
+        const result = account(
           await transaction.user.update({
             where: { employeeId },
             data: { isActive },
             select: accountSelect,
           }),
         );
+        if (!isActive)
+          await transaction.session.updateMany({
+            where: {
+              authenticationIdentity: { user: { employeeId } },
+              revokedAt: null,
+            },
+            data: { revokedAt: new Date() },
+          });
+        await administrationAudit(
+          transaction,
+          mutation,
+          isActive ? "ACCOUNT_ACTIVATE" : "ACCOUNT_DEACTIVATE",
+          employeeId,
+          ["isActive"],
+        );
+        return result;
       });
     } catch (error) {
       throw this.safeError(error);
@@ -147,6 +189,7 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
     employeeId: string,
     passwordHash: string,
     changedAt: Date,
+    mutation?: EmployeeMutation,
   ) {
     try {
       return await this.database.$transaction(async (transaction) => {
@@ -176,6 +219,13 @@ export class PrismaAccountAdministrationRepository implements AccountAdministrat
             "NOT_FOUND",
             "Akun tidak ditemukan.",
           );
+        await administrationAudit(
+          transaction,
+          mutation,
+          "ACCOUNT_PASSWORD_RESET",
+          employeeId,
+          ["credential"],
+        );
         return account(row);
       });
     } catch (error) {

@@ -62,8 +62,14 @@ function unzip(input: Uint8Array): Map<string, Buffer> {
   return files;
 }
 
+const rowNumberForMessage = (attributes: string, current: number) =>
+  Number(/\br="(\d+)"/.exec(attributes)?.[1] ?? current + 1);
+
 export class XlsxWorkbookReader implements EmployeeWorkbookReader {
-  constructor(private readonly rejectFormulas = false) {}
+  constructor(
+    private readonly rejectFormulas = false,
+    private readonly textNipOnly = false,
+  ) {}
   async read(input: Uint8Array): Promise<readonly (readonly unknown[])[]> {
     try {
       if (input.length < 4 || Buffer.from(input).readUInt32LE(0) !== 0x04034b50)
@@ -97,6 +103,17 @@ export class XlsxWorkbookReader implements EmployeeWorkbookReader {
             /<v>([\s\S]*?)<\/v>/.exec(cell[2])?.[1] ??
             /<t\b[^>]*>([\s\S]*?)<\/t>/.exec(cell[2])?.[1] ??
             "";
+          if (
+            this.textNipOnly &&
+            column === 1 &&
+            Number(/\br="(\d+)"/.exec(row[1])?.[1] ?? rows.length + 1) > 1 &&
+            raw &&
+            !/\bt="(s|inlineStr|str)"/.test(cell[1])
+          )
+            throw new EmployeeError(
+              "VALIDATION",
+              `Baris ${rowNumberForMessage(row[1], rows.length)}, NIP bertipe teks wajib digunakan; angka Excel dapat kehilangan digit/awalan nol.`,
+            );
           cells[column - 1] = /\bt="s"/.test(cell[1])
             ? (shared[Number(raw)] ?? "")
             : decodeXml(raw);
@@ -114,10 +131,11 @@ export class XlsxWorkbookReader implements EmployeeWorkbookReader {
         rows[rowNumber - 1] = cells;
       }
       return rows;
-    } catch {
+    } catch (error) {
+      if (error instanceof EmployeeError) throw error;
       throw new EmployeeError(
         "VALIDATION",
-        "File XLSX rusak atau tidak didukung.",
+        "File XLSX rusak/tidak didukung. Gunakan NIP bertipe teks dan jangan gunakan formula.",
       );
     }
   }
