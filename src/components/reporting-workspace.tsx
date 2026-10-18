@@ -6,6 +6,12 @@ import { AdminFloatingWindow } from "./admin-floating-window";
 import { useDashboardJSON } from "./use-dashboard-json";
 import type { ReportRow, Filters } from "@/application/reporting/contracts";
 import "./reporting-workspace.css";
+import {
+  ReportClientError,
+  reportJSON,
+  reportBlob,
+  handoffReportDownload,
+} from "./reporting-client";
 const statuses: Record<string, string> = {
   APPROVED: "Disetujui",
   SUBMITTED: "Diajukan",
@@ -38,24 +44,6 @@ type Page = {
   nextCursor: string | null;
   artifacts: { id: string; format: string; checksum: string; size: number }[];
 };
-class Failure extends Error {
-  constructor(
-    message: string,
-    readonly code: string,
-  ) {
-    super(message);
-  }
-}
-async function json(path: string, init?: RequestInit) {
-  const r = await fetch(path, { cache: "no-store", ...init });
-  const d = await r.json();
-  if (!r.ok)
-    throw new Failure(
-      d.error ?? "Laporan tidak tersedia.",
-      d.code ?? "REPORT_UNAVAILABLE",
-    );
-  return d;
-}
 export function ReportingWorkspace() {
   const today = toBusinessDate(new Date()),
     initialMonth = today.slice(0, 7),
@@ -114,8 +102,12 @@ export function ReportingWorkspace() {
     setRetry(null);
   }
   function fail(e: unknown, again: () => void) {
-    setError(e instanceof Error ? e.message : "Laporan gagal diproses.");
-    setCode(e instanceof Failure ? e.code : "REPORT_UNAVAILABLE");
+    setError(
+      e instanceof ReportClientError
+        ? e.message
+        : "Laporan tidak dapat diproses. Coba lagi.",
+    );
+    setCode(e instanceof ReportClientError ? e.code : "REPORT_UNAVAILABLE");
     setRetry(() => again);
   }
   async function create() {
@@ -124,13 +116,14 @@ export function ReportingWorkspace() {
     setBusy(true);
     setError("");
     setCode("");
+    setRetry(null);
     setNotice("");
     const seq = generation.current,
       payload = JSON.stringify(filters);
     if (attempt.current?.payload !== payload)
       attempt.current = { payload, key: crypto.randomUUID() };
     try {
-      const result = await json("/api/reports/runs", {
+      const result = await reportJSON("/api/reports/runs", "create", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -158,11 +151,14 @@ export function ReportingWorkspace() {
     inFlight.current = true;
     setBusy(true);
     setError("");
+    setCode("");
+    setRetry(null);
     setNotice("");
     const seq = generation.current;
     try {
-      const result = await json(
+      const result = await reportJSON(
         `/api/reports/runs/${page.run.id}?${next ? `cursor=${encodeURIComponent(next)}&` : ""}limit=${newSize ?? page.limit}`,
+        "preview",
       );
       if (seq !== generation.current) return;
       setPage(result);
@@ -184,40 +180,37 @@ export function ReportingWorkspace() {
     inFlight.current = true;
     setBusy(true);
     setError("");
+    setCode("");
+    setRetry(null);
     setNotice("");
     const seq = generation.current,
       runId = page.run.id;
     exportKeys.current[format] ??= crypto.randomUUID();
     try {
-      const result = await json(`/api/reports/runs/${runId}/exports`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          format,
-          idempotencyKey: exportKeys.current[format],
-        }),
-      });
+      const result = await reportJSON(
+        `/api/reports/runs/${runId}/exports`,
+        "export",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            format,
+            idempotencyKey: exportKeys.current[format],
+          }),
+        },
+      );
       if (seq !== generation.current) return;
-      const r = await fetch(
+      const { blob, servedAt } = await reportBlob(
         `/api/reports/runs/${runId}/artifacts/${result.artifact.id}`,
-        { cache: "no-store" },
+        format,
       );
-      if (!r.ok) {
-        const e = await r.json();
-        throw new Failure(e.error, e.code);
-      }
-      const blob = await r.blob();
       if (seq !== generation.current) return;
-      const url = URL.createObjectURL(blob),
-        a = document.createElement("a");
-      a.href = url;
-      a.download = `si-cuti-${runId}.${format.toLowerCase()}`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const validServedAt =
+        servedAt && Number.isFinite(Date.parse(servedAt)) ? servedAt : null;
+      const downloadNotice = `Berkas mulai dilayani${validServedAt ? ` ${formatDateTime(validServedAt)}` : ""}. Periksa unduhan perangkat Anda.`;
+      handoffReportDownload(blob, `si-cuti-${runId}.${format.toLowerCase()}`);
       setRetry(null);
-      setNotice(
-        `Berkas mulai dilayani ${formatDateTime(r.headers.get("X-Report-Served-At") ?? new Date().toISOString())}. Periksa unduhan perangkat Anda.`,
-      );
+      setNotice(downloadNotice);
     } catch (e) {
       if (seq === generation.current) fail(e, () => void download(format));
     } finally {
@@ -312,19 +305,9 @@ export function ReportingWorkspace() {
           <option value="inactive">Nonaktif</option>
         </select>
       </label>
-      <div>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => {
-            setLookup(filters.search);
-            setLookupCursor(null);
-          }}
-        >
-          Cari pilihan pegawai
-        </button>
-        <label>
-          Pegawai
+      <div className="report-employee-chooser">
+        <span>Pegawai</span>
+        <div className="report-employee-control">
           <select
             aria-label="Pegawai laporan"
             value={filters.employeeId ?? ""}
@@ -348,15 +331,29 @@ export function ReportingWorkspace() {
               </option>
             ))}
           </select>
-        </label>
-        {employees.data?.nextCursor && (
           <button
             type="button"
+            className="secondary-button"
+            aria-label="Cari pilihan pegawai"
+            title="Cari pilihan dari nama/NIP yang diisi"
+            onClick={() => {
+              setLookup(filters.search);
+              setLookupCursor(null);
+            }}
+          >
+            ⌕
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            aria-label="Pilihan berikutnya"
+            title="Halaman pilihan pegawai berikutnya"
+            disabled={!employees.data?.nextCursor}
             onClick={() => setLookupCursor(employees.data!.nextCursor)}
           >
-            Pilihan berikutnya
+            →
           </button>
-        )}
+        </div>
       </div>
       {employees.error && (
         <p role="alert">
@@ -385,10 +382,16 @@ export function ReportingWorkspace() {
       <header>
         <p className="eyebrow">ADMINISTRASI</p>
         <h1>Laporan</h1>
-        <p>
-          Rekap pengajuan dari snapshot baca; bukan laporan pemakaian aktual
-          atau surat keputusan.
-        </p>
+        <p>Rekap pengajuan cuti dan izin.</p>
+        <details className="report-help">
+          <summary>Makna laporan dan batas data</summary>
+          <p>
+            Pratinjau, PDF dan Excel memakai data yang dibekukan saat pratinjau
+            dibuat. Ini laporan administratif, bukan pemakaian aktual atau surat
+            keputusan. Periode tetap utuh meskipun ada pengembalian saldo. Akses
+            laporan berlaku 24 jam.
+          </p>
+        </details>
       </header>
       <div
         className="report-actions"

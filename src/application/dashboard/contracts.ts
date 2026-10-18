@@ -138,6 +138,20 @@ export type AgendaItem = {
   hasBalanceReturn: boolean;
   employee?: { id: string; fullName: string };
 };
+// Bounded chips per date; the complete date agenda remains server-paginated.
+export const CALENDAR_CHIP_LIMIT = 3;
+export type CalendarChip = {
+  requestId: string;
+  typeLabel: string;
+  status: string;
+  hasBalanceReturn: boolean;
+  employee?: { fullName: string };
+};
+export type CalendarDay = {
+  date: string;
+  requestCount: number;
+  entries: CalendarChip[];
+};
 export type Summary = {
   fixed:
     | {
@@ -162,7 +176,7 @@ export interface DashboardReader {
     actor: Principal,
     filter: DashboardFilter,
   ): Promise<{
-    days: { date: string; requestCount: number }[];
+    days: CalendarDay[];
     uniqueRequestCount: number;
   }>;
   agenda(

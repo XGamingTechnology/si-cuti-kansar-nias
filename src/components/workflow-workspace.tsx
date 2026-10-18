@@ -2,6 +2,7 @@
 
 import { formatDate, formatDateTime } from "./indonesian-date";
 import { LeaveOutcomePanel } from "./leave-outcome-panel";
+import { useDashboardJSON } from "./use-dashboard-json";
 import { AdminFloatingWindow } from "./admin-floating-window";
 import { AdminPagination, useAdminPagination } from "./admin-pagination";
 
@@ -208,7 +209,15 @@ export function WorkflowWorkspace({
   const [kind, setKind] = useState<Kind>(initialKind);
   const [requests, setRequests] = useState<RequestRecord[]>([]);
   const pagination = useAdminPagination(requests, kind);
-  const [types, setTypes] = useState<PermissionType[]>([]);
+  const permissionTypes = useDashboardJSON<{
+    permissionTypes: PermissionType[];
+  }>(kind === "permission" ? "/api/workflow/permission-types" : null);
+  const types = permissionTypes.data?.permissionTypes ?? [];
+  const typesBlocked =
+    kind === "permission" &&
+    (permissionTypes.loading ||
+      Boolean(permissionTypes.error) ||
+      !types.length);
   const [selected, setSelected] = useState<RequestRecord | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [detailError, setDetailError] = useState(false);
@@ -229,13 +238,9 @@ export function WorkflowWorkspace({
     setListLoading(true);
     setListError("");
     try {
-      const [{ requests: values }, typeData] = await Promise.all([
-        api(`/api/workflow/${kind}`),
-        api("/api/workflow/permission-types"),
-      ]);
+      const { requests: values } = await api(`/api/workflow/${kind}`);
       if (sequence !== listSequence.current) return [];
       setRequests(values);
-      setTypes(typeData.permissionTypes);
       setListLoading(false);
       return values as RequestRecord[];
     } catch (error) {
@@ -347,7 +352,7 @@ export function WorkflowWorkspace({
   const saving = useRef(false);
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving.current) return;
+    if (saving.current || typesBlocked) return;
     saving.current = true;
     setActing(true);
     const sequence = detailSequence.current;
@@ -804,7 +809,24 @@ export function WorkflowWorkspace({
                           : selected?.currentRevision.permissionTypeId
                       }
                       required
+                      disabled={typesBlocked}
+                      aria-describedby={
+                        kind === "permission"
+                          ? "permission-type-state"
+                          : undefined
+                      }
                     >
+                      {kind === "permission" && (
+                        <option value="">
+                          {permissionTypes.loading
+                            ? "Memuat jenis izin…"
+                            : permissionTypes.error
+                              ? "Jenis izin gagal dimuat"
+                              : !types.length
+                                ? "Tidak ada jenis izin aktif"
+                                : "Pilih jenis izin"}
+                        </option>
+                      )}
                       {kind === "leave"
                         ? leaveTypes.map(([id, name]) => (
                             <option key={id} value={id}>
@@ -819,6 +841,38 @@ export function WorkflowWorkspace({
                     </select>
                   </label>
 
+                  {kind === "permission" && (
+                    <div
+                      id="permission-type-state"
+                      className="workflow-field-full"
+                    >
+                      {permissionTypes.loading ? (
+                        <p role="status">Memuat jenis izin…</p>
+                      ) : permissionTypes.error ? (
+                        <div role="alert">
+                          <p>
+                            Jenis izin gagal dimuat. Coba lagi sebelum
+                            menyimpan.
+                          </p>
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={permissionTypes.reload}
+                          >
+                            Muat ulang jenis izin
+                          </button>
+                        </div>
+                      ) : !types.length ? (
+                        <p role="status">
+                          Belum ada jenis izin aktif. Hubungi Admin Kepegawaian
+                          untuk memeriksa daftar jenis izin. Draf belum dapat
+                          disimpan.
+                        </p>
+                      ) : (
+                        <p>Pilih salah satu jenis izin aktif.</p>
+                      )}
+                    </div>
+                  )}
                   {kind === "leave" && (
                     <>
                       <label className="workflow-field-full">
@@ -905,7 +959,7 @@ export function WorkflowWorkspace({
                     <button
                       className="primary-button"
                       type="submit"
-                      disabled={acting}
+                      disabled={acting || typesBlocked}
                     >
                       {editing ? "Simpan Perubahan" : "Simpan Draf"}
                     </button>

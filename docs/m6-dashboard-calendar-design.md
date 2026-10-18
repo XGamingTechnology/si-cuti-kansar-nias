@@ -139,12 +139,12 @@ private, no-store; jangan berbagi cache antar principal atau menyimpan PII di lo
 
 Semua di bawah **endpoint baru yang diusulkan**, bukan klaim sudah tersedia:
 
-| GET                        | Kontrak dan batas                                                                                                                                                                                                                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/api/dashboard/summary`   | `from,to,kind,type?,status?,employeeId?`; fixed indicators + grouped period counts. kind wajib `leave`/`permission`; default status periode APPROVED. Pegawai juga mendapatkan saldo-self tahun berjalan.                                                                                        |
-| `/api/calendar`            | Parameter sama; maksimum 62 hari inklusif; UI meminta satu bulan aktual. Response bucket `{date,requestCount}` untuk semua tanggal, termasuk nol, dan `uniqueRequestCount` untuk rentang; tanpa pagination karena bucket tanggal terbatas. Tidak menjumlahkan bucket sebagai uniqueRequestCount. |
-| `/api/calendar/agenda`     | Filter sama; maksimum 366 hari inklusif. `limit` default 10, max 50; cursor keyset `(startDate,requestId)` dengan kind wajib, urutan ASC. Cursor tervalidasi dan terikat filter/scope; server tetap menerapkan authorization. `nextCursor`, total request filter dari DB.                        |
-| `/api/dashboard/employees` | Admin-only lookup nama/NIP, query maks. 100 karakter, limit default 20/max 50, cursor ID; select ID/nama/NIP saja, bukan profile lengkap.                                                                                                                                                        |
+| GET                        | Kontrak dan batas                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/dashboard/summary`   | `from,to,kind,type?,status?,employeeId?`; fixed indicators + grouped period counts. kind wajib `leave`/`permission`; default status periode APPROVED. Pegawai juga mendapatkan saldo-self tahun berjalan.                                                                                                                                                                 |
+| `/api/calendar`            | Parameter sama; maksimum 62 hari inklusif; UI meminta satu bulan aktual. Response bucket `{date,requestCount,entries}` (amendment UAT 18 Oktober 2026: maksimum 3 chip minimal/tanggal) untuk semua tanggal, termasuk nol, dan `uniqueRequestCount` untuk rentang; tanpa pagination karena bucket tanggal terbatas. Tidak menjumlahkan bucket sebagai uniqueRequestCount. |
+| `/api/calendar/agenda`     | Filter sama; maksimum 366 hari inklusif. `limit` default 10, max 50; cursor keyset `(startDate,requestId)` dengan kind wajib, urutan ASC. Cursor tervalidasi dan terikat filter/scope; server tetap menerapkan authorization. `nextCursor`, total request filter dari DB.                                                                                                 |
+| `/api/dashboard/employees` | Admin-only lookup nama/NIP, query maks. 100 karakter, limit default 20/max 50, cursor ID; select ID/nama/NIP saja, bukan profile lengkap.                                                                                                                                                                                                                                 |
 
 Summary juga maksimum 366 hari; semua rentang harus valid `F<=T`, tahun tanggal
 1900–9999. Tidak ada rentang tak terbatas/default silent: tanpa from/to server
@@ -194,8 +194,12 @@ bulan + agenda berhalaman. Rentang custom >bulan beralih ke agenda, tidak memuat
 366 kolom kalender. Tombol Hari ini dan bulan sebelumnya/berikutnya; minggu mulai
 Senin, date-only WIB, tanpa drag/drop, resize atau aksi approval baru.
 
-Kalender bulan menampilkan badge jumlah per hari; klik tanggal membuka agenda
-terfilter tanggal itu. Tidak memuat semua nama/event ke setiap sel atau silently
+Amendment UAT pengguna 18 Oktober 2026 WIB: kalender bulan menampilkan maksimal tiga
+chip nama singkat + jenis untuk Admin, label Cuti/Izin saya untuk Pegawai, dan `+N lainnya`.
+`entries` hanya requestId, typeLabel, status, hasBalanceReturn serta employee.fullName khusus
+Admin; Pegawai tidak menerima identitas pegawai lain. Proyeksi current revision/scope
+berlaku sebelum limit per tanggal, maksimal 186 chip untuk 62 hari. Klik tanggal membuka
+agenda lengkap terfilter tanggal itu. Tidak memuat semua nama/event ke setiap sel atau silently
 truncate data. Total dan tombol pagination berasal dari server. Event spanning
 month memakai indikator lanjutan di agenda; navigasi detail tetap ke workflow
 existing dengan pemeriksaan akses. Filter status ditampilkan terus agar non-APPROVED

@@ -2,7 +2,9 @@ import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import type { Principal } from "@/modules/auth/service";
 import { annualBalanceReadiness } from "@/application/leave-balance/administration";
 import { PrismaAnnualBalanceAdministrationRepository } from "@/infrastructure/leave-balance/prisma-annual-balance-administration-repository";
+import { CALENDAR_CHIP_LIMIT } from "@/application/dashboard/contracts";
 import type {
+  CalendarChip,
   DashboardFilter,
   AgendaCursor,
   DashboardReader,
@@ -102,15 +104,53 @@ export class PrismaDashboardReader implements DashboardReader {
   async calendar(actor: Principal, f: DashboardFilter) {
     return this.db.$transaction(
       async (tx) => {
+        await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '10s'");
         const days = await tx.$queryRaw<
           { date: string; requestCount: number }[]
         >(
           Prisma.sql`WITH eligible AS (SELECT q.id,r."startDate",r."endDate" FROM ${source(f.kind)} WHERE ${where(actor, f)}) SELECT to_char(d,'YYYY-MM-DD') AS date,COUNT(e.id)::int AS "requestCount" FROM generate_series(${f.from}::date,${f.to}::date,interval '1 day') d LEFT JOIN eligible e ON e."startDate"<=d AND e."endDate">=d GROUP BY d ORDER BY d`,
         );
+        // At most 62 * 3 rows, no private detail columns. Scope and current pointer are
+        // applied before per-day limiting so another employee cannot crowd out SELF.
+        const chips = await tx.$queryRaw<
+          (CalendarChip & { date: string; fullName: string | null })[]
+        >(
+          Prisma.sql`WITH eligible AS (
+            SELECT q.id AS "requestId",q.status::text AS status,r."startDate",r."endDate",
+            ${f.kind === "leave" ? Prisma.sql`r."leaveType"::text` : Prisma.sql`p.name`} AS "typeLabel",
+            ${actor.role === "ADMIN_KEPEGAWAIAN" ? Prisma.sql`e."fullName"` : Prisma.sql`NULL::text`} AS "fullName",
+            ${f.kind === "leave" ? Prisma.sql`EXISTS(SELECT 1 FROM "LeaveBalanceReturn" b WHERE b."leaveRequestId"=q.id AND b."revisionId"=r.id)` : Prisma.sql`FALSE`} AS "hasBalanceReturn"
+            FROM ${source(f.kind)} ${actor.role === "ADMIN_KEPEGAWAIAN" ? Prisma.sql`JOIN "Employee" e ON e.id=q."employeeId"` : Prisma.empty}
+            WHERE ${where(actor, f)}
+          ) SELECT to_char(d,'YYYY-MM-DD') AS date,c."requestId",c.status,c."typeLabel",c."fullName",c."hasBalanceReturn"
+          FROM generate_series(${f.from}::date,${f.to}::date,interval '1 day') d
+          JOIN LATERAL (SELECT * FROM eligible e WHERE e."startDate"<=d AND e."endDate">=d
+            ORDER BY e."startDate",e."requestId" LIMIT ${CALENDAR_CHIP_LIMIT}) c ON TRUE ORDER BY d,c."startDate",c."requestId"`,
+        );
+        const entries = new Map<string, CalendarChip[]>();
+        for (const c of chips) {
+          const values = entries.get(c.date) ?? [];
+          values.push({
+            requestId: c.requestId,
+            typeLabel:
+              f.kind === "leave"
+                ? (labels[c.typeLabel] ?? c.typeLabel)
+                : c.typeLabel,
+            status: c.status,
+            hasBalanceReturn: c.hasBalanceReturn,
+            ...(actor.role === "ADMIN_KEPEGAWAIAN"
+              ? { employee: { fullName: c.fullName! } }
+              : {}),
+          });
+          entries.set(c.date, values);
+        }
         const [row] = await tx.$queryRaw<{ count: number }[]>(
           Prisma.sql`SELECT COUNT(*)::int AS count FROM ${source(f.kind)} WHERE ${where(actor, f)}`,
         );
-        return { days, uniqueRequestCount: row.count };
+        return {
+          days: days.map((d) => ({ ...d, entries: entries.get(d.date) ?? [] })),
+          uniqueRequestCount: row.count,
+        };
       },
       { isolationLevel: "RepeatableRead" },
     );

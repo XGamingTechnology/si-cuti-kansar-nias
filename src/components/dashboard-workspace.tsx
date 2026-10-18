@@ -1,11 +1,13 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDate, formatMonth, formatDateTime } from "./indonesian-date";
 import { toBusinessDate } from "@/domain/business-date";
 import { AdminFloatingWindow } from "./admin-floating-window";
 import { useDashboardJSON } from "./use-dashboard-json";
 import { CalendarOverlayAdmin } from "./calendar-overlay-admin";
 import "./dashboard-workspace.css";
+import type { CalendarDay } from "@/application/dashboard/contracts";
+import { isCalendarWeekend, shortCalendarName } from "./calendar-presentation";
 const statusLabels: Record<string, string> = {
   DRAFT: "Draf",
   SUBMITTED: "Menunggu tinjauan",
@@ -35,7 +37,7 @@ type Summary = {
   types: { id: string; name: string }[];
 };
 type Calendar = {
-  days: { date: string; requestCount: number }[];
+  days: CalendarDay[];
   uniqueRequestCount: number;
 };
 type Agenda = {
@@ -123,6 +125,10 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
   const [cursor, setCursor] = useState<string | null>(null);
   const [previous, setPrevious] = useState<(string | null)[]>([]);
   const [selectedDay, setSelectedDay] = useState("");
+  const agendaHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (selectedDay) agendaHeading.current?.focus();
+  }, [selectedDay]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [showMonth, setShowMonth] = useState(false);
@@ -405,9 +411,7 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
         <div>
           <p className="eyebrow">DASHBOARD & KALENDER</p>
           <h1>{admin ? "Ringkasan administrasi" : "Beranda saya"}</h1>
-          <p>
-            Periode pengajuan, bukan catatan kehadiran atau penggunaan aktual.
-          </p>
+          {admin && <p>Pengajuan dan agenda pegawai.</p>}
         </div>
         <button className="secondary-button" type="button" onClick={refreshAll}>
           Perbarui tampilan
@@ -445,10 +449,7 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           >
             {balance.data && (
               <>
-                <p>
-                  Tahun saldo {balance.data.year} · Tidak mengikuti filter
-                  kalender
-                </p>
+                <p>Tahun {balance.data.year} · saldo terkini</p>
                 {balance.data.readiness !== "INITIALIZED" ? (
                   <p>
                     {balance.data.readiness === "PARTIAL"
@@ -525,23 +526,32 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
                   (["leave", "permission"] as const).map((k) => (
                     <div key={k}>
                       <span>Pengajuan saya — {kindLabel[k]}</span>
-                      {["DRAFT", "SUBMITTED", "RETURNED_FOR_CORRECTION"].map(
-                        (s) => (
-                          <p key={s}>
-                            <a href={`/pengajuan?kind=${k}`}>
-                              {s === "SUBMITTED" ? "Diajukan" : statusLabels[s]}
-                            </a>{" "}
-                            <b>
-                              {(k === "leave"
-                                ? fixedSummary.data!.fixed.ownLeave
-                                : fixedSummary.data!.fixed.ownPermission)?.[
-                                s
-                              ] ?? 0}
-                            </b>
-                          </p>
-                        ),
-                      )}
-                      <small>Semua periode · Milik sendiri</small>
+                      <p>
+                        <a href={`/pengajuan?kind=${k}`}>Perlu diperbaiki</a>{" "}
+                        <b>
+                          {(k === "leave"
+                            ? fixedSummary.data!.fixed.ownLeave
+                            : fixedSummary.data!.fixed.ownPermission
+                          )?.RETURNED_FOR_CORRECTION ?? 0}
+                        </b>
+                      </p>
+                      <p>
+                        <a href={`/pengajuan?kind=${k}`}>Draf</a>{" "}
+                        <b>
+                          {(k === "leave"
+                            ? fixedSummary.data!.fixed.ownLeave
+                            : fixedSummary.data!.fixed.ownPermission
+                          )?.DRAFT ?? 0}
+                        </b>
+                      </p>
+                      <small>
+                        Menunggu tinjauan:{" "}
+                        {(k === "leave"
+                          ? fixedSummary.data!.fixed.ownLeave
+                          : fixedSummary.data!.fixed.ownPermission
+                        )?.SUBMITTED ?? 0}{" "}
+                        · Semua periode
+                      </small>
                       <details className="employee-action-hint">
                         <summary>Langkah selanjutnya</summary>
                         <p>
@@ -554,10 +564,11 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
                   ))
                 )}
               </div>
-              <p className="m6-caption">
-                Periode disetujui tetap dihitung meskipun ada pengembalian
-                saldo. Status diajukan belum memastikan kelengkapan bukti.
-              </p>
+              {admin && (
+                <p className="m6-caption">
+                  Semua periode; terpisah dari filter kalender.
+                </p>
+              )}
             </>
           )}
         </ResourceState>
@@ -586,12 +597,14 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           Filter periode
         </button>
       </div>
-      <section
+      <details
         className="m6-panel m6-desktop-filters"
         aria-label="Filter periode"
+        open={admin}
       >
+        <summary>Filter periode dan status</summary>
         {filters}
-      </section>
+      </details>
       {filterOpen && (
         <AdminFloatingWindow
           title="Filter periode pengajuan"
@@ -696,9 +709,15 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           </div>
         </header>
         <p>
-          {statusLabels[status]} · WIB. Hitungan sel adalah pengajuan pada
-          tanggal itu, bukan hari saldo.
+          {statusLabels[status]} · WIB · Pilih tanggal untuk membuka agenda.
         </p>
+        <div className="m6-calendar-legend" aria-label="Legenda kalender">
+          <span className="weekend">Sab/Min · Akhir pekan</span>
+          <span className="holiday">LN · Libur Nasional</span>
+          <span className="joint">CB · Cuti Bersama</span>
+          <span>● Hari ini</span>
+          <span>✓ Tanggal dipilih</span>
+        </div>
         <div className="m6-overlay-controls">
           <label>
             <input
@@ -732,26 +751,31 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           retry={overlay.reload}
         >
           {overlay.data?.dataset ? (
-            <p className="m6-caption">
-              Input Admin berdasarkan dokumen resmi · Versi{" "}
-              {overlay.data.dataset.version} ·{" "}
-              {overlay.data.dataset.sourceReference} (
-              {formatDate(overlay.data.dataset.sourcePublishedOn)}) · Terbit{" "}
-              {formatDateTime(overlay.data.dataset.publishedAt)}. Tidak
-              tersinkronisasi otomatis.
-              {overlay.data.dataset.sourceUrl && (
-                <>
-                  {" "}
-                  <a
-                    href={overlay.data.dataset.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Sumber resmi
-                  </a>
-                </>
-              )}
-            </p>
+            <details className="m6-caption">
+              <summary>
+                Sumber kalender · Versi {overlay.data.dataset.version}
+              </summary>
+              <p>
+                Input Admin berdasarkan dokumen resmi · Versi{" "}
+                {overlay.data.dataset.version} ·{" "}
+                {overlay.data.dataset.sourceReference} (
+                {formatDate(overlay.data.dataset.sourcePublishedOn)}) · Terbit{" "}
+                {formatDateTime(overlay.data.dataset.publishedAt)}. Tidak
+                tersinkronisasi otomatis.
+                {overlay.data.dataset.sourceUrl && (
+                  <>
+                    {" "}
+                    <a
+                      href={overlay.data.dataset.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Sumber resmi
+                    </a>
+                  </>
+                )}
+              </p>
+            </details>
           ) : (
             <p>
               Data libur resmi tahun {month.slice(0, 4)} belum tersedia.
@@ -784,7 +808,10 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
               aria-label={`Kalender ${formatMonth(month)}`}
             >
               {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((v) => (
-                <span className="m6-weekday" key={v}>
+                <span
+                  className={`m6-weekday${v === "Sab" || v === "Min" ? " weekend" : ""}`}
+                  key={v}
+                >
                   {v}
                 </span>
               ))}
@@ -793,23 +820,49 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
               ))}
               {calendar.data?.days.map((v) => {
                 const events = overlayEvents.filter((e) => e.date === v.date);
+                const weekend = isCalendarWeekend(v.date);
+                const chips = v.entries ?? [];
+                const more = Math.max(0, v.requestCount - chips.length);
                 return (
                   <button
-                    className={`${v.date === day ? "today" : ""} ${v.date === selectedDay ? "selected" : ""}`}
+                    className={`${v.date === day ? "today" : ""} ${v.date === selectedDay ? "selected" : ""} ${weekend || events.length ? "red-date" : ""}`}
+                    aria-pressed={v.date === selectedDay}
                     key={v.date}
                     type="button"
-                    aria-label={`${formatDate(v.date)}, ${v.requestCount} pengajuan${events.length ? `, ${events.map((e) => e.name).join(", ")}` : ""}`}
+                    aria-label={`${formatDate(v.date)}, ${v.requestCount} pengajuan${chips.length ? `, ${chips.map((c) => `${admin ? (c.employee?.fullName ?? "Pegawai") : `${kindLabel[kind]} saya`}: ${c.typeLabel}, ${statusLabels[c.status]}${c.hasBalanceReturn ? ", ada pengembalian saldo" : ""}`).join("; ")}` : ""}${weekend ? ", akhir pekan" : ""}${v.date === day ? ", hari ini" : ""}${events.length ? `, ${events.map((e) => `${e.category === "PUBLIC_HOLIDAY" ? "Libur Nasional" : "Cuti Bersama"}: ${e.name}`).join(", ")}` : ""}`}
                     onClick={() => {
                       setSelectedDay(v.date);
                       setCursor(null);
                       setPrevious([]);
                     }}
                   >
-                    <span>{Number(v.date.slice(-2))}</span>
-                    {v.requestCount > 0 && (
-                      <b>
-                        {v.requestCount} {kindLabel[kind]}
-                      </b>
+                    <span className="m6-day-number">
+                      {Number(v.date.slice(-2))}
+                      {v.date === day ? " ●" : ""}
+                      {v.date === selectedDay ? " ✓" : ""}
+                    </span>
+                    {chips.map((c) => (
+                      <span
+                        className="m6-calendar-chip"
+                        key={c.requestId}
+                        title={`${admin ? `${c.employee?.fullName ?? "Pegawai"} · ` : ""}${c.typeLabel} · ${statusLabels[c.status]}${c.hasBalanceReturn ? " · Ada pengembalian saldo; periode tetap ditampilkan" : ""}`}
+                      >
+                        {c.hasBalanceReturn && (
+                          <span aria-label="Ada pengembalian saldo">↩ </span>
+                        )}
+                        {admin
+                          ? shortCalendarName(c.employee?.fullName ?? "Pegawai")
+                          : `${kindLabel[kind]} saya`}{" "}
+                        · {c.typeLabel.replace(/^Cuti /, "")}
+                        {(status === "all" || c.status !== "APPROVED") && (
+                          <span className="m6-chip-status">
+                            {statusLabels[c.status]}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                    {more > 0 && (
+                      <b className="m6-calendar-more">+{more} lainnya</b>
                     )}
                     {events.map((e) => (
                       <small
@@ -818,6 +871,7 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
                         }
                         key={e.category}
                       >
+                        {e.category === "PUBLIC_HOLIDAY" ? "LN" : "CB"} ·{" "}
                         {e.name}
                       </small>
                     ))}
@@ -826,15 +880,15 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
               })}
             </div>
             <p className="m6-caption">
-              {calendar.data?.uniqueRequestCount} pengajuan unik pada bulan ini;
-              jumlah sel tidak boleh dijumlahkan sebagai total unik.
+              {calendar.data?.uniqueRequestCount} pengajuan pada bulan ini ·
+              Periode dapat tampil pada beberapa tanggal.
             </p>
           </ResourceState>
         </div>
       </section>
       <section className="m6-panel" aria-label="Agenda pengajuan">
         <header className="m6-calendar-header">
-          <h2>
+          <h2 ref={agendaHeading} tabIndex={-1}>
             Agenda {kindLabel[kind]}{" "}
             {selectedDay
               ? `tanggal ${formatDate(selectedDay)}`
@@ -955,6 +1009,24 @@ export function DashboardWorkspace({ admin }: { admin: boolean }) {
           </p>
         </ResourceState>
       </section>
+      <details className="m6-panel m6-help">
+        <summary>Tentang kalender dan saldo</summary>
+        <p>
+          Kalender menampilkan periode pengajuan sesuai status, bukan catatan
+          kehadiran atau penggunaan aktual. Tanggal kosong tidak menjamin
+          kelayakan pengajuan atau saldo cukup.
+        </p>
+        <p>
+          Periode disetujui tetap ditampilkan meskipun ada pengembalian saldo;
+          jumlah pengembalian tidak menentukan tanggal penggunaan aktual. Saldo
+          terkini dan ringkasan tindakan tidak mengikuti filter periode.
+        </p>
+        <p>
+          Penanda akhir pekan dan libur hanya tampilan; tidak mengubah hitungan
+          hari kerja, approval, saldo atau syarat klaim. Klaim Cuti Bersama
+          bukan bukti pegawai sedang cuti.
+        </p>
+      </details>
       {overlayOpen && (
         <CalendarOverlayAdmin
           year={Number(month.slice(0, 4))}

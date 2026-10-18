@@ -646,4 +646,49 @@ run("M6 read projections and publication on disposable PostgreSQL", () => {
     ).rejects.toThrow("Forbidden");
     expect(() => overlays.publish(a, {})).toThrow("Forbidden");
   });
+  it("bounds named chips per date, retains current revision/return and strips identity from SELF", async () => {
+    for (let i = 0; i < 7; i++)
+      await leave(
+        await actor("PEGAWAI"),
+        "APPROVED",
+        "2026-12-31",
+        "2027-01-02",
+      );
+    const adminCalendar = await reader.calendar(admin, {
+      from: "2026-12-30",
+      to: "2027-01-03",
+      kind: "leave",
+      status: "APPROVED",
+      limit: 10,
+    });
+    expect(adminCalendar.days).toHaveLength(5);
+    const busy = adminCalendar.days.find((d) => d.date === "2027-01-01")!;
+    expect(busy.requestCount).toBeGreaterThan(7);
+    expect(busy.entries).toHaveLength(3);
+    expect(adminCalendar.days.every((d) => d.entries.length <= 3)).toBe(true);
+    expect(busy.entries.every((c) => Boolean(c.employee?.fullName))).toBe(true);
+    expect(JSON.stringify(adminCalendar)).not.toMatch(
+      /PRIVATE_|reason|nip|leaveAddress|leavePhone|storageKey/,
+    );
+    const self = await reader.calendar(a, {
+      from: "2026-12-30",
+      to: "2027-01-03",
+      kind: "leave",
+      status: "APPROVED",
+      limit: 10,
+    });
+    expect(JSON.stringify(self)).not.toMatch(
+      /fullName|employee|PRIVATE_|reason|nip|storageKey/,
+    );
+    const c = self.days[0].entries.find((c) => c.requestId === returnedId)!;
+    expect(c).toMatchObject({
+      typeLabel: "Cuti Tahunan",
+      hasBalanceReturn: true,
+      status: "APPROVED",
+    });
+    expect(self.days[0].requestCount).toBe(1);
+    expect(
+      self.days.at(-1)?.entries.some((c) => c.requestId === returnedId),
+    ).toBe(true);
+  });
 });
