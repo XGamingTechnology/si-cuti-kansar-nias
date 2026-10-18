@@ -49,6 +49,20 @@ RUN npx esbuild scripts/report-cleanup.ts --bundle --platform=node --format=esm 
 USER reports
 ENTRYPOINT ["node", "report-cleanup.mjs"]
 
+# Isolated avatar orphan cleanup: SELECT-only maintenance identity, separate private volume.
+FROM dependencies AS avatar-maintenance
+COPY tsconfig.json prisma.config.ts ./
+COPY prisma ./prisma
+COPY src ./src
+COPY scripts/avatar-cleanup.ts ./scripts/avatar-cleanup.ts
+ARG PRISMA_GENERATE_DATABASE_URL=postgresql://prisma-build:prisma-build@127.0.0.1:5432/prisma_build
+RUN DATABASE_URL=${PRISMA_GENERATE_DATABASE_URL} npx prisma generate \
+    && npx esbuild scripts/avatar-cleanup.ts --bundle --platform=node --format=esm --packages=external --outfile=avatar-cleanup.mjs \
+    && groupadd --system --gid 1001 avatars \
+    && useradd --system --uid 1001 --gid avatars avatars
+USER avatars
+ENTRYPOINT ["node", "avatar-cleanup.mjs"]
+
 FROM node:24.15.0-bookworm-slim AS runtime
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 WORKDIR /app

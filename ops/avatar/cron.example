@@ -1,0 +1,4 @@
+# Operator installs explicitly, per environment. Host cron UTC; runs every hour.
+# Wrapper owns env/DB login and mounts ONLY avatar volume; never pass report volume/purger.
+# flock path must be writable by the operator job identity. Monitor exit status, missed >2h and backlog.
+17 * * * * flock -n /var/lock/si-cuti-avatar-staging.lock /opt/si-cuti-ops/avatar-cleanup-staging >> /var/log/si-cuti-avatar-staging.log 2>&1
