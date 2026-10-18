@@ -1,0 +1,164 @@
+.report-workspace {
+  max-width: 1440px;
+  margin: auto;
+  color: #223b4e;
+}
+.report-workspace h1 {
+  font-size: 27px;
+  margin: 8px 0 12px;
+}
+.report-workspace h2 {
+  font-size: 19px;
+}
+.report-workspace p {
+  line-height: 1.65;
+}
+.report-panel {
+  border: 1px solid #dbe3e9;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 18px 0;
+  min-width: 0;
+}
+.report-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+.report-actions button {
+  min-height: 42px;
+}
+.report-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.report-filters label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.report-filters input,
+.report-filters select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #c7d4df;
+  border-radius: 7px;
+  padding: 8px;
+  background: white;
+  color: #223b4e;
+  font: inherit;
+}
+.report-filters p {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+.report-filters > div {
+  display: grid;
+  gap: 8px;
+}
+.report-table {
+  overflow-x: auto;
+}
+.report-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.report-table th,
+.report-table td {
+  text-align: left;
+  padding: 14px 10px;
+  border-bottom: 1px solid #e2e9ef;
+  vertical-align: top;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.report-table th {
+  background: #f5f8fa;
+}
+.report-table summary {
+  color: #90621b;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.report-error {
+  background: #fff3f2;
+  border: 1px solid #edc9c4;
+  padding: 16px;
+  border-radius: 8px;
+}
+.report-notice {
+  background: #eef8f3;
+  padding: 14px;
+  border-radius: 8px;
+}
+.report-caption {
+  color: #526a7b;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.report-filter-trigger {
+  display: none;
+}
+@media (max-width: 1000px) {
+  .report-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .report-desktop-filters {
+    display: none;
+  }
+  .report-filter-trigger {
+    display: inline-flex;
+  }
+  .report-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .report-panel {
+    padding: 14px;
+  }
+  .report-table {
+    overflow: visible;
+  }
+  .report-table thead {
+    display: none;
+  }
+  .report-table table,
+  .report-table tbody,
+  .report-table tr,
+  .report-table td {
+    display: block;
+  }
+  .report-table tr {
+    border: 1px solid #dbe3e9;
+    border-radius: 8px;
+    margin: 12px 0;
+    padding: 8px;
+  }
+  .report-table td {
+    padding: 8px;
+    border: 0;
+  }
+  .report-table td:before {
+    content: attr(data-label);
+    display: block;
+    color: #637887;
+    font-size: 11px;
+    margin-bottom: 5px;
+  }
+}
+.report-actions select {
+  min-height: 42px;
+  border: 1px solid #c7d4df;
+  border-radius: 7px;
+  padding: 7px;
+  background: white;
+  color: #223b4e;
+  font: inherit;
+}

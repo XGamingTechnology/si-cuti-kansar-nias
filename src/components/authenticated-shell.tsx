@@ -2,6 +2,7 @@
 
 import "./employee-workspace.css";
 import { EmployeeProfile } from "./employee-profile";
+import { ReportingWorkspace } from "./reporting-workspace";
 import { DashboardWorkspace } from "./dashboard-workspace";
 import { useEffect, useState } from "react";
 import { AdminUiIcon } from "./admin-ui-icon";
@@ -44,11 +45,18 @@ export function AuthenticatedShell({
     | "pejabat"
     | "pengajuan"
     | "klaim"
-    | "dashboard";
+    | "dashboard"
+    | "laporan";
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [adminSurface, setAdminSurface] = useState<
-    "pegawai" | "saldo" | "pejabat" | "pengajuan" | "klaim" | "dashboard"
+    | "pegawai"
+    | "saldo"
+    | "pejabat"
+    | "pengajuan"
+    | "klaim"
+    | "dashboard"
+    | "laporan"
   >(initialAdminSurface);
   const isAdmin = isAdminPrincipal(principal);
   useEffect(() => {
@@ -206,6 +214,16 @@ export function AuthenticatedShell({
             </a>
           )}
 
+          {isAdmin && (
+            <a
+              href="/admin/laporan"
+              className={adminSurface === "laporan" ? "active" : ""}
+              aria-current={adminSurface === "laporan" ? "page" : undefined}
+            >
+              <Icon name="file" />
+              <span>Laporan</span>
+            </a>
+          )}
           <a
             className={workflowActive ? "active" : ""}
             aria-current={workflowActive ? "page" : undefined}
@@ -295,6 +313,7 @@ export function AuthenticatedShell({
 
         <main id="main-content" className="authenticated-content" tabIndex={-1}>
           {dashboardActive && <DashboardWorkspace admin={isAdmin} />}
+          {isAdmin && adminSurface === "laporan" && <ReportingWorkspace />}
           {isAdmin && adminSurface === "pegawai" && <EmployeeManagement />}
           {isAdmin && adminSurface === "saldo" && <AnnualBalanceManagement />}
           {isAdmin && adminSurface === "pejabat" && (

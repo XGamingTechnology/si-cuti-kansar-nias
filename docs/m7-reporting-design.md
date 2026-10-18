@@ -1,10 +1,14 @@
 # M7 — Desain Laporan dan Ekspor PDF/Excel SI CUTI
 
-**Status: usulan untuk persetujuan, bukan keputusan stakeholder atau implementasi.**
+**Status R1/R2: disetujui stakeholder melalui percakapan 17 Oktober 2026 WIB.**
+R3–R5 tetap usulan ditunda, bukan lingkup implementasi fase pertama.
 Base `origin/staging`: `e81b6f0261f35cf7265e27c0680b381cdb186c0b`, diperiksa 17 Oktober 2026 WIB.
 PR #113 merged pada base tersebut; #110 dan #112 juga sudah merged. UAT bisnis masih tertunda.
-Tidak ada bukti operator baru yang menetapkan commit ini sudah deploy. Task ini hanya menambah
-dokumen ini; tidak mengubah runtime, schema, dependency, migration atau status issue.
+Tidak ada bukti operator baru yang menetapkan commit ini sudah deploy. PR desain #114 telah
+merged pada 18 Oktober 2026 WIB melalui `ec099d9832ab285b21fcb064f5ccc1037ccbb51f`.
+PR implementasi #115 mengintegrasikan `origin/staging` tersebut melalui merge pada branch
+`codex/m7-reporting-implementation`; persetujuan dan klarifikasi berikut tetap berlaku.
+Base implementasi awal di atas dipertahankan sebagai catatan historis; PR #115 belum merged.
 
 ## 1. Sumber, keputusan dan audit kemampuan existing
 
@@ -13,8 +17,9 @@ AGENTS.md dan tujuh dokumen wajib diperiksa: `requirements.md`, `architecture.md
 `requirement-traceability.md`. Proposal sumber
 `source/Laporan-Kerangka-Inovasi-SI-CUTI-KANSAR-NIAS.pdf` halaman 5–8 menetapkan pelaporan
 Admin, filter, PDF/Excel dan histori Pegawai; tidak menetapkan kontrak laporan terperinci.
-`decision-log.md` masih mencatat **RPT-001 dan cakupan/akses AUD-001 belum diputuskan**.
-Tidak ditemukan amendment M7 yang mengesahkan hak ekspor baru. Definisi M6 yang sudah disetujui
+`decision-log.md` masih mencatat **RPT-001 dan cakupan/akses AUD-001 belum diputuskan secara global**;
+amendment M7 yang disetujui di bawah menetapkan keduanya khusus R1/R2.
+Hak ekspor baru R1/R2 kini disahkan melalui keputusan stakeholder di bawah. Definisi M6 yang sudah disetujui
 (`m6-dashboard-calendar-design.md`), WF-001–004, BAL, aturan klaim, DOC-003 dan kompensasi
 pengembalian tetap dipakai; tidak diajukan ulang. Register historis bukan alasan membuka kembali
 aturan yang sudah diamendemen dalam dokumen keputusan khusus.
@@ -33,6 +38,8 @@ aturan yang sudah diamendemen dalam dokumen keputusan khusus.
 | Audit domain                                     | `prisma/schema.prisma`: transition, AnnualBalanceOperation, LeaveBalanceReturn, official correction, CalendarOverlayVersion              | Bukti audit per domain tersedia. **Belum ada ReportRun/ReportAuditEvent atau layanan audit ekspor umum**; logger aplikasi bukan pengganti audit persisten                                         |
 | UI                                               | `src/components/{authenticated-shell,dashboard-workspace,admin-floating-window}.tsx`, `src/components/indonesian-date.ts`                | Sidebar, dialog, format WIB dan states dapat dipakai; belum ada workspace laporan                                                                                                                 |
 
+Audit tabel ini merekam keadaan base sebelum implementasi; realisasi M7 dijelaskan di
+[m7-reporting-implementation.md](m7-reporting-implementation.md).
 Audit dibatasi pada sumber data/renderer/otorisasi ini. Tidak ada akses database staging/produksi.
 
 ## 2. Satu rekomendasi fase pertama
@@ -52,7 +59,7 @@ Selesainya coding/CI M7 nanti bukan penerimaan UAT atau bukti deployment.
 
 ## 3. Kontrak umum
 
-Seluruh ketentuan M7 berikut adalah **rekomendasi default yang perlu disetujui sesuai §10**.
+Ketentuan fase pertama R1/R2 disetujui sesuai §10; kontrak R3–R5 tetap rancangan lanjutan.
 
 - Bahasa Indonesia. Timestamp absolut memakai Asia/Jakarta dan label WIB; disimpan UTC.
   Date-only PostgreSQL DATE tetap `YYYY-MM-DD`, tidak dikonversi melalui timezone browser.
@@ -93,7 +100,7 @@ Semua ID UUID ditulis utuh sebagai teks di Excel. Sheet Metadata dan Ringkasan m
 
 ### R1 — Rekap Pengajuan Cuti (fase pertama)
 
-| Aspek                 | Kontrak usulan                                                                                                                                                                                                                                                                                                                                                                 |
+| Aspek                 | Kontrak R1/R2 disetujui                                                                                                                                                                                                                                                                                                                                                        |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Tujuan/pengguna       | Admin memeriksa pengajuan yang beririsan periode; bukan daftar absensi atau pemakaian aktual                                                                                                                                                                                                                                                                                   |
 | PDF A4 landscape      | No.; Nama/NIP; Unit kerja kini; Jenis cuti; Periode penuh; Status kini; Revisi; Hari kerja tahunan (revisi); Ada pengembalian saldo                                                                                                                                                                                                                                            |
@@ -107,7 +114,7 @@ Semua ID UUID ditulis utuh sebagai teks di Excel. Sheet Metadata dan Ringkasan m
 
 ### R2 — Rekap Izin (fase pertama, terpisah dari cuti)
 
-| Aspek              | Kontrak usulan                                                                                                                                                                                                                                                                                                       |
+| Aspek              | Kontrak R1/R2 disetujui                                                                                                                                                                                                                                                                                              |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Tujuan/pengguna    | Admin merekap pengajuan izin non-cuti; tidak menghitung TUKIN/disiplin                                                                                                                                                                                                                                               |
 | PDF A4 landscape   | No.; Nama/NIP; Unit kerja kini; Jenis izin; Periode penuh; Status kini; Revisi                                                                                                                                                                                                                                       |
@@ -164,8 +171,8 @@ sekarang untuk membuka R1/R2.
 
 PDF R1 landscape A4: margin 12 mm, font DejaVu Sans 9 pt (jangan dikecilkan untuk memuat kolom),
 header tabel diulang, teks wrap dan tinggi baris mengikuti isi, baris tidak terpotong antarhalaman.
-Alokasi lebar konten 273 mm: No 7; Nama/NIP 54; Unit 30; Jenis 30; Periode 43; Status 34;
-Revisi 10; Hari 30; Pengembalian 35. R2 landscape: 8/52/40/40/55/56/22 mm.
+Alokasi lebar konten 273 mm: No 10; Nama/NIP 51; Unit 27; Jenis 30; Periode 43; Status 34;
+Revisi 16; Hari 30; Pengembalian 32 (penyesuaian teknis agar header tidak terpecah pada font 9 pt). R2 landscape: 10/52/38/40/55/56/22 mm.
 Jika satu baris melampaui halaman, gagal dengan pesan agar filter/teks ditinjau; jangan menghilangkan isi.
 R3–R5 juga landscape sesuai kolom; hanya R1/R2 yang dirender fase pertama.
 
@@ -242,7 +249,7 @@ Arsitektur calon: `application/reporting` (schema, izin, orkestrasi, DTO, defini
    Dua request terpisah tanpa runId **tidak** dijanjikan snapshot identik. Renderer version + checksum
    dipin; retry format sama mengembalikan artefak yang sudah selesai. Temp artifact tidak dapat
    diunduh sampai checksum/ukuran dan audit READY terkomit; duplicate request tidak mengubah domain.
-5. Usulan masa akses dataset/artefak **24 jam**, lewat itu 410; purger operasional harian menghapus
+5. Masa akses dataset/artefak **24 jam** disetujui, lewat itu 410; purger operasional setiap 10 menit menghapus
    file paling lambat 48 jam sejak dibuat (batas fisik berbeda dari expiry akses). Audit metadata
    tidak ikut dihapus oleh purger artefak. Jangan menyimpan laporan di public/ atau URL anonim.
 
@@ -283,7 +290,7 @@ correlationId, sourceIp hanya dari mekanisme proxy tepercaya (null jika tidak te
 resultCode/status, rowCount (null jika belum diketahui), dataset checksum dan artifact checksum jika
 tersedia. Search nama/NIP di filter **tidak** disimpan mentah dalam audit/log: simpan keyed digest
 untuk korelasi + indikator filter terpasang; employeeId/unit/status/tanggal ternormalisasi dapat
-disimpan dalam audit terbatas. Raw filter ber-PII hanya pada manifest privat berumur 24 jam.
+disimpan dalam audit terbatas. Raw filter ber-PII hanya pada dataset file privat dengan akses 24 jam (SQL manifest menyimpan filter teredaksi).
 Jangan serialize principal/DTO/body/stack dengan payload ke Pino.
 
 Event: RUN_REQUESTED, RUN_READY/FAILED/REJECTED, PREVIEW_READ, EXPORT_REQUESTED,
@@ -295,9 +302,9 @@ klaim file dibaca/disimpan penerima; catat STREAM_FAILED bila terdeteksi tanpa m
 existing tanpa mencatat cookie/token. DB aplikasi tidak boleh update/delete event audit normal.
 Tidak mengklaim WORM/anti-tamper absolut dari append-only DB.
 
-Usulan retensi audit M7 **90 hari**, akses operator administratif terbatas, tanpa UI audit umum;
-mekanisme purge terotorisasi terpisah dari role aplikasi biasa. Ini keputusan AUD-001 baru yang
-perlu disahkan, bukan anggapan retensi seluruh histori/arsip domain menjadi 90 hari.
+Retensi audit M7 **90 hari** disetujui, akses operator administratif terbatas, tanpa UI audit umum;
+mekanisme purge terotorisasi terpisah dari role aplikasi biasa. Ini amendment AUD-001 khusus M7 yang
+sudah disahkan, bukan anggapan retensi seluruh histori/arsip domain menjadi 90 hari.
 
 ## 8. UI
 
@@ -343,7 +350,7 @@ Tidak ada tab Pegawai M7, reminder, ekspor otomatis atau report PDF yang diangga
    multi-sheet/style/header sesuai; tidak ada formula/external relationship/macro. Buka Excel/
    LibreOffice jika fasilitas ada dan laporkan bila belum dilakukan.
 7. Audit/persistence: sukses/gagal/rejected/format/rowCount, retry/concurrency, actor binding,
-   rollback metadata, orphan cleanup, expiry 24 jam dan purge maksimal 48 jam, audit 90 hari setelah
+   rollback metadata, orphan cleanup, expiry 24 jam dan purge maksimal 48 jam, audit 90 hari sesuai keputusan yang
    disetujui. Inject kegagalan audit/storage/renderer; tidak ada file tanpa otorisasi/audit READY,
    no content sensitif di log, unduh terputus tidak diberi status “diterima”.
 8. No-mutation integration: bandingkan saldo/operasi/workflow/revisi/klaim/return/arsip/
@@ -358,12 +365,21 @@ Tidak ada tab Pegawai M7, reminder, ekspor otomatis atau report PDF yang diangga
 pemeriksaan diff hanya satu Markdown. Tidak menjalankan seluruh tes aplikasi atau mengklaim
 renderer/API yang diusulkan sudah diuji. Tidak merge/deploy/menutup issue.
 
-## 10. Keputusan stakeholder yang masih diperlukan
+## 10. Keputusan stakeholder disetujui — 17 Oktober 2026 WIB
 
-Hanya empat paket keputusan berikut membuka implementasi R1/R2. R3–R5 tetap backlog sehingga
-pemilihan detailnya tidak memblokir fase pertama. Semua rekomendasi ini **belum disetujui**.
+Empat paket berikut **disetujui** oleh stakeholder melalui percakapan 17 Oktober 2026 WIB,
+beserta klarifikasi berikut (bukan usulan yang masih menunggu jawaban):
 
-| Keputusan terbuka                               | Satu rekomendasi default                                                                                                                                       | Alasan                                                                                                       | Dampak alternatif                                                                                                                                      |
+1. R1/R2 dan kolom sesuai desain; R3–R5 ditunda.
+2. Admin-only; run, preview dan artefak hanya Admin pembuat dengan sesi/role aktif.
+3. Audit durable wajib sebelum hasil/unduhan; metadata audit M7 90 hari.
+4. Akses snapshot/artefak 24 jam; dataset dan berkas sementara aktif dihapus maksimal 48 jam.
+5. Batas 48 jam **tidak menjamin penghapusan backup**; cakupan/retensi backup didokumentasikan terpisah.
+6. Tidak mengubah retensi pengajuan, ledger, bukti, histori koreksi atau PDF keputusan final.
+
+Tabel berikut merekam default yang disetujui, bukan membuka ulang keputusan. R3–R5 tetap backlog.
+
+| Keputusan disetujui                             | Ketentuan disetujui                                                                                                                                            | Alasan                                                                                                       | Dampak alternatif                                                                                                                                      |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | M7-SCOPE / RPT-001: katalog dan semantik ekspor | Setujui R1/R2 saja, periode overlap, APPROVED default/non-draf opsional, status saat snapshot, identitas master kini, kolom tepat §4 dan tanpa total pemakaian | Reuse makna M6 yang sudah disetujui; persetujuan ini untuk penerapannya pada laporan, bukan membuka ulang M6 | Menambah saldo/klaim/return perlu aktivasi kontrak masing-masing; status akhir periode/identitas historis perlu query dan sumber historis terpisah     |
 | M7-ACCESS / RPT-001: penerima ekspor baru       | Admin-only; run/artefak hanya pembuat; NIP/nama/unit minimal sesuai kontrak, Pegawai tetap read owner existing                                                 | Ekspor organisasi meningkatkan risiko distribusi; tidak menyamakan read dengan bulk export                   | Ekspor pribadi memerlukan scope owner di seluruh query/artefak/test; akses Admin lain atau pimpinan memerlukan permission/transfer audit baru          |
@@ -373,6 +389,6 @@ pemilihan detailnya tidak memblokir fase pertama. Semua rekomendasi ini **belum 
 Batas 1.000 baris, 366 hari, preview 25 dan renderer bounded merupakan default teknis untuk diuji
 pada skala proposal 93 pegawai, bukan kuota/hak cuti atau keputusan bisnis baru. Tidak perlu membuka
 kembali rule saldo, approval, eligibility, hari kerja, identitas atasan atau koreksi Pejabat Cuti.
-Setelah empat paket disetujui, implementasikan R1/R2 berikut snapshot, audit, renderer, UI, migration
+Berdasarkan empat paket yang sudah disetujui, implementasikan R1/R2 berikut snapshot, audit, renderer, UI, migration
 forward yang diperlukan dan seluruh gate sebagai **satu task fitur lengkap**; rollout/UAT tetap gate
 tersendiri dengan bukti operator.

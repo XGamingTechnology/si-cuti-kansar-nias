@@ -38,6 +38,17 @@ RUN npx prisma generate \
 USER recovery
 CMD ["node", "scripts/auth-recovery.ts"]
 
+# Isolated M7 maintenance image; not part of the running web image.
+FROM dependencies AS report-maintenance
+COPY tsconfig.json ./
+COPY src ./src
+COPY scripts/report-cleanup.ts ./scripts/report-cleanup.ts
+RUN npx esbuild scripts/report-cleanup.ts --bundle --platform=node --format=esm --packages=external --outfile=report-cleanup.mjs \
+    && groupadd --system --gid 1001 reports \
+    && useradd --system --uid 1001 --gid reports reports
+USER reports
+ENTRYPOINT ["node", "report-cleanup.mjs"]
+
 FROM node:24.15.0-bookworm-slim AS runtime
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 WORKDIR /app
