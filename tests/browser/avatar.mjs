@@ -294,6 +294,7 @@ try {
         true,
       );
     },
+    true,
   );
   await scenario(
     "DB: decoder rejects corrupt replacement and old photo stays valid",
