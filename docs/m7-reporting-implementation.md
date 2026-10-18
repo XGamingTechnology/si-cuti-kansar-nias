@@ -1,8 +1,11 @@
 # M7 R1/R2 — Implementasi dan runbook
 
 Base `origin/staging` `e81b6f0261f35cf7265e27c0680b381cdb186c0b`; branch
-`codex/m7-reporting-implementation`. Desain #114 masih **open** saat pekerjaan dimulai;
-dokumen desain disertakan dalam branch ini agar PR implementasi mandiri. Tidak melakukan merge #114.
+`codex/m7-reporting-implementation`. Desain #114 masih open saat pekerjaan dimulai dan telah
+**merged pada 18 Oktober 2026 WIB**, commit `ec099d9832ab285b21fcb064f5ccc1037ccbb51f`.
+PR #115 mengintegrasikan `origin/staging` tersebut melalui merge pada branch implementasi yang sama;
+base awal di atas tetap catatan historis. Resolusi hanya memperbarui dokumen, mempertahankan
+kontrak dan keputusan yang disetujui; runtime/migration/dependency tidak berubah. PR #115 belum merged.
 Keputusan stakeholder 17 Oktober 2026 WIB dicatat di `m7-reporting-design.md` dan amendment
 M7 `decision-log.md`: R1/R2, akses Admin pembuat aktif, audit durable 90 hari, akses 24 jam,
 penghapusan file aktif maksimal 48 jam, dengan backup dan retensi domain tetap terpisah.

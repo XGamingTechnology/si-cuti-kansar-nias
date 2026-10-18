@@ -4,8 +4,11 @@
 R3–R5 tetap usulan ditunda, bukan lingkup implementasi fase pertama.
 Base `origin/staging`: `e81b6f0261f35cf7265e27c0680b381cdb186c0b`, diperiksa 17 Oktober 2026 WIB.
 PR #113 merged pada base tersebut; #110 dan #112 juga sudah merged. UAT bisnis masih tertunda.
-Tidak ada bukti operator baru yang menetapkan commit ini sudah deploy. Desain awal di PR #114 masih open ketika implementasi dimulai; dokumen ini disertakan agar PR
-implementasi mandiri. Tidak melakukan merge desain secara otomatis.
+Tidak ada bukti operator baru yang menetapkan commit ini sudah deploy. PR desain #114 telah
+merged pada 18 Oktober 2026 WIB melalui `ec099d9832ab285b21fcb064f5ccc1037ccbb51f`.
+PR implementasi #115 mengintegrasikan `origin/staging` tersebut melalui merge pada branch
+`codex/m7-reporting-implementation`; persetujuan dan klarifikasi berikut tetap berlaku.
+Base implementasi awal di atas dipertahankan sebagai catatan historis; PR #115 belum merged.
 
 ## 1. Sumber, keputusan dan audit kemampuan existing
 
@@ -246,7 +249,7 @@ Arsitektur calon: `application/reporting` (schema, izin, orkestrasi, DTO, defini
    Dua request terpisah tanpa runId **tidak** dijanjikan snapshot identik. Renderer version + checksum
    dipin; retry format sama mengembalikan artefak yang sudah selesai. Temp artifact tidak dapat
    diunduh sampai checksum/ukuran dan audit READY terkomit; duplicate request tidak mengubah domain.
-5. Usulan masa akses dataset/artefak **24 jam**, lewat itu 410; purger operasional setiap 10 menit menghapus
+5. Masa akses dataset/artefak **24 jam** disetujui, lewat itu 410; purger operasional setiap 10 menit menghapus
    file paling lambat 48 jam sejak dibuat (batas fisik berbeda dari expiry akses). Audit metadata
    tidak ikut dihapus oleh purger artefak. Jangan menyimpan laporan di public/ atau URL anonim.
 
@@ -347,7 +350,7 @@ Tidak ada tab Pegawai M7, reminder, ekspor otomatis atau report PDF yang diangga
    multi-sheet/style/header sesuai; tidak ada formula/external relationship/macro. Buka Excel/
    LibreOffice jika fasilitas ada dan laporkan bila belum dilakukan.
 7. Audit/persistence: sukses/gagal/rejected/format/rowCount, retry/concurrency, actor binding,
-   rollback metadata, orphan cleanup, expiry 24 jam dan purge maksimal 48 jam, audit 90 hari setelah
+   rollback metadata, orphan cleanup, expiry 24 jam dan purge maksimal 48 jam, audit 90 hari sesuai keputusan yang
    disetujui. Inject kegagalan audit/storage/renderer; tidak ada file tanpa otorisasi/audit READY,
    no content sensitif di log, unduh terputus tidak diberi status “diterima”.
 8. No-mutation integration: bandingkan saldo/operasi/workflow/revisi/klaim/return/arsip/
@@ -376,7 +379,7 @@ beserta klarifikasi berikut (bukan usulan yang masih menunggu jawaban):
 
 Tabel berikut merekam default yang disetujui, bukan membuka ulang keputusan. R3–R5 tetap backlog.
 
-| Keputusan terbuka                               | Satu rekomendasi default                                                                                                                                       | Alasan                                                                                                       | Dampak alternatif                                                                                                                                      |
+| Keputusan disetujui                             | Ketentuan disetujui                                                                                                                                            | Alasan                                                                                                       | Dampak alternatif                                                                                                                                      |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | M7-SCOPE / RPT-001: katalog dan semantik ekspor | Setujui R1/R2 saja, periode overlap, APPROVED default/non-draf opsional, status saat snapshot, identitas master kini, kolom tepat §4 dan tanpa total pemakaian | Reuse makna M6 yang sudah disetujui; persetujuan ini untuk penerapannya pada laporan, bukan membuka ulang M6 | Menambah saldo/klaim/return perlu aktivasi kontrak masing-masing; status akhir periode/identitas historis perlu query dan sumber historis terpisah     |
 | M7-ACCESS / RPT-001: penerima ekspor baru       | Admin-only; run/artefak hanya pembuat; NIP/nama/unit minimal sesuai kontrak, Pegawai tetap read owner existing                                                 | Ekspor organisasi meningkatkan risiko distribusi; tidak menyamakan read dengan bulk export                   | Ekspor pribadi memerlukan scope owner di seluruh query/artefak/test; akses Admin lain atau pimpinan memerlukan permission/transfer audit baru          |
