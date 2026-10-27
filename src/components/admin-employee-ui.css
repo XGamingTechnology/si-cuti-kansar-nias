@@ -1218,3 +1218,41 @@
     grid-template-columns: minmax(0, 2fr) minmax(130px, 1fr) minmax(130px, 1fr);
   }
 }
+
+.decision-source-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.decision-source-details dd {
+  margin: 0;
+}
+.decision-stamp-controls {
+  min-width: 0;
+}
+@media (max-width: 480px) {
+  .decision-stamp-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pdf-page-preview {
+  width: 100%;
+  margin: 12px 0;
+  background: #e8edf1;
+  border: 1px solid #d5dee5;
+  overflow: auto;
+}
+.pdf-page-preview canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: white;
+}
+.pdf-page-preview canvas[hidden] {
+  display: none;
+}
+.pdf-page-preview p {
+  padding: 12px;
+}

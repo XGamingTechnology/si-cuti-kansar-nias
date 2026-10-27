@@ -1,3 +1,4 @@
+import { PDFDocument } from "pdf-lib";
 import { createHash, randomUUID } from "node:crypto";
 import { AnnualBalanceMutationService } from "@/application/leave-balance/service";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/application/workflow/types";
 import { generateDecisionPdf, validateDecisionPlacement } from "./decision-pdf";
 import type { DocumentStorage } from "@/application/ports/document-storage";
+import { DECISION_EDITION_RENDERER } from "./ports";
 import type {
   LeaveRecordsDependencies,
   DecisionPlacement,
@@ -265,6 +267,30 @@ export class LeaveRecordsService {
       throw new WorkflowError("CONFLICT", "Checksum scan sumber tidak sesuai.");
     return { record, scan };
   }
+  async decisionSourcePages(actor: WorkflowActor, requestId: string) {
+    const { record, scan } = await this.editionSource(actor, requestId);
+    const source = await PDFDocument.load(scan);
+    return {
+      sourceChecksum: record.snapshot.sourceChecksumSha256,
+      pages: source.getPages().map((page, i) => {
+        const crop = page.getCropBox(),
+          media = page.getMediaBox();
+        const width =
+          Math.min(crop.x + crop.width, media.x + media.width) -
+          Math.max(crop.x, media.x);
+        const height =
+          Math.min(crop.y + crop.height, media.y + media.height) -
+          Math.max(crop.y, media.y);
+        const rotation = ((page.getRotation().angle % 360) + 360) % 360;
+        return {
+          page: i + 1,
+          width: rotation % 180 ? height : width,
+          height: rotation % 180 ? width : height,
+          rotation,
+        };
+      }),
+    };
+  }
   async previewDecisionEdition(
     actor: WorkflowActor,
     requestId: string,
@@ -299,7 +325,7 @@ export class LeaveRecordsService {
         placement,
         sourceChecksum,
         actorUserId: actor.userId,
-        renderer: "form-stamp-v1",
+        renderer: DECISION_EDITION_RENDERER,
       }),
     };
   }
@@ -327,12 +353,23 @@ export class LeaveRecordsService {
     const record = await this.dependencies.repository.decision(requestId);
     if (!record)
       throw new WorkflowError("CONFLICT", "Arsip keputusan belum tersedia.");
+    // Saved older renderer editions remain replayable without regeneration.
+    const savedRetry = record.editions?.find((e) => e.idempotencyKey === key);
+    if (
+      savedRetry &&
+      savedRetry.payloadHash === fingerprint &&
+      savedRetry.createdByUserId === actor.userId &&
+      savedRetry.sourceChecksumSha256 === sourceChecksum &&
+      sourceChecksum === record.snapshot.sourceChecksumSha256 &&
+      JSON.stringify(savedRetry.placement) === JSON.stringify(placement)
+    )
+      return { id: savedRetry.id, version: savedRetry.version };
     const payloadHash = hash({
       archiveId: record.id,
       placement,
       sourceChecksum,
       actorUserId: actor.userId,
-      renderer: "form-stamp-v1",
+      renderer: DECISION_EDITION_RENDERER,
     });
     if (
       payloadHash !== fingerprint ||

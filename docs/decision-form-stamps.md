@@ -9,12 +9,14 @@ both automatically approved from a single Admin action.
 ## Admin flow
 
 After a final decision with a pinned source, choose **Atur Penanda pada Formulir**. Select the
-source page and top/left/width/height percentages, request a private PDF preview, then verify
+source page (with visible dimensions/rotation) and top/left/width/height percentages, inspect the
+pinned original scan, request a private PDF preview, then verify
 identity, NIP, period and placement before saving. Editing coordinates clears the preview and
 confirmation. The server checks page/crop/rotation bounds, actual source checksum, actor, payload
 and preview fingerprint. The human verification is required; no OCR match is claimed. Scans that
 are skewed may need manual positioning; arbitrary PDF page rotations beyond multiples of 90
-are rejected. Browser PDF support may vary; the preview can also be opened in a separate tab.
+are rejected. Inline pages use the bundled PDF.js canvas renderer with zoom up to 300%; saving stays blocked
+until rendering succeeds. The PDF can also be opened in a separate tab.
 
 A saved edition places the source form first with the marker, followed by a readable decision
 appendix. The reason is shown in full in the appendix, and the rejection marker points to it.
@@ -64,3 +66,12 @@ on 15 October 2026 WIB, including the new migration, healthy app and internal li
 The user then reported the result was okay. This is scoped feedback, not evidence that every
 browser/authorization/rotation/mobile UAT case was executed. Public HTTPS checks remain unreported.
 See `docs/staging-checkpoint-20261015.md` for exact deployment provenance and remaining checks.
+
+## UAT amendment, 27 October 2026
+
+New editions use `form-stamp-v2`, status, Admin pencatat and snapshot time at minimum 7 pt.
+Insufficient area is rejected; enlarge the box and inspect again. Admin pencatat is not presented
+as the official signatory. GET on the edition-preview endpoint returns only Admin-authorized,
+checksum-checked pinned-source page geometry (private/no-store). Effective crop is intersected
+with MediaBox. Old edition files remain unchanged; saved older commands replay without rendering.
+See [UAT verification and rollout](uat-20261027.md) and [TTE design](tte-integration-design.md).

@@ -116,7 +116,18 @@ export async function generateDecisionPdf(
   if (placement) {
     sourcePages.forEach((p) => pdf.addPage(p));
     const target = sourcePages[placement.page - 1];
-    const crop = target.getCropBox();
+    const rawCrop = target.getCropBox(),
+      media = target.getMediaBox();
+    const x = Math.max(rawCrop.x, media.x),
+      y = Math.max(rawCrop.y, media.y);
+    const crop = {
+      x,
+      y,
+      width: Math.min(rawCrop.x + rawCrop.width, media.x + media.width) - x,
+      height: Math.min(rawCrop.y + rawCrop.height, media.y + media.height) - y,
+    };
+    if (crop.width <= 0 || crop.height <= 0)
+      throw new Error("Area halaman scan tidak valid.");
     const angle = ((target.getRotation().angle % 360) + 360) % 360;
     if (![0, 90, 180, 270].includes(angle))
       throw new Error("Rotasi scan tidak didukung.");
@@ -140,33 +151,26 @@ export async function generateDecisionPdf(
       borderColor: color,
     });
     const lines = [
-      approved ? "DISETUJUI" : "TIDAK DISETUJUI",
-      "DI SI CUTI",
-      new Intl.DateTimeFormat("id-ID", {
-        timeZone: "Asia/Jakarta",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-      }).format(new Date(snapshot.occurredAt)) + " WIB",
+      approved ? "DISETUJUI DI SI CUTI" : "DITOLAK DI SI CUTI",
+      ...textLines("Admin pencatat: " + snapshot.actorName, w - 12, 7),
+      ...textLines(decisionTime(snapshot.occurredAt), w - 12, 7),
       "Arsip " + id.slice(0, 8).toUpperCase(),
+      ...(!approved
+        ? textLines("Alasan: lihat ringkasan keputusan", w - 12, 7)
+        : []),
     ];
-    if (!approved) lines.push("Alasan: lihat keterangan keputusan");
-    let y = h - 10;
-    for (const [i, line] of lines.entries()) {
-      const size = Math.min(
-        i === 0 ? 9 : 7,
-        (w - 10) / stampFont.widthOfTextAtSize(line, 1),
-        (h - 12) / lines.length - 1,
+    const lineHeight = 10;
+    if (
+      h < lines.length * lineHeight + 12 ||
+      lines.some((line) => stampFont.widthOfTextAtSize(line, 7) > w - 12)
+    )
+      throw new Error(
+        "Penanda terlalu kecil untuk dibaca. Perbesar lebar/tinggi pada preview.",
       );
-      if (size < 5)
-        throw new Error(
-          "Penanda terlalu kecil. Perbesar lebar/tinggi pada preview.",
-        );
-      box.drawText(line, { x: 5, y, size, font: stampFont, color });
-      y -= (h - 12) / lines.length;
+    let stampY = h - 14;
+    for (const line of lines) {
+      box.drawText(line, { x: 6, y: stampY, size: 7, font: stampFont, color });
+      stampY -= lineHeight;
     }
     const [embedded] = await pdf.embedPdf(await stamp.save(), [0]);
     const left = visibleW * placement.left,

@@ -25,7 +25,8 @@ proposals in Issue #107. No government holiday calendar or quota is inferred or 
 - New operational policies use the entire credit year in WIB. Submission and positive approval must
   occur in that credit year; year-end late approval/back-credit is not automatically supported.
 - Pegawai selects one or more dates from one policy version, assignment type Siaga Khusus/Ops/
-  Siaga Rutin, title and private evidence. Sprin number is optional metadata, not an assignment type.
+  Siaga Rutin or Sprin Penugasan (user amendment, 27 October 2026), title and private evidence.
+  Sprin number remains separate optional metadata for every assignment type.
   The UI requires a fresh evidence upload for a new claim; it never reuses a rejected claim's bytes silently.
 - Submit goes directly to SUBMITTED; no new DRAFT/RETURNED_FOR_CORRECTION lifecycle is introduced.
   Admin records a final per-date review under compatible BAL-005 partial-approval support. Incomplete

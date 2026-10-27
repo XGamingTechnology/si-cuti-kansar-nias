@@ -5,7 +5,8 @@ import type { AnnualBalanceAccountState } from "@/application/leave-balance/port
 export type AssignmentType =
   | "SPECIAL_STANDBY"
   | "OPERATIONS"
-  | "REGULAR_STANDBY";
+  | "REGULAR_STANDBY"
+  | "SPRIN_ASSIGNMENT";
 export type ClaimStatus = "SUBMITTED" | "APPROVED" | "REJECTED";
 export type PolicyInput = {
   name: string;

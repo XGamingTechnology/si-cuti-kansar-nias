@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
   createDecisionDocumentHandler,
+  createDecisionSourcePagesHandler,
   createDecisionEditionHandlers,
   createDecisionEditionPreviewHandler,
   createDecisionHandler,
@@ -34,6 +35,10 @@ function fixture(principal: Principal | null = admin) {
       })),
     },
     records: {
+      decisionSourcePages: vi.fn(async () => ({
+        sourceChecksum: "hash",
+        pages: [{ page: 1, width: 595, height: 842, rotation: 0 }],
+      })),
       previewDecisionEdition: vi.fn(async () => ({
         content: new Uint8Array([37, 80, 68, 70]),
         fingerprint: "preview-bound",
@@ -97,6 +102,7 @@ describe("leave records HTTP authorization and replay boundary", () => {
   it.each([
     createDecisionHandler,
     createDecisionDocumentHandler,
+    createDecisionSourcePagesHandler,
     createDecisionEditionPreviewHandler,
     createReturnPreviewHandler,
     createReturnEvidenceHandler,
@@ -265,4 +271,22 @@ describe("decision edition delivery", () => {
       "preview-bound",
     );
   });
+});
+
+it("page picker metadata is private and Admin-only, including anonymous denial", async () => {
+  for (const [principal, status] of [
+    [null, 401],
+    [owner, 403],
+    [admin, 200],
+  ] as const) {
+    const f = fixture(principal);
+    const r = await createDecisionSourcePagesHandler(f.factory)(
+      request(),
+      context,
+    );
+    expect(r.status).toBe(status);
+    if (status === 200)
+      expect(r.headers.get("cache-control")).toContain("no-store");
+    else expect(f.value.records.decisionSourcePages).not.toHaveBeenCalled();
+  }
 });

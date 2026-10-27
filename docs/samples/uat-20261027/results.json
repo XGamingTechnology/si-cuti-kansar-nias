@@ -1,0 +1,16 @@
+{
+  "checks": [
+    "Real DB: empty active permission types, explanatory message and disabled select",
+    "Real UI: active permission selected and draft saved on mobile",
+    "INTERCEPTED loading: distinct permission state",
+    "INTERCEPTED error: distinct permission state",
+    "INTERCEPTED network: distinct permission state",
+    "Real API/DB: policy configuration, all four types, optional/independent number, evidence, duplicate409, preview/approval/history, RBAC",
+    "Real API/DB: two scan versions, approval pinned V1, source checksum unchanged, multipage/crop/rotation metadata, marked preview/save/replay, old editions and owner/foreign RBAC",
+    "Real Admin UI: pinned source/page selection, preview and confirmed new edition on mobile; desktop preview",
+    "Real API/DB: rejection with pinned scan and actual marked rejection PDF",
+    "Actual PDFs saved for visual inspection; synthetic scan has no fabricated signature"
+  ],
+  "year": 2026,
+  "source": "origin/staging e5c1818305e8f50c74bd2fea7e5cb61536a87b09"
+}

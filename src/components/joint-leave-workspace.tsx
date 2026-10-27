@@ -27,6 +27,7 @@ const assignmentLabels: Record<string, string> = {
   SPECIAL_STANDBY: "Siaga Khusus",
   OPERATIONS: "Ops",
   REGULAR_STANDBY: "Siaga Rutin",
+  SPRIN_ASSIGNMENT: "Sprin Penugasan",
 };
 const statusLabels: Record<string, string> = {
   SUBMITTED: "Diajukan",

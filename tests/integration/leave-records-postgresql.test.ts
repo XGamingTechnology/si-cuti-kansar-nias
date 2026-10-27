@@ -251,8 +251,8 @@ run("decision archives and leave returns on disposable PostgreSQL", () => {
       page: 1,
       left: 0.05,
       top: 0.7,
-      width: 0.3,
-      height: 0.12,
+      width: 0.4,
+      height: 0.2,
     };
     const preview = await records.previewDecisionEdition(
       f.admin,
@@ -276,6 +276,13 @@ run("decision archives and leave returns on disposable PostgreSQL", () => {
       ),
     );
     expect(same).toEqual(edition);
+    expect(
+      (
+        await database.leaveDecisionEdition.findUniqueOrThrow({
+          where: { id: edition.id },
+        })
+      ).rendererVersion,
+    ).toBe("form-stamp-v2");
     expect(await database.leaveDecisionEdition.count()).toBe(1);
     const frozen = JSON.stringify(decision!.snapshot);
     const nextPlacement = { ...placement, left: 0.35 };

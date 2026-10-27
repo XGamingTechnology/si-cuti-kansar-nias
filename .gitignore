@@ -46,3 +46,9 @@ backups/
 private-documents/
 .DS_Store
 tsconfig.tsbuildinfo
+
+# Local task scratch and disposable test assets
+/work/
+
+# Generated pinned PDF.js viewer assets (prepared by dev/build)
+/public/pdfjs/

@@ -150,3 +150,65 @@ describe("Joint Leave HTTP boundary", () => {
     expect(f.database.$disconnect).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("Next static-route context regression", () => {
+  it.each(["claims", "policies", "duplicates"] as const)(
+    "accepts a context without params for %s",
+    async (action) => {
+      const f = setup();
+      const r = await f.handler(action)(new Request(url), {});
+      expect(r.status).toBe(200);
+    },
+  );
+  it("configures with static context, preserving RBAC", async () => {
+    const input = {
+      name: "SIMULASI",
+      creditYear: 2026,
+      quotaDays: 1,
+      sourceReference: "SINTETIS",
+      events: [{ date: "2026-10-12", name: "Simulasi", kind: "REGULAR" }],
+    };
+    const request = () =>
+      new Request(url + "/policies", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+    expect((await setup(admin).handler("policies")(request(), {})).status).toBe(
+      200,
+    );
+    expect((await setup(owner).handler("policies")(request(), {})).status).toBe(
+      403,
+    );
+  });
+  it("accepts Sprin Penugasan with an optional independent number", async () => {
+    const f = setup();
+    const form = new FormData();
+    form.set(
+      "data",
+      JSON.stringify({
+        policyId: randomUUID(),
+        eventIds: [randomUUID()],
+        assignmentType: "SPRIN_ASSIGNMENT",
+        title: "Sprin sintetis",
+        sprinNumber: null,
+        idempotencyKey: randomUUID(),
+      }),
+    );
+    form.set(
+      "evidence",
+      new File(["synthetic"], "bukti.pdf", { type: "application/pdf" }),
+    );
+    expect(
+      (
+        await f.handler("claims")(
+          new Request(url, { method: "POST", body: form }),
+          {},
+        )
+      ).status,
+    ).toBe(200);
+    expect(f.service.submit.mock.calls[0][1]).toMatchObject({
+      assignmentType: "SPRIN_ASSIGNMENT",
+      sprinNumber: null,
+    });
+  });
+});

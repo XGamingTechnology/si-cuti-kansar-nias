@@ -1,3 +1,4 @@
+import { StandardFontEmbedder } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import {
   calculateIndonesianTenure,
@@ -51,6 +52,65 @@ const raw = (request = base, generatedAt = new Date("2030-01-01")) =>
   ).toString("latin1");
 
 describe("official pre-signature leave form", () => {
+  it("keeps long field tails and measured text inside A4 table cells across pages", () => {
+    const request = {
+      ...base,
+      employee: {
+        ...base.employee,
+        fullName: "W".repeat(190),
+        positionTitle: "Jabatan panjang ".repeat(15),
+        workUnit: "Unit panjang ".repeat(15),
+      },
+      currentRevision: {
+        ...base.currentRevision,
+        formPlace: "Tempat panjang ".repeat(6),
+        reason: "ALASAN ".repeat(1300) + "AKHIRALASAN",
+        leaveAddress: "ALAMAT ".repeat(1300) + "AKHIRALAMAT",
+      },
+    };
+    const output = raw(request);
+    expect(output).toContain("AKHIRALASAN");
+    expect(output).toContain("AKHIRALAMAT");
+    expect(output).not.toContain("/Count 1");
+    const regular = StandardFontEmbedder.for(
+        "Helvetica" as Parameters<typeof StandardFontEmbedder.for>[0],
+      ),
+      bold = StandardFontEmbedder.for(
+        "Helvetica-Bold" as Parameters<typeof StandardFontEmbedder.for>[0],
+      );
+    for (const page of output
+      .split("stream\n")
+      .filter((s) => s.startsWith("q\n"))) {
+      const boxes = [
+        ...page.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) re S/g),
+      ].map((m) => m.slice(1).map(Number));
+      for (const [x, y, w, h] of boxes) {
+        expect(x + w).toBeLessThanOrEqual(563.01);
+        expect(y).toBeGreaterThanOrEqual(24);
+        expect(y + h).toBeLessThanOrEqual(810.01);
+      }
+      for (const m of page.matchAll(
+        /\/(F[12]) ([\d.]+) Tf\n1 0 0 1 ([\d.]+) ([\d.]+) Tm\n\((.*)\) Tj/g,
+      )) {
+        const [, f, size, x, y, value] = m,
+          px = Number(x),
+          py = Number(y);
+        const cell = boxes.find(
+          ([bx, by, bw, bh]) =>
+            px > bx && px < bx + bw && py > by && py < by + bh,
+        );
+        if (cell)
+          expect(
+            px +
+              (f === "F2" ? bold : regular).widthOfTextAtSize(
+                value.replace(/\\([()\\])/g, "$1"),
+                Number(size),
+              ),
+          ).toBeLessThanOrEqual(cell[0] + cell[2] - 2);
+      }
+    }
+  });
+
   it("creates a valid, one-page A4 portrait PDF", () => {
     const document = generateLeaveDocument(base, []);
     const output = Buffer.from(document).toString("latin1");

@@ -393,3 +393,16 @@ describe("Joint Leave approved rules", () => {
     expect(publicClaim(c)).toEqual({ id: claimId });
   });
 });
+
+it.each([null, "SPRIN/UAT/01"])(
+  "accepts Sprin assignment without deriving its number: %s",
+  (sprinNumber) => {
+    expect(
+      validateSubmit({
+        ...submitted,
+        assignmentType: "SPRIN_ASSIGNMENT",
+        sprinNumber,
+      }),
+    ).toMatchObject({ assignmentType: "SPRIN_ASSIGNMENT", sprinNumber });
+  },
+);
