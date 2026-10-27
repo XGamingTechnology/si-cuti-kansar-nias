@@ -296,9 +296,14 @@ _Gambar 27. Form klaim dan kendala memuat kebijakan._
 
 **Tujuan/menu/prasyarat.** Klaim digunakan untuk bukti penugasan pada tanggal Cuti Bersama sesuai pengaturan Admin yang sah. Buka **Klaim Cuti Bersama**, siapkan tanggal kebijakan, jenis/judul penugasan, Sprin bila relevan dan bukti PDF/JPEG/PNG maksimal 10 MB.
 
-**Urutan menurut komponen dan service yang tersedia, belum diverifikasi end-to-end pada task ini:**
+**Pembaruan kandidat 27 Oktober 2026:** perbaikan endpoint klaim diuji pada aplikasi lokal,
+PostgreSQL disposable dan sesi asli; lihat [bukti UAT](../uat-20261027.md). Screenshot error di
+atas merekam kondisi 18 Oktober, bukan bukti kondisi VPS sekarang. Rollout/UAT instansi tetap
+perlu verifikasi terpisah.
 
-1. Pilih **Ajukan Klaim**, kebijakan/tanggal yang tersedia dan isi penugasan.
+**Urutan pengajuan:**
+
+1. Pilih **Ajukan Klaim**, kebijakan/tanggal yang tersedia dan isi penugasan: Siaga Khusus, Ops, Siaga Rutin atau **Sprin Penugasan**. Nomor Sprin tetap kolom terpisah yang opsional.
 2. Unggah bukti, periksa isian dan kirim sekali.
 3. Periksa daftar serta detail untuk hasil pemeriksaan per tanggal; persetujuan dapat sebagian.
 4. Tanggal yang masih aktif/sudah disetujui dapat diblokir sebagai duplikasi; jangan membuat klaim berulang untuk mengatasi pesan tersebut.

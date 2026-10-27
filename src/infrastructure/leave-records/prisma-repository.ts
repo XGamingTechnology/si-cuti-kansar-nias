@@ -1,3 +1,4 @@
+import { DECISION_EDITION_RENDERER } from "@/application/leave-records/ports";
 import {
   Prisma,
   type PrismaClient,
@@ -75,6 +76,7 @@ export class PrismaLeaveRecordsRepository implements LeaveRecordsRepository {
             checksumSha256: checksum,
             sizeBytes: size,
             version: (last?.version ?? 0) + 1,
+            rendererVersion: DECISION_EDITION_RENDERER,
           },
         });
         return map(made);

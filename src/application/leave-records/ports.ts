@@ -1,3 +1,4 @@
+export const DECISION_EDITION_RENDERER = "form-stamp-v2";
 import type {
   DocumentStorage,
   StoredDocument,

@@ -128,9 +128,12 @@ export function validateSubmit(input: SubmitInput): SubmitInput {
   if (new Set(eventIds).size !== eventIds.length)
     throw new JointLeaveError("VALIDATION", "Pilihan tanggal duplikat.");
   if (
-    !["SPECIAL_STANDBY", "OPERATIONS", "REGULAR_STANDBY"].includes(
-      input.assignmentType,
-    )
+    ![
+      "SPECIAL_STANDBY",
+      "OPERATIONS",
+      "REGULAR_STANDBY",
+      "SPRIN_ASSIGNMENT",
+    ].includes(input.assignmentType)
   )
     throw new JointLeaveError("VALIDATION", "Jenis penugasan tidak valid.");
   return {

@@ -4769,3 +4769,23 @@ button:active:not(:disabled) {
     padding: 1rem;
   }
 }
+
+/* Native date controls and long form values must stay inside their grid cell. */
+.workflow-form,
+.workflow-form label,
+.workflow-date-grid {
+  min-width: 0;
+}
+.workflow-form input,
+.workflow-form select,
+.workflow-form textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 480px) {
+  .workflow-date-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

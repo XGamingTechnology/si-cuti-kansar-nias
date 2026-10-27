@@ -316,3 +316,14 @@ export function createDecisionEditionPreviewHandler(
     });
   }, factory);
 }
+
+export function createDecisionSourcePagesHandler(
+  factory: Factory = createLeaveDocumentRuntime,
+) {
+  return run(async (runtime, actor, _request, id) => {
+    requireWorkflowAdmin(actor);
+    return Response.json(await runtime.records.decisionSourcePages(actor, id), {
+      headers: { "cache-control": "private, no-store" },
+    });
+  }, factory);
+}

@@ -46,7 +46,7 @@ const snapshot: DecisionSnapshot = {
   sourceDocumentVersion: 1,
   sourceChecksumSha256: null,
 };
-const placement = { page: 1, left: 0.05, top: 0.65, width: 0.4, height: 0.15 };
+const placement = { page: 1, left: 0.05, top: 0.65, width: 0.4, height: 0.2 };
 async function fixture() {
   const pdf = await PDFDocument.create();
   pdf.addPage([400, 300]);
@@ -150,6 +150,59 @@ describe("decision editions", () => {
         f.checksum,
       ),
     ).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(f.storage.put).not.toHaveBeenCalled();
+  });
+  it("exposes only pinned page geometry to Admin and checks its source checksum", async () => {
+    const f = await fixture();
+    expect(
+      await f.service.decisionSourcePages(admin, snapshot.requestId),
+    ).toEqual({
+      sourceChecksum: f.checksum,
+      pages: [{ page: 1, width: 400, height: 300, rotation: 0 }],
+    });
+    await expect(
+      f.service.decisionSourcePages(owner, snapshot.requestId),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    f.files.set("source", new Uint8Array([1]));
+    await expect(
+      f.service.decisionSourcePages(admin, snapshot.requestId),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+  it("uses the visible media/crop intersection without altering an oversized crop", async () => {
+    const f = await fixture(),
+      pdf = await PDFDocument.create();
+    const page = pdf.addPage([400, 300]);
+    page.setCropBox(-50, -40, 600, 500);
+    const bytes = await pdf.save(),
+      checksum = createHash("sha256").update(bytes).digest("hex");
+    f.files.set("source", bytes);
+    f.archive.snapshot.sourceChecksumSha256 = checksum;
+    expect(
+      (await f.service.decisionSourcePages(admin, snapshot.requestId)).pages,
+    ).toEqual([{ page: 1, width: 400, height: 300, rotation: 0 }]);
+    const result = await f.service.previewDecisionEdition(
+      admin,
+      snapshot.requestId,
+      placement,
+      checksum,
+    );
+    expect(
+      (await PDFDocument.load(result.content)).getPage(0).getCropBox(),
+    ).toEqual({ x: -50, y: -40, width: 600, height: 500 });
+    expect(
+      createHash("sha256").update(f.files.get("source")!).digest("hex"),
+    ).toBe(checksum);
+  });
+  it("rejects unreadably small markers without changing original bytes", async () => {
+    const f = await fixture();
+    await expect(
+      f.service.previewDecisionEdition(
+        admin,
+        snapshot.requestId,
+        { ...placement, height: 0.055 },
+        f.checksum,
+      ),
+    ).rejects.toThrow("terlalu kecil");
     expect(f.storage.put).not.toHaveBeenCalled();
   });
   it("formats decision time as WIB across date boundaries", () =>
@@ -266,6 +319,50 @@ describe("decision editions", () => {
     await expect(
       f.service.decisionDocument(owner, snapshot.requestId, randomUUID()),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+  it("replays a saved older renderer edition without rewriting its bytes", async () => {
+    const f = await fixture(),
+      key = randomUUID();
+    const preview = await f.service.previewDecisionEdition(
+      admin,
+      snapshot.requestId,
+      placement,
+      f.checksum,
+    );
+    const saved = await f.service.saveDecisionEdition(
+      admin,
+      snapshot.requestId,
+      placement,
+      f.checksum,
+      key,
+      true,
+      preview.fingerprint,
+    );
+    f.editions[0].payloadHash = "a".repeat(64); // Persisted older renderer fingerprint.
+    vi.mocked(f.storage.put).mockClear();
+    expect(
+      await f.service.saveDecisionEdition(
+        admin,
+        snapshot.requestId,
+        placement,
+        f.checksum,
+        key,
+        true,
+        "a".repeat(64),
+      ),
+    ).toEqual(saved);
+    expect(f.storage.put).not.toHaveBeenCalled();
+    await expect(
+      f.service.saveDecisionEdition(
+        admin,
+        snapshot.requestId,
+        { ...placement, left: 0.2 },
+        f.checksum,
+        key,
+        true,
+        "a".repeat(64),
+      ),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
   });
   it("detects source corruption and cleans stored output on persistence failure", async () => {
     const f = await fixture();

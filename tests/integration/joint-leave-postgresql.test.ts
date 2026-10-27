@@ -148,6 +148,35 @@ run("Joint Leave on disposable PostgreSQL", () => {
       })
     ).grantedDays;
   }
+  it.each([
+    "SPRIN_ASSIGNMENT",
+    "SPECIAL_STANDBY",
+    "OPERATIONS",
+    "REGULAR_STANDBY",
+  ] as const)(
+    "persists/reviews %s without requiring Sprin metadata",
+    async (assignmentType) => {
+      const f = await fixture();
+      const c = await f.submit({ ...f.inputFor(), assignmentType });
+      expect((await service().get(f.owner, c.id)).assignmentType).toBe(
+        assignmentType,
+      );
+      expect((await service().get(f.owner, c.id)).sprinNumber).toBeNull();
+      await expect(
+        f.submit({ ...f.inputFor(), assignmentType }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+      const input = await decision(
+        f.admin,
+        c.id,
+        c.dates.map((d) => d.eventId),
+      );
+      await service().review(f.admin, c.id, input);
+      expect(await credit(f.owner)).toBe(3);
+      expect((await service().get(f.admin, c.id)).assignmentType).toBe(
+        assignmentType,
+      );
+    },
+  );
   it("pins immutable policy/evidence; partial decision, GRANT links, fresh counters and same-key replay agree", async () => {
     const f = await fixture(),
       c = await f.submit();

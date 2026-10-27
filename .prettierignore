@@ -4,3 +4,5 @@ node_modules
 src/generated
 package-lock.json
 docs/source
+work
+public/pdfjs

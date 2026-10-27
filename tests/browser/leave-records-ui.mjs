@@ -35,7 +35,23 @@ const bundled = await build({
 const css =
   (await readFile("src/app/styles.css", "utf8")) +
   (await readFile("src/components/admin-employee-ui.css", "utf8"));
-const server = createServer((request, response) => {
+const server = createServer(async (request, response) => {
+  if (request.url.startsWith("/pdfjs/")) {
+    response.setHeader(
+      "content-type",
+      request.url.endsWith(".mjs")
+        ? "text/javascript"
+        : request.url.endsWith(".wasm")
+          ? "application/wasm"
+          : "application/octet-stream",
+    );
+    response.end(
+      await readFile(
+        "public" + new URL(request.url, "http://localhost").pathname,
+      ),
+    );
+    return;
+  }
   if (request.url === "/app.js") {
     response.setHeader("content-type", "text/javascript");
     response.end(bundled.outputFiles[0].text);
@@ -68,6 +84,7 @@ async function pageFixture({
   abort = false,
   conflict = false,
   failReplacementUpload = false,
+  invalidPreview = false,
 } = {}) {
   const page = await browser.newPage({
     acceptDownloads: true,
@@ -99,11 +116,18 @@ async function pageFixture({
   await page.route("**/api/workflow/leave/**", async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const method = route.request().method();
+    if (pathname.endsWith("/decision/editions/preview") && method === "GET")
+      return route.fulfill({
+        json: {
+          sourceChecksum: "synthetic-checksum",
+          pages: [{ page: 1, width: 595, height: 842, rotation: 0 }],
+        },
+      });
     if (pathname.endsWith("/decision/editions/preview"))
       return route.fulfill({
         contentType: "application/pdf",
         headers: { "x-si-cuti-preview": "stamp-preview" },
-        body: pdf,
+        body: invalidPreview ? Buffer.from("not-pdf") : pdf,
       });
     if (pathname.endsWith("/decision/editions")) {
       editions.push(route.request().postDataJSON());
@@ -193,6 +217,8 @@ async function pageFixture({
       }
       return route.fulfill({ json: { return: result } });
     }
+    if (pathname.includes("/documents/"))
+      return route.fulfill({ contentType: "application/pdf", body: pdf });
     return route.fulfill({
       status: 404,
       json: { error: "Fixture route missing" },
@@ -447,7 +473,10 @@ try {
       assert.equal(await save.isEnabled(), true);
       await d.getByLabel("Posisi dari kiri (%)").fill("10");
       assert.equal(await save.isDisabled(), true);
-      assert.equal(await d.locator("iframe").count(), 0);
+      assert.equal(
+        await d.getByRole("img", { name: /Preview penanda keputusan/ }).count(),
+        0,
+      );
       await d.getByRole("button", { name: "Lihat Preview PDF" }).click();
       await d.getByRole("link", { name: "Buka preview di tab baru" }).waitFor();
       await d.getByRole("checkbox").check();
@@ -526,6 +555,31 @@ try {
     await page.locator(".request-card").first().waitFor();
     return page;
   }
+  await scenario(
+    "failed PDF page render blocks confirmation and saving",
+    async () => {
+      const f = await pageFixture({ invalidPreview: true });
+      await f.page
+        .getByRole("button", { name: "Atur Penanda pada Formulir" })
+        .click();
+      const d = f.page.getByRole("dialog", {
+        name: "Penanda Keputusan pada Formulir",
+      });
+      await d.getByRole("button", { name: "Lihat Preview PDF" }).click();
+      await d
+        .getByText("Halaman PDF gagal ditampilkan.", { exact: false })
+        .waitFor();
+      assert.equal(await d.getByRole("checkbox").isDisabled(), true);
+      assert.equal(
+        await d
+          .getByRole("button", { name: "Simpan Edisi Final" })
+          .isDisabled(),
+        true,
+      );
+      assert.equal(f.editions.length, 0);
+      await f.page.close();
+    },
+  );
   await scenario(
     "rejection message clears when another request opens",
     async () => {

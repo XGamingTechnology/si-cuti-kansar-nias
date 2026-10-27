@@ -391,7 +391,7 @@ _Gambar 36. Memilih scan sumber dan dasar keputusan._
 
 1. Baca status, sumber/versi, snapshot dan ketersediaan PDF.
 2. Unduh PDF keputusan melalui tombol pada arsip, lalu periksa file pada perangkat.
-3. Jika memakai penanda pada edisi turunan, atur posisi, **preview**, verifikasi dan simpan edisi sesuai dialog; jangan menimpa scan asli.
+3. Pilih **Atur Penanda pada Formulir**, periksa scan asli versi keputusan, pilih halaman (ukuran/rotasi ditampilkan), lalu atur persentase posisi dan ukuran. Buat **preview** dan gunakan perbesaran bila perlu, pastikan tulisan/tanda tangan tidak tertutup, konfirmasi dan simpan edisi. Jika terlalu kecil, perbesar dan preview ulang. Scan asli tetap tersimpan; edisi memuat scan bertanda diikuti ringkasan keputusan. Admin pencatat dan waktu adalah catatan SI CUTI, bukan nama pejabat penandatangan.
 4. Untuk arsip legacy yang belum mempunyai sumber terverifikasi, ikuti tindakan verifikasi eksplisit yang tersedia; jangan mengarang nama/tanggal historis dari master saat ini.
 
 **Hasil.** Scan asli, formulir awal, arsip final dan edisi penanda adalah berkas/peran berbeda. **Jika arsip belum siap atau sumber bermasalah**, periksa melalui proses yang berwenang; jangan mengunggah pengganti di folder storage dari luar aplikasi. Penanda bukan tanda tangan elektronik tersertifikasi, cap resmi baru atau nomor surat yang dibuat panduan.
