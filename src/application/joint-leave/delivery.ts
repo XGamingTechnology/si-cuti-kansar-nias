@@ -21,7 +21,7 @@ type Runtime = {
   jointLeave: JointLeaveService;
 };
 type Factory = () => Runtime;
-type Context = { params: Promise<{ id?: string }> };
+type Context = { params?: Promise<{ id?: string }> };
 type Action =
   | "claims"
   | "policies"
@@ -74,6 +74,7 @@ const submitSchema = z
       "SPECIAL_STANDBY",
       "OPERATIONS",
       "REGULAR_STANDBY",
+      "SPRIN_ASSIGNMENT",
     ]),
     title: z.string().max(300),
     sprinNumber: z.string().max(200).nullable(),
@@ -131,7 +132,7 @@ export function createJointLeaveHandler(
         ),
         service = runtime.jointLeave;
       const url = new URL(request.url),
-        id = context ? ((await context.params).id ?? "") : "";
+        id = (await context?.params)?.id ?? "";
       if (
         ["preview", "review"].includes(action) ||
         (action === "policies" && request.method === "POST")
