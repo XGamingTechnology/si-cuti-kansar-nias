@@ -104,6 +104,43 @@ describe("Joint Leave HTTP boundary", () => {
     });
     expect(r.headers.get("cache-control")).toContain("no-store");
   });
+  it("handles static Next route context without params", async () => {
+    const f = setup();
+    const r = await f.handler("claims")(new Request(url), {} as never);
+    expect(r.status).toBe(200);
+    expect(f.service.list).toHaveBeenCalledOnce();
+  });
+  it("accepts Sprin Penugasan while retaining optional Sprin number metadata", async () => {
+    const f = setup();
+    const form = new FormData();
+    form.set(
+      "data",
+      JSON.stringify({
+        policyId: randomUUID(),
+        eventIds: [randomUUID()],
+        assignmentType: "SPRIN_ASSIGNMENT",
+        title: "Penugasan sintetis",
+        sprinNumber: null,
+        idempotencyKey: randomUUID(),
+      }),
+    );
+    form.set(
+      "evidence",
+      new File(["%PDF-1.7"], "evidence.pdf", { type: "application/pdf" }),
+    );
+    const response = await f.handler("claims")(
+      new Request(url, { method: "POST", body: form }),
+    );
+    expect(response.status).toBe(200);
+    expect(f.service.submit).toHaveBeenCalledWith(
+      owner,
+      expect.objectContaining({
+        assignmentType: "SPRIN_ASSIGNMENT",
+        sprinNumber: null,
+      }),
+      expect.any(Object),
+    );
+  });
   it("rejects malformed/unexpected authority in review payload", async () => {
     const f = setup(admin),
       r = await f.handler("review")(
