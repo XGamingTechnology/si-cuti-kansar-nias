@@ -25,7 +25,8 @@ proposals in Issue #107. No government holiday calendar or quota is inferred or 
 - New operational policies use the entire credit year in WIB. Submission and positive approval must
   occur in that credit year; year-end late approval/back-credit is not automatically supported.
 - Pegawai selects one or more dates from one policy version, assignment type Siaga Khusus/Ops/
-  Siaga Rutin, title and private evidence. Sprin number is optional metadata, not an assignment type.
+  Siaga Rutin/Sprin Penugasan, title and private evidence. Sprin number remains optional metadata.
+  Sprin Penugasan is a fourth assignment category; it does not make the Sprin number mandatory.
   The UI requires a fresh evidence upload for a new claim; it never reuses a rejected claim's bytes silently.
 - Submit goes directly to SUBMITTED; no new DRAFT/RETURNED_FOR_CORRECTION lifecycle is introduced.
   Admin records a final per-date review under compatible BAL-005 partial-approval support. Incomplete
@@ -60,6 +61,11 @@ with a synthetic reset. Existing reservation retries remain idempotent; this doe
 Forward migration `20261016090000_joint_leave_claims` adds JointLeaveClaim and JointLeaveClaimDate,
 policy creator/command metadata and event group. Old policy rows remain valid through nullable/default
 additions. All previous migrations remain byte-identical.
+
+Forward migration `20261028100000_sprin_assignment_type` extends only the assignment-type check to
+include `SPRIN_ASSIGNMENT`; it preserves existing claim rows and keeps Sprin number optional. Apply
+it through the normal migration process before deploying this code. No new eligibility or balance
+policy is attached to the category.
 
 Claim metadata stores submitted actor/time, employee identity snapshot, immutable policy/event selection,
 assignment/Sprin/title, evidence MIME/size/SHA-256 and private storage key, stable submission UUID/hash.
