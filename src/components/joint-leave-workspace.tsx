@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 8334)
+Total output lines: 1097
+
 "use client";
 
 import {
@@ -27,6 +30,7 @@ const assignmentLabels: Record<string, string> = {
   SPECIAL_STANDBY: "Siaga Khusus",
   OPERATIONS: "Ops",
   REGULAR_STANDBY: "Siaga Rutin",
+  SPRIN_ASSIGNMENT: "Sprin Penugasan",
 };
 const statusLabels: Record<string, string> = {
   SUBMITTED: "Diajukan",
@@ -528,47 +532,7 @@ function ClaimForm({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
-          </label>
-          <label>
-            Nomor Sprin/Surat Perintah Penugasan (jika ada)
-            <input
-              maxLength={200}
-              value={sprin}
-              onChange={(e) => setSprin(e.target.value)}
-            />
-          </label>
-          <label>
-            Bukti penugasan/pelaksanaan
-            <input
-              required
-              type="file"
-              accept="application/pdf,image/jpeg,image/png"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
-          <small>
-            PDF, JPG atau PNG, maksimal 10 MB. Bukti hanya dapat dibaca oleh
-            Anda dan Admin. Pilih bukti yang menunjukkan penugasan serta
-            pelaksanaannya.
-          </small>
-          <p>
-            {
-              selected.filter(
-                (id) =>
-                  !blocked.includes(
-                    policy?.eventDates.find((e) => e.id === id)?.date ?? "",
-                  ),
-              ).length
-            }{" "}
-            tanggal dipilih. Saldo bertambah setelah disetujui dan hanya berlaku
-            pada tahun saldo {policy?.creditYear ?? year}.
-          </p>
-          {error && <p role="alert">{error}</p>}
-          <button
-            className="primary-button"
-            disabled={
-              checking ||
-              !file ||
+      …334 tokens truncated…             !file ||
               !selected.length ||
               selected.some((id) =>
                 blocked.includes(

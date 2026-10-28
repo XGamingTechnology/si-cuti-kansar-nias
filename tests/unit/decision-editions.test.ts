@@ -156,6 +156,21 @@ describe("decision editions", () => {
     expect(decisionTime(snapshot.occurredAt)).toMatch(
       /05 Januari 2099.*01[.:]00.*WIB/,
     ));
+  it("fits a long Admin identity across wrapped lines in a taller marker", async () => {
+    const scan = await PDFDocument.create();
+    scan.addPage([400, 300]);
+    const result = await generateDecisionPdf(
+      "long-actor",
+      {
+        ...snapshot,
+        actorName:
+          "Admin Kepegawaian Dokumentasi Wilayah Contoh Nusantara Sintetis",
+      },
+      await scan.save(),
+      { page: 1, left: 0.05, top: 0.6, width: 0.55, height: 0.2 },
+    );
+    expect((await PDFDocument.load(result)).getPageCount()).toBe(2);
+  });
   it("previews without writes, requires confirmation/fingerprint and denies Pegawai mutation", async () => {
     const f = await fixture();
     await expect(

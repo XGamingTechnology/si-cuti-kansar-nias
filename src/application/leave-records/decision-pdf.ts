@@ -139,18 +139,26 @@ export async function generateDecisionPdf(
       borderWidth: 1.1,
       borderColor: color,
     });
+    const actorLines = textLines(
+      "Admin pencatat: " + snapshot.actorName,
+      w - 10,
+      6,
+    );
     const lines = [
       approved ? "DISETUJUI" : "TIDAK DISETUJUI",
       "DI SI CUTI",
-      new Intl.DateTimeFormat("id-ID", {
-        timeZone: "Asia/Jakarta",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-      }).format(new Date(snapshot.occurredAt)) + " WIB",
+      "Dicatat: " +
+        new Intl.DateTimeFormat("id-ID", {
+          timeZone: "Asia/Jakarta",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23",
+        }).format(new Date(snapshot.occurredAt)) +
+        " WIB",
+      ...actorLines,
       "Arsip " + id.slice(0, 8).toUpperCase(),
     ];
     if (!approved) lines.push("Alasan: lihat keterangan keputusan");
