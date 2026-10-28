@@ -18,9 +18,25 @@ are rejected. Browser PDF support may vary; the preview can also be opened in a 
 
 A saved edition places the source form first with the marker, followed by a readable decision
 appendix. The reason is shown in full in the appendix, and the rejection marker points to it.
-Dates use WIB. Actor/request UUIDs and checksums remain in audit rather than dominating the
-human summary. Coordinates use the displayed crop area, including rotated scans. Only the
-selected page receives the marker; signatures/text must remain clear as verified by Admin.
+The marker labels the WIB time as the time recorded and names the Admin recorder; it does not
+claim the recorder is the authorized official signer. Coordinates use the displayed crop area,
+including rotated scans. Only the selected page receives the marker; signatures/text must remain
+clear as verified by Admin. A preview that cannot fit the full recorder name legibly asks for a
+larger marker area before it can be saved.
+
+The original application PDF/form layout is not redesigned by this change. Existing source pages,
+including their signature and decision boxes, remain byte-for-byte preserved in storage; only a
+derived edition adds the requested marker. The bundled sample UAT images are not a substitute for
+the employee's actual signed scan when checking a reported layout defect.
+
+## Future electronic-signature integration (TTE)
+
+TTE is a separate future project. Design decisions include the provider API, provider-verified signer
+identity, certificate and revocation checks, trusted timestamp, and proof that the signature covers
+the final PDF bytes. SI CUTI must not synthesize a signature, borrow an Admin recorder's identity as
+the authorized signer, or keep private signing keys. Until a provider and signer authorization path
+are selected and implemented, the SI CUTI marker remains an administrative record only; an uploaded
+manually signed scan remains unchanged.
 
 ## Preserved records
 
