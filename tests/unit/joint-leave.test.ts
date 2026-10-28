@@ -232,6 +232,13 @@ describe("Joint Leave approved rules", () => {
     expect(() =>
       validateSubmit({ ...submitted, assignmentType: "SPRIN" as never }),
     ).toThrow();
+    expect(
+      validateSubmit({
+        ...submitted,
+        assignmentType: "SPRIN_ASSIGNMENT",
+        sprinNumber: null,
+      }).assignmentType,
+    ).toBe("SPRIN_ASSIGNMENT");
     expect(() =>
       validateSubmit({ ...submitted, eventIds: [eventId, eventId] }),
     ).toThrow(/duplikat/);
